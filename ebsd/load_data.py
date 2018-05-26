@@ -59,6 +59,6 @@ def load_ang_file(fname):
             if irow >= nrow:
                 break
 
-    print('{} points read in {:.2f} s'.format(irow, time.time() - t0))
+    print('\n{} points read in {:.2f} s'.format(irow, time.time() - t0))
 
     return data, grid, dx, dy, ncols_odd, ncols_even, nrows

@@ -5,7 +5,7 @@ import numpy as np
 
 class LassoSelector2(_SelectorWidget):
     def __init__(self, ax, x, y, lineprops=None):
-        _SelectorWidget.__init__(self, ax, self.onselect, button=None)
+        _SelectorWidget.__init__(self, ax, self.onselect, button=None, useblit=True)
 
         if lineprops is None:
             lineprops = dict()
@@ -92,7 +92,7 @@ class LassoSelector2(_SelectorWidget):
 
 class RectangleSelector2(RectangleSelector):
     def __init__(self, ax, x, y, rectprops=None, aspect=None):
-        RectangleSelector.__init__(self, ax, self.onselect, rectprops=rectprops, interactive=True)
+        RectangleSelector.__init__(self, ax, self.onselect, rectprops=rectprops, useblit=True, interactive=True)
 
         self.state_modifier_keys = dict(move=' ', accept='enter', clear='c', disconnect='escape', square='shift', center='control')
 

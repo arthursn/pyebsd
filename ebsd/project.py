@@ -1,12 +1,14 @@
 import numpy as np
 from matplotlib import rcParams
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 from .orientation import euler_rotation
 from .load_data import load_ang_file
 from .plotting import plot_property, plot_IPF, plot_PF
 
 ssfonts = rcParams['font.sans-serif']
+
+
 def _item2top(l, item):
     try:
         oldindex = l.index[item]
@@ -22,7 +24,9 @@ rcParams['savefig.dpi'] = 300
 rcParams['savefig.bbox'] = 'tight'
 rcParams['savefig.pad_inches'] = 0.0
 
+
 class Scandata(object):
+
     def __init__(self, fname):
         self.fname = fname
         raw = load_ang_file(fname)
@@ -38,32 +42,32 @@ class Scandata(object):
         self.N = len(self.data)
 
         self.ind = np.arange(self.N, dtype=int)
-        self.phi1 = self.data[:,0]
-        self.Phi = self.data[:,1]
-        self.phi2 = self.data[:,2]
-        self.x = self.data[:,3]
-        self.y = self.data[:,4]
-        self.IQ = self.data[:,5]
-        self.CI = self.data[:,6]
-        self.ph = self.data[:,7]
+        self.phi1 = self.data[:, 0]
+        self.Phi = self.data[:, 1]
+        self.phi2 = self.data[:, 2]
+        self.x = self.data[:, 3]
+        self.y = self.data[:, 4]
+        self.IQ = self.data[:, 5]
+        self.CI = self.data[:, 6]
+        self.ph = self.data[:, 7]
 
         self.R = euler_rotation(self.phi1, self.Phi, self.phi2)
 
         self.figs_maps = []
         self.axes_maps = []
-    
+
     @property
     def M(self):
-        return self.R.transpose([0,2,1])
+        return self.R.transpose([0, 2, 1])
 
     @property
     def i(self):
-        return self.ind//self.ncols 
+        return self.ind//self.ncols
 
     @property
     def j(self):
-        rem = self.ind%self.ncols
-        return rem//self.ncols_odd + 2*(rem%self.ncols_odd)
+        rem = self.ind % self.ncols
+        return rem//self.ncols_odd + 2*(rem % self.ncols_odd)
 
     @property
     def neighbors(self, distance=0):
@@ -76,21 +80,25 @@ class Scandata(object):
 
         i_near = np.ndarray((self.N, 6), dtype=int)
         j_near = np.vstack([j2_, j1_, j1, j2, j1, j1_]).T.astype(int)
-        i_near[j0%2==0] = (np.vstack([i0, i1_, i1_, i0, i0, i0]).T)[j0%2==0]
-        i_near[j0%2==1] = (np.vstack([i0, i0, i0, i0, i1, i1]).T)[j0%2==1]
+        i_near[j0 % 2 == 0] = (np.vstack([i0, i1_, i1_, i0, i0, i0]).T)[
+            j0 % 2 == 0]
+        i_near[j0 % 2 == 1] = (np.vstack([i0, i0, i0, i0, i1, i1]).T)[
+            j0 % 2 == 1]
 
         near = self.ij2ind(i_near, j_near)
         near[(near < 0) | (near >= self.N)] = -1
         return near.astype(int)
-    
+
     def ij2ind(self, i, j):
         """
         i, j grid positions to index
         """
-        # 1 - self.N*(j/self.ncols) turns negative every i, j pair where j extrapolates ncols
-        return (1 - self.N*(j//self.ncols))*(i*self.ncols + (j%2)*self.ncols_odd + (j//2))
+        # 1 - self.N*(j/self.ncols) turns negative every i, j pair where j
+        # extrapolates ncols
+        return (1 - self.N*(j//self.ncols))*(i*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
-    def plot_IPF(self, d='ND', ax=None, sel=None, gray=None, tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
+    def plot_IPF(self, d='ND', ax=None, sel=None, gray=None, tiling='rect',
+                 w=2048, scalebar=True, verbose=True, **kwargs):
         """
         Plot inverse pole figure
 
@@ -129,24 +137,34 @@ class Scandata(object):
             Variables are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
         """
-        ebsdmap = plot_IPF(self.R, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y, self.dx, d, ax, sel, gray, tiling, w, scalebar, verbose, **kwargs)
+        ebsdmap = plot_IPF(self.R, self.nrows, self.ncols_even, self.ncols_odd,
+                           self.x, self.y, self.dx, d, ax, sel, gray, tiling, w,
+                           scalebar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_property(self, prop, ax=None, colordict=None, colorfill=[0,0,0,1], sel=None, gray=None, tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
-        ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y, self.dx, ax, colordict, colorfill, sel, gray, tiling, w, scalebar, verbose, **kwargs)
+    def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
+                      sel=None, gray=None, tiling='rect', w=2048,
+                      scalebar=True, verbose=True, **kwargs):
+        ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd,
+                                self.x, self.y, self.dx, ax, colordict, colorfill,
+                                sel, gray, tiling, w, scalebar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_phase(self, ax=None, colordict={'1': [1,0,0,1], '2': [0,1,0,1]}, colorfill=[0,0,0,1], sel=None, gray=None, tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
-        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray, tiling, w, scalebar, verbose, **kwargs)
+    def plot_phase(self, ax=None, colordict={'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]},
+                   colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
+                   w=2048, scalebar=True, verbose=True, **kwargs):
+        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray,
+                                     tiling, w, scalebar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_PF(self, proj=[1,0,0], ax=None, sel=None, parent_or=None, contour=False, verbose=True, **kwargs):
+    def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, parent_or=None,
+                contour=False, verbose=True, **kwargs):
         """
         Plot pole figure
 
@@ -205,6 +223,7 @@ class Scandata(object):
     def savefig(self, fname, **kwargs):
         kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
         plt.savefig(fname, **kwargs)
+
 
 def load_scandata(fname):
     return Scandata(fname)

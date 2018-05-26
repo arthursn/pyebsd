@@ -1,8 +1,10 @@
 import sys
 
+
 class ProgressBar(object):
-    def __init__(self, niterations, barsize=50, 
-                 progresschar='#', fillingchar='.', separatorleft='[', separatorright=']'):
+
+    def __init__(self, niterations, barsize=50, progresschar='#',
+                 fillingchar='.', separatorleft='[', separatorright=']'):
 
         self.nit = niterations
         self.size = barsize
@@ -23,10 +25,15 @@ class ProgressBar(object):
         if it/self.each >= self.nprg:
             prg = 100.*it/self.nit  # progress in percentage
 
-            nprg = self.nprg + len(self.seplft)  # number of progress chars that will be printed
-            nfill = self.size - self.nprg + len(self.seprgt)  # number of filling chars that will be printed
+            # number of progress chars that will be printed
+            nprg = self.nprg + len(self.seplft)
+            # number of filling chars that will be printed
+            nfill = self.size - self.nprg + len(self.seprgt)
 
-            sys.stdout.write('{:4.0f}% {:{}<{}}{:{}>{}}\r'.format(prg, self.seplft, self.prgchr, nprg, self.seprgt, self.fillchr, nfill))  # draws progressbar
+            # draws progressbar
+            sys.stdout.write('{:4.0f}% {:{}<{}}{:{}>{}}\r'.format(
+                prg, self.seplft, self.prgchr, nprg,
+                self.seprgt, self.fillchr, nfill))
             sys.stdout.flush()
 
             self.nprg += 1

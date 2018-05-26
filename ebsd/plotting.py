@@ -15,11 +15,12 @@ class EBSDMap(object):
     """
     Documentation
     """
-    def __init__(self, x, y, img, ax):
+    def __init__(self, x, y, img, ax, fig):
         self.x = x
         self.y = y
         self.img = img
         self.ax = ax
+        self.fig = fig
         
         self.selector = None
     
@@ -284,6 +285,9 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         fig, ax = plt.subplots()
     else:
         ax.cla()
+        fig = ax.get_figure()
+
+    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
     if tiling == 'hex':
         if not dx:
@@ -341,8 +345,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
 
     # add scalebar
     if scalebar:
-        scalebar = ScaleBar(1.e-6)
-        scalebar.location = 'lower left'
+        scalebar = ScaleBar(1e-6)
+        scalebar.location = scalebar_location
         ax.add_artist(scalebar)
 
     # removing the borders/margins
@@ -353,7 +357,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
     # return ax, img
-    return EBSDMap(x, y, img, ax)
+    return EBSDMap(x, y, img, ax, fig)
 
 def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
              sel=None, gray=None, tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
@@ -396,6 +400,9 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
         fig, ax = plt.subplots()
     else:
         ax.cla()
+        fig = ax.get_figure()
+
+    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
     if tiling == 'hex':
         if not dx:
@@ -453,8 +460,8 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
 
     # add scalebar
     if scalebar:
-        scalebar = ScaleBar(1.e-6)
-        scalebar.location = 'lower left'
+        scalebar = ScaleBar(1e-6)
+        scalebar.location = scalebar_location
         ax.add_artist(scalebar)
 
     # removing the borders/margins
@@ -465,4 +472,4 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
     # return ax, img
-    return EBSDMap(x, y, img, ax)
+    return EBSDMap(x, y, img, ax, fig)

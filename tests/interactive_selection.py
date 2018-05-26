@@ -37,7 +37,7 @@ fig = plt.gcf() # get current figure
 
 # select points using lasso or rectangle selector. Interactive mode should be on
 lasso = ipf.lasso_selector()
-# lasso = scan.rect_selector()
+# lasso = ipf.rect_selector()
 
 fig2, ax2 = plt.subplots()
 pyebsd.set_tight_plt()
