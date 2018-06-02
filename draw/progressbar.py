@@ -24,9 +24,11 @@ class ProgressBar(object):
         self.draw(0)  # draws empty progress bar
 
     def draw(self, it):
-        nprg = round(it/self.each)
+        nprg = int(round(it/self.each))
         # updates bar only when necessary
         if nprg > self.nprg or it + 1 == self.nit:
+            self.nprg = nprg
+
             # progress in percentage
             prg = 100.*it/self.nit
 
@@ -48,13 +50,11 @@ class ProgressBar(object):
 
             sys.stdout.flush()
 
-            self.nprg += 1
-
 
 if __name__ == '__main__':
     import time
     n = 5839
-    pbar = ProgressBar(n, 71)
+    pbar = ProgressBar(n)
     pbar.initialize()
     for i in range(n):
         pbar.draw(i)
