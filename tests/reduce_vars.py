@@ -1,4 +1,4 @@
-def reduce_vars(V, trunc=1e-3):
+def remove_redundant_variants(V, trunc=1e-3):
     """
     Returns a reduced number of crystal bases after removing those who are
     equivalent to another already listed.

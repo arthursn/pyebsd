@@ -16,27 +16,46 @@ class ProgressBar(object):
         self.seplft = separatorleft
         self.seprgt = separatorright
 
+        self.seplftsize = len(self.seplft)
+        self.seprgtsize = len(self.seprgt)
+
     def initialize(self):
         self.nprg = 0
         self.draw(0)  # draws empty progress bar
 
     def draw(self, it):
-        if it/self.each >= self.nprg:
+        nprg = round(it/self.each)
+        # updates bar only when necessary
+        if nprg > self.nprg or it + 1 == self.nit:
             # progress in percentage
             prg = 100.*it/self.nit
 
-            # number of progress chars that will be printed
-            nprg = self.nprg + len(self.seplft)
             # number of filling chars that will be printed
-            nfill = self.size - self.nprg + len(self.seprgt)
+            nfill = self.size - nprg + self.seprgtsize
+            if nfill < 0:
+                nfill = 0
+            # number of progress chars that will be printed
+            nprg += self.seplftsize
 
             # draws progressbar
             sys.stdout.write('{:4.0f}% {:{}<{}}{:{}>{}}\r'.format(
                 prg, self.seplft, self.prgchr, nprg,
                 self.seprgt, self.fillchr, nfill))
+
+            # line break when finished
+            if it + 1 == self.nit:
+                sys.stdout.write('\n')
+
             sys.stdout.flush()
 
             self.nprg += 1
 
-            if self.nprg > self.size:
-                sys.stdout.write('\n')
+
+if __name__ == '__main__':
+    import time
+    n = 5839
+    pbar = ProgressBar(n, 71)
+    pbar.initialize()
+    for i in range(n):
+        pbar.draw(i)
+        time.sleep(1e-4)
