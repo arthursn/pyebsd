@@ -1,12 +1,11 @@
 import os
 import sys
-newdir = os.path.join('..', '..')
-if newdir not in sys.path:
-    sys.path.insert(1, newdir)
-import pyebsd
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+import pyebsd
+
 
 T_KS = pyebsd.OR()  # K-S
 T_NW = pyebsd.OR(ds=[[1, 1, 0], [1, 0, 0]])  # N-W

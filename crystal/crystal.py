@@ -1,17 +1,20 @@
-import numpy as np 
+import numpy as np
 from itertools import permutations
+
 
 def list_symm(**kwargs):
     """
+    List symmetry matrices for cubic symmetry group 
     """
     permt = list(permutations(list(range(3))))
-    I = np.diag([1,1,1])
-    C1 = np.asarray([I[:,arr] for arr in permt])
+    I = np.diag([1, 1, 1])
+    C1 = np.asarray([I[:, arr] for arr in permt])
     C2, C3, C4 = C1.copy(), C1.copy(), C1.copy()
-    C2[:,:,0] = -C1[:,:,0]
-    C3[:,:,1] = -C1[:,:,1]
-    C4[:,:,2] = -C1[:,:,2]
-    return np.vstack([C1,C2,C3,C4])
+    C2[:, :, 0] = -C1[:, :, 0]
+    C3[:, :, 1] = -C1[:, :, 1]
+    C4[:, :, 2] = -C1[:, :, 2]
+    return np.vstack([C1, C2, C3, C4])
+
 
 def list_vars(d):
     """
@@ -20,6 +23,7 @@ def list_vars(d):
     C = list_symm()
     var = set([tuple(v) for v in np.dot(C, d)])
     return np.asarray(list(var))
+
 
 def stereographic_projection(d, norm=True, coord='cartesian'):
     """
@@ -33,10 +37,10 @@ def stereographic_projection(d, norm=True, coord='cartesian'):
         return
 
     if ndim == 1:
-        d = d.reshape(3,1)
+        d = d.reshape(3, 1)
     elif ndim == 2:
         if shp[0] != 3:
-            d = d.transpose([1,0])
+            d = d.transpose([1, 0])
     else:
         return
 
@@ -56,10 +60,12 @@ def stereographic_projection(d, norm=True, coord='cartesian'):
 
     return c0, c1
 
+
 def proj2direction(c0, c1):
     d2 = (1-c0**2.-c1**2.)/(1+c0**2.+c1**2.)
     d = [c0*(1.+d2), c1*(1.+d2), d2]
     return d
+
 
 def mis(A, B, out='deg', math='avg', **kwargs):
     Adim, Bdim = np.ndim(A), np.ndim(B)
@@ -68,12 +74,12 @@ def mis(A, B, out='deg', math='avg', **kwargs):
         A, B = B, A
         Adim, Bdim = Bdim, Adim
     if (Adim == 3) and (Bdim == 2):
-        D = np.tensordot(A, B, axes=[[-1],[-2]])
-        x = np.abs(np.trace(D, axis1=1, axis2=2)) # trace
+        D = np.tensordot(A, B, axes=[[-1], [-2]])
+        x = np.abs(np.trace(D, axis1=1, axis2=2))  # trace
         if out != 'tr':
-            x = np.arccos((x-1.)/2.) # mis x in radians
+            x = np.arccos((x-1.)/2.)  # mis x in radians
             if out == 'deg':
-                x = np.degrees(x) # mis x in degrees
+                x = np.degrees(x)  # mis x in degrees
         if math == 'avg':
             x = np.mean(x)
         elif math == 'min':
@@ -82,12 +88,12 @@ def mis(A, B, out='deg', math='avg', **kwargs):
             x = np.max(x)
     elif (Adim == 3) and (Bdim == 3):
         if kwargs.pop('vect', True):
-            D = np.tensordot(A, B, axes=[[-1],[-2]]).transpose([0,2,1,3])
-            x = np.abs(np.trace(D, axis1=2, axis2=3)) # trace
+            D = np.tensordot(A, B, axes=[[-1], [-2]]).transpose([0, 2, 1, 3])
+            x = np.abs(np.trace(D, axis1=2, axis2=3))  # trace
             if out != 'tr':
-                x = np.arccos((x-1.)/2.) # mis x in radians
+                x = np.arccos((x-1.)/2.)  # mis x in radians
                 if out == 'deg':
-                    x = np.degrees(x) # mis x in degrees
+                    x = np.degrees(x)  # mis x in degrees
             if math == 'avg':
                 x = np.mean(x, axis=0)
             elif math == 'min':
@@ -98,14 +104,14 @@ def mis(A, B, out='deg', math='avg', **kwargs):
             if math is not None:
                 x = np.ndarray(len(B))
             else:
-                x = np.ndarray((len(B),len(A)))
+                x = np.ndarray((len(B), len(A)))
             for i in range(len(B)):
-                D = np.tensordot(A, B[i], axes=[[-1],[-2]])
-                y = np.abs(np.trace(D, axis1=1, axis2=2)) # trace
+                D = np.tensordot(A, B[i], axes=[[-1], [-2]])
+                y = np.abs(np.trace(D, axis1=1, axis2=2))  # trace
                 if out != 'tr':
-                    y = np.arccos((y-1.)/2.) # mis x in radians
+                    y = np.arccos((y-1.)/2.)  # mis x in radians
                     if out == 'deg':
-                        y = np.degrees(y) # mis x in degrees
+                        y = np.degrees(y)  # mis x in degrees
                 if math == 'avg':
                     x[i] = np.mean(y)
                 elif math == 'min':
@@ -118,6 +124,7 @@ def mis(A, B, out='deg', math='avg', **kwargs):
     else:
         return
     return x
+
 
 def reduce_vars(V, trunc=1e-3):
     """

@@ -1,11 +1,9 @@
 import sys
-import numpy as np
-import matplotlib.pyplot as plt
 from itertools import combinations
 
-newdir = os.path.join('..', '..')
-if newdir not in sys.path:
-    sys.path.insert(1, newdir)
+import numpy as np
+import matplotlib.pyplot as plt
+
 import pyebsd
 
 

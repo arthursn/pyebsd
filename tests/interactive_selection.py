@@ -1,13 +1,10 @@
-#!/usr/bin/python
 import os
 import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 from builtins import input
 
-newdir = os.path.join('..', '..')
-if newdir not in sys.path:
-    sys.path.insert(1, newdir)
 import pyebsd
 
 if 'fname_local' not in locals() or 'fname_local' not in globals():
@@ -30,7 +27,8 @@ if fname != fname_local:
 
 plt.ion()
 
-ipf = scan.plot_IPF(sel=(scan.ph == 2) & (scan.CI > .2), gray=scan.IQ)
+ipf = scan.plot_IPF(sel=(scan.ph == 2) & (scan.CI > .2),
+                    gray=scan.IQ, d=[1, 1, 0])
 # ax, img = scan.plot_phase(gray=scan.IQ)
 fig = plt.gcf()  # get current figure
 
