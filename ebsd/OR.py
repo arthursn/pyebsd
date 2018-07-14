@@ -10,10 +10,11 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     """
     Calculates the accurate orientation relationship between parent
     and child phases.
-    
-    - Miyamoto, G., Takayama, N., & Furuhara, T. (2009). Accurate measurement
-      of the orientation relationship of lath martensite and bainite by electron
-      backscatter diffraction analysis. Scripta Materialia, 60(12), 1113–1116. 
+
+    - Miyamoto, G., Takayama, N., & Furuhara, T. (2009). Accurate 
+      measurement of the orientation relationship of lath martensite 
+      and bainite by electron backscatter diffraction analysis. 
+      Scripta Materialia, 60(12), 1113-1116.
       http://doi.org/10.1016/j.scriptamat.2009.02.053
     """
     t0 = time.time()
@@ -84,25 +85,26 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     # Return the OR matrices V for each pixel,
     # the average OR matrix Vavg, and the
     # rotation matrix of the parent phase
-    return V, Vavg, R_prt
+    return V, Vavg, R_prt, isel
 
 
 def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     """
-    From the parallel planes (ps) and directions (ds) determine the orientations 
-    matrices of the parent (M_prt) and child (M_chd) phases. Having M_prt and M_chd,
-    calculates all the transformation matrices V (all the variants) of the 
-    orientation relationship between the two phases.
+    From the parallel planes (ps) and directions (ds) determine the 
+    orientations matrices of the parent (M_prt) and child (M_chd) 
+    phases. Having M_prt and M_chd, calculates all the transformation 
+    matrices V (all the variants) of the orientation relationship
+    between the two phases.
     """
     trunc = kwargs.pop('trunc', 1e-8)
     ps, ds = np.asarray(ps), np.asarray(ds)
     p_prt, d_prt = ps[0], ds[0]  # parent phase
     p_chd, d_chd = ps[1], ds[1]  # child phase
 
-    # check variants normal to plane 'n'. Due to numerical truncation, instead
-    # of choosing the variants 'd' based on np.dot(d,n) == 0, a tolerance 'trunc'
-    # is set. i.e., the variants are chosen according to the criteria
-    # np.abs(np.dot(d,n)) <= trunc (1e-8)
+    # check variants normal to plane 'n'. Due to numerical truncation,
+    # instead of choosing the variants 'd' based on np.dot(d,n) == 0,
+    # a tolerance 'trunc' is set. i.e., the variants are chosen
+    # according to the criteria np.abs(np.dot(d,n)) <= trunc (1e-8)
     if np.abs(np.dot(p_prt, d_prt)) > trunc:
         ds = list_vars(d_prt)
         sel = np.abs(np.asarray([np.dot(p_prt, d) for d in ds])) <= trunc

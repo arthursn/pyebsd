@@ -147,7 +147,7 @@ plt.show()
 # ax2, img2 = scan.plot_IPF(tiling='hex', sel=(scan.ph==1) & (scan.CI>.2), gray=IQ)
 
 # # average orientation of the austenite grain in the selected area
-# R_avg = pyebsd.avg_orientation(R, sel=sel & (ph==2) & (CI>.2), vect=True)
+# R_avg = pyebsd.avg_orientation(R, sel=sel & (ph==2) & (CI>.2), vectorized=True)
 
 # # parent_or = np.asarray([[1,-1,0],[1,1,-2],[1,1,1]]).T
 # parent_or = np.diag([1,1,1]) # Identity matrix (canonical base)

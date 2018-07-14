@@ -68,6 +68,10 @@ def proj2direction(c0, c1):
 
 
 def mis(A, B, out='deg', math='avg', **kwargs):
+    """
+    Calculates the misorientation between A e B
+    """
+    
     Adim, Bdim = np.ndim(A), np.ndim(B)
 
     if Bdim > Adim:
@@ -87,7 +91,7 @@ def mis(A, B, out='deg', math='avg', **kwargs):
         elif math == 'max':
             x = np.max(x)
     elif (Adim == 3) and (Bdim == 3):
-        if kwargs.pop('vect', True):
+        if kwargs.pop('vectorized', True):
             D = np.tensordot(A, B, axes=[[-1], [-2]]).transpose([0, 2, 1, 3])
             x = np.abs(np.trace(D, axis1=2, axis2=3))  # trace
             if out != 'tr':

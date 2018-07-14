@@ -1,6 +1,8 @@
-import sys, os, time
+import sys
+import os
+import time
 
-import numpy as np 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from PIL import Image, ImageDraw
@@ -11,51 +13,58 @@ from ..crystal import stereographic_projection
 from ..draw import modify_show, set_tight_plt, draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
 
+
 class EBSDMap(object):
     """
     Documentation
     """
+
     def __init__(self, x, y, img, ax, fig):
         self.x = x
         self.y = y
         self.img = img
         self.ax = ax
         self.fig = fig
-        
+
         self.selector = None
-    
+
     @property
     def sel(self):
         if self.selector:
             return self.selector.sel
 
     def lasso_selector(self, lineprops=dict(color='white')):
-        self.selector = LassoSelector2(self.ax, self.x, self.y, lineprops=lineprops)
+        self.selector = LassoSelector2(
+            self.ax, self.x, self.y, lineprops=lineprops)
         return self.selector
 
-    def rect_selector(self, rectprops=dict(edgecolor='white', fill=False), aspect=None):
-        self.selector = RectangleSelector2(self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
+    def rect_selector(self, rectprops=dict(edgecolor='white', fill=False),
+                      aspect=None):
+        self.selector = RectangleSelector2(
+            self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
         return self.selector
+
 
 def get_color(uvw):
     """
-    Only valid for cubic system. Because of the symmetry in the cubic system,
-    [u,v,w], [v,u,w], [w,u,v], and so on belong to the same family of 
-    directions.
-    What I do here is to sort u, v, and w and then select a specific variant
-    in which the order of u, v, w is 1, 0, 2.
+    Only valid for cubic system. Because of the symmetry in the cubic 
+    system, [u,v,w], [v,u,w], [w,u,v], and so on belong to the same 
+    family of directions.
+    What I do here is to sort u, v, and w and then select a specific 
+    variant in which the order of u, v, w is 1, 0, 2.
     """
     uvw = np.abs(uvw)
     uvw = np.sort(uvw, axis=1)
-    uvw = uvw[:,[1,0,2]]
+    uvw = uvw[:, [1, 0, 2]]
 
-    a, b, c = uvw[:,2]-uvw[:,0], uvw[:,0]-uvw[:,1], uvw[:,1]
+    a, b, c = uvw[:, 2]-uvw[:, 0], uvw[:, 0]-uvw[:, 1], uvw[:, 1]
     a, b, c = (.8*a)**.75, b**.75, (1.4*c)**.75
-    rgb = np.array([a,b,c])
+    rgb = np.array([a, b, c])
     M = np.max(rgb, axis=0)
     rgb = rgb*255/M
     rgb = np.ndarray.astype(rgb, int)
     return rgb.T
+
 
 def unit_triangle(n=512, **kwargs):
     """
@@ -66,19 +75,20 @@ def unit_triangle(n=512, **kwargs):
     xp, yp = np.meshgrid(np.linspace(0, xmax, n), np.linspace(0, ymax, n))
     xp, yp = xp.ravel(), yp.ravel()
     u, v, w = 2*xp, 2*yp, 1-xp**2-yp**2
-    uvw = np.vstack([u,v,w]).T
+    uvw = np.vstack([u, v, w]).T
 
     col = np.ndarray(uvw.shape)
     sel = (w >= u) & (u >= v)
     col[sel] = get_color(uvw[sel])
-    col[np.logical_not(sel)] = [255,255,255]
+    col[np.logical_not(sel)] = [255, 255, 255]
 
     img = toimage(col.reshape(n, n, 3))
 
     fig, ax = plt.subplots(facecolor='white')
     ax.set_aspect('equal')
     ax.axis('off')
-    ax.imshow(img, interpolation='None', origin='lower', extent=(0, xmax, 0, ymax), **kwargs)
+    ax.imshow(img, interpolation='None', origin='lower',
+              extent=(0, xmax, 0, ymax), **kwargs)
 
     # Draw borders of unit triangle
     t = np.linspace(0, 1., n)
@@ -86,48 +96,55 @@ def unit_triangle(n=512, **kwargs):
     # [np.repeat(1.,n), t, np.repeat(1.,n)]
     # [t[::-1], t[::-1], np.repeat(1.,n)]
     # [t, np.repeat(0,n), np.repeat(1.,n)]
-    u = np.hstack([np.repeat(1.,n), t[::-1], t])
-    v = np.hstack([t, t[::-1], np.repeat(0,n)])
-    w = np.hstack([np.repeat(1.,n), np.repeat(1.,n), np.repeat(1.,n)])
-    x, y = stereographic_projection([u,v,w])
+    u = np.hstack([np.repeat(1., n), t[::-1], t])
+    v = np.hstack([t, t[::-1], np.repeat(0, n)])
+    w = np.hstack([np.repeat(1., n), np.repeat(1., n), np.repeat(1., n)])
+    x, y = stereographic_projection([u, v, w])
     ax.plot(x, y, 'k-', lw=2)
 
-    ax.annotate('001', xy=stereographic_projection([0,0,1]), xytext=(0, -20), textcoords='offset points', ha='center', va='center', size=30)
-    ax.annotate('101', xy=stereographic_projection([1,0,1]), xytext=(0, -20), textcoords='offset points', ha='center', va='center', size=30)
-    ax.annotate('111', xy=stereographic_projection([1,1,1]), xytext=(0, 20), textcoords='offset points', ha='center', va='center', size=30)
+    ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(
+        0, -20), textcoords='offset points', ha='center', va='center', size=30)
+    ax.annotate('101', xy=stereographic_projection([1, 0, 1]), xytext=(
+        0, -20), textcoords='offset points', ha='center', va='center', size=30)
+    ax.annotate('111', xy=stereographic_projection([1, 1, 1]), xytext=(
+        0, 20), textcoords='offset points', ha='center', va='center', size=30)
     ax.set_xlim(-.01, xmax+.01)
     ax.set_ylim(-.01, ymax+.01)
 
     return ax, img
 
-def plot_PF(R=None, M=None, proj=[1,0,0], ax=None, 
+
+def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
             sel=None, parent_or=None, contour=False, verbose=True, **kwargs):
     """
-    The user should provide either R or M. It's more convenient to use R
-    values when plotting raw experimental data. M should be used when 
-    plotting the variants of a specific orientation relationship.
+    The user should provide either R or M. It's more convenient to use
+    R values when plotting raw experimental data. M should be used 
+    when plotting the variants of a specific orientation relationship.
 
     Parameters
     ----------
     R : numpy ndarray shape(N,3,3)
-        Transformation matrix from the crystal coordinates to the mechanical
-        coordinates (EBSD system). Can be calculated directly from the Euler
-        angles provided by the EBSD system using 'pyebsd.euler_rotation'
+        Transformation matrix from the crystal coordinates to the 
+        mechanical coordinates (EBSD system). Can be calculated 
+        directly from the Euler angles provided by the EBSD system 
+        using 'pyebsd.euler_rotation'
     M : numpy ndarray shape(N,3,3)
-        Transformation matrix from the mechanical coordinates to the crystal
-        coordinates. M is the inverse (transposed) matrix of R (M = R^-1)
+        Transformation matrix from the mechanical coordinates to the 
+        crystal coordinates. M is the inverse (transposed) matrix of 
+        R (M = R^-1)
     proj : list or numpy array(3) (optional)
         Family of direction projected in the pole figure.
         Default: [1,0,0]
     ax : AxesSubplot instance (optional)
         The pole figure will be plotted in the provided instance 'ax'
     sel : boolean numpy 1D array
-        Array with boolean [True, False] values indicating which data points 
-        should be plotted
+        Array with boolean [True, False] values indicating which data 
+        points should be plotted
         Default: None
     parent_or : numpy ndarray shape(3, 3)
-        Orientation matrix of the parent phase. The pole figure is rotated 
-        until the axes coincides with the orientation 'parent_or'
+        Orientation matrix of the parent phase. The pole figure is 
+        rotated until the axes coincides with the orientation 
+        'parent_or'
         Default: None
     contour : [True, False]
         contour=True plots the pole figure using contour plot
@@ -138,12 +155,12 @@ def plot_PF(R=None, M=None, proj=[1,0,0], ax=None,
             line width of PF frame
             Default: 0.5
         fill : [True, False]
-            True: filled contour plot 'plt.contourf'; False: contour plot 
-            'plt.contour'
+            True: filled contour plot 'plt.contourf'; False: contour 
+            plot 'plt.contour'
             Default: True
         bins : int or tuple or array (int,int)
-            Binning used in the calculation of the points density histogram (prior
-            to contour plot)
+            Binning used in the calculation of the points density 
+            histogram (prior to contour plot)
             Default: (256, 256)
         fn : ['sqrt', 'log', 'None'] or function(x)
             function that modifies the points density.
@@ -152,8 +169,8 @@ def plot_PF(R=None, M=None, proj=[1,0,0], ax=None,
             number of levels in the contour plot
             Default: 10
 
-    The kwargs properties not listed here are automatically passed to the plotting
-    functions:
+    The kwargs properties not listed here are automatically passed to 
+    the plotting functions:
     if not contour:
         plt.plot(..., **kwargs)
     if contour and fill:
@@ -163,36 +180,38 @@ def plot_PF(R=None, M=None, proj=[1,0,0], ax=None,
     """
     if isinstance(R, np.ndarray):
         if R.ndim == 2:
-            R = R.reshape(1,3,3)
+            R = R.reshape(1, 3, 3)
     elif isinstance(M, np.ndarray):
         if M.ndim == 2:
-            M = M.reshape(1,3,3)
-        R = M.transpose([0,2,1])
+            M = M.reshape(1, 3, 3)
+        R = M.transpose([0, 2, 1])
     else:
         return
-    
+
     if verbose:
         t0 = time.time()
         sys.stdout.write('Plotting Pole Figure... ')
         sys.stdout.flush()
 
-    xp, yp = PF(R, proj=proj, parent_or=parent_or)  # gets Cartesian coordinates of PF projections
+    # gets Cartesian coordinates of PF projections
+    xp, yp = PF(R, proj=proj, parent_or=parent_or)
 
     if isinstance(sel, np.ndarray):  # selected values
         xp, yp = xp[sel], yp[sel]
 
-    if not ax:  # if ax was not provided, creates new ax object
+    if ax is None:  # if ax was not provided, creates new ax object
         fig, ax = plt.subplots(facecolor='white')
         ax.set_aspect('equal')
         ax.axis('off')
         lw_frame = kwargs.pop('lw_frame', .5)
         draw_circle_frame(ax, lw=lw_frame)
-    
+
     if contour:
         fill = kwargs.pop('fill', True)
-        bins = kwargs.pop('bins', (256,256))
+        bins = kwargs.pop('bins', (256, 256))
 
-        hist, xedges, yedges = np.histogram2d(yp.ravel(), xp.ravel(), bins=bins, range=[[-1,1],[-1,1]])
+        hist, xedges, yedges = np.histogram2d(
+            yp.ravel(), xp.ravel(), bins=bins, range=[[-1, 1], [-1, 1]])
         fn = kwargs.pop('fn', 'sqrt')
 
         if fn:
@@ -205,15 +224,16 @@ def plot_PF(R=None, M=None, proj=[1,0,0], ax=None,
                     hist = fn(hist)
                 except:
                     pass
-        
+
         nlevels = kwargs.pop('nlevels', 10)
         lvls = np.linspace(0, np.max(hist), nlevels)
         kwargs['levels'] = lvls[1:]
 
-        X, Y = np.meshgrid((xedges[:-1] + xedges[1:])/2., (yedges[:-1] + yedges[1:])/2.)
+        X, Y = np.meshgrid((xedges[:-1] + xedges[1:])/2.,
+                           (yedges[:-1] + yedges[1:])/2.)
         circle = X**2 + Y**2 >= 1.
         hist[circle] = np.nan
-        
+
         if fill:
             ax.contourf(hist, extent=(-1, 1, -1, 1), **kwargs)
         else:
@@ -233,8 +253,11 @@ def plot_PF(R=None, M=None, proj=[1,0,0], ax=None,
 
     return ax
 
-def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, colordict=None, colorfill=[0,0,0,1],
-                  sel=None, gray=None, tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
+
+def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
+                  dx=None, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
+                  sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
+                  verbose=True, **kwargs):
     """
     Documentation
     """
@@ -245,9 +268,12 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
 
     # getting kwargs properties...
     cmap = kwargs.pop('cmap', plt.get_cmap())
-    vmin, vmax = kwargs.pop('vmin', np.min(prop[sel])), kwargs.pop('vmax', np.max(prop[sel]))
+    vmin, vmax = kwargs.pop('vmin', np.min(prop[sel])), kwargs.pop(
+        'vmax', np.max(prop[sel]))
 
-    N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows%2)*ncols_odd)  # calculates expect number of points from provided nrows, ncols_odd and ncols_even
+    # calculates expect number of points from provided nrows,
+    # ncols_odd and ncols_even
+    N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
 
@@ -257,7 +283,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         for p, rgba in colordict.items():
             col[prop == float(p)] = rgba
     else:
-        prop = (prop - vmin)/(vmax - vmin) # normalizes prop to range [0,1]
+        prop = (prop - vmin)/(vmax - vmin)  # normalizes prop to range [0,1]
         prop[prop < 0], prop[prop > 1] = 0, 1
         col = cmap(prop)
 
@@ -277,11 +303,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         if prop.shape != gray.shape:
             return
         else:
-            gray = gray.reshape(-1,1)/np.max(gray)
+            gray = gray.reshape(-1, 1)/np.max(gray)
             col[sel] = col[sel]*gray[sel]
-            col[:,3] = 1. # set alpha = 1. for all points
+            col[:, 3] = 1.  # set alpha = 1. for all points
 
-    if not ax:
+    if ax is None:
         fig, ax = plt.subplots()
     else:
         ax.cla()
@@ -299,8 +325,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         edge_length = dx/3.**.5
 
         for i in range(6):
-            x_hex[:,i] = x[sel] + np.sin(i*np.pi/3)*edge_length
-            y_hex[:,i] = y[sel] + np.cos(i*np.pi/3)*edge_length
+            x_hex[:, i] = x[sel] + np.sin(i*np.pi/3)*edge_length
+            y_hex[:, i] = y[sel] + np.cos(i*np.pi/3)*edge_length
 
         scale = 1.*w/(xmax - xmin)
         h = np.int(scale*(ymax - ymin))
@@ -311,14 +337,17 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         img = Image.new('RGB', (w, h), 'black')
         draw = ImageDraw.Draw(img)
         for i in range(len(x_hex)):
-            color = col[i,0], col[i,1], col[i,2]
+            color = col[i, 0], col[i, 1], col[i, 2]
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img, interpolation='nearest', extent=(xmin, xmax, ymax, ymin), **kwargs)
+        ax.imshow(img, interpolation='nearest', extent=(
+            xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
         N, ncols = 2*N, 2*ncols_even
-        rm = np.hstack([np.arange(0, N, 2*(ncols+1)), np.arange(ncols+1, N, 2*(ncols+1))]) # remove extra pixels
+        # remove extra pixels
+        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                        np.arange(ncols+1, N, 2*(ncols+1))])
 
         col = np.repeat(col, 2, axis=0)
         col = np.delete(col, rm, axis=0)
@@ -327,19 +356,20 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
         jmin, jmax = 0, ncols
         if np.count_nonzero(np.logical_not(sel)) > 0:
             sel = np.repeat(sel, 2)
-            sel = np.delete(sel, rm, axis=0)                        
+            sel = np.delete(sel, rm, axis=0)
             isel, jsel = np.where(sel.reshape(nrows, ncols))
             imin, imax = np.min(isel)+1, np.max(isel)+1
             jmin, jmax = np.min(jsel)+1, np.max(jsel)
 
         scale = 1.*w/(jmax - jmin)
         h = np.int(scale*(imax - imin)*(3.**.5))
-        
+
         col = col.reshape(nrows, ncols, -1)
 
-        img = toimage(col[imin:imax,jmin:jmax,:])
+        img = toimage(col[imin:imax, jmin:jmax, :])
         img = img.resize(size=(w, h))
-        ax.imshow(img, interpolation='nearest', extent=(xmin, xmax, ymax, ymin), **kwargs)
+        ax.imshow(img, interpolation='nearest', extent=(
+            xmin, xmax, ymax, ymin), **kwargs)
     else:
         return
 
@@ -359,8 +389,10 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, ax=None, co
     # return ax, img
     return EBSDMap(x, y, img, ax, fig)
 
-def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
-             sel=None, gray=None, tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
+
+def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
+             dx=None, d='ND', ax=None, sel=None, gray=None, tiling='rect',
+             w=2048, scalebar=True, verbose=True, **kwargs):
     """
     Documentation
     """
@@ -369,10 +401,14 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
-    N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows%2)*ncols_odd)  # calculates expect number of points from provided nrows, ncols_odd and ncols_even
+    # calculates expect number of points from provided nrows,
+    # ncols_odd and ncols_even
+    N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
-    col = get_color(IPF(R, d))  # call IPF to get crystal directions parallel to d and convert to color code (RGB)
+    # call IPF to get crystal directions parallel to d and
+    # convert to color code (RGB)
+    col = get_color(IPF(R, d))
 
     if N != R.shape[0]:
         print('N and R.shape differ')
@@ -383,20 +419,20 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
             print('R.shape and sel.shape differ')
             return
         else:
-            col[np.logical_not(sel)] = [0,0,0] # RGB
+            col[np.logical_not(sel)] = [0, 0, 0]  # RGB
     else:
         sel = np.ndarray(N, dtype=bool)
         sel.fill(True)
-    
+
     if isinstance(gray, np.ndarray):
         if N != gray.shape[0]:
             print('R.shape and gray.shape differ')
             return
         else:
-            gray = gray.reshape(-1,1)/np.max(gray)
+            gray = gray.reshape(-1, 1)/np.max(gray)
             col[sel] = col[sel]*gray[sel]
 
-    if not ax:
+    if ax is None:
         fig, ax = plt.subplots()
     else:
         ax.cla()
@@ -414,8 +450,8 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
         edge_length = dx/3.**.5
 
         for i in range(6):
-            x_hex[:,i] = x[sel] + np.sin(i*np.pi/3)*edge_length
-            y_hex[:,i] = y[sel] + np.cos(i*np.pi/3)*edge_length
+            x_hex[:, i] = x[sel] + np.sin(i*np.pi/3)*edge_length
+            y_hex[:, i] = y[sel] + np.cos(i*np.pi/3)*edge_length
 
         scale = 1.*w/(xmax - xmin)
         h = np.int((ymax - ymin)*scale)
@@ -426,14 +462,17 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
         img = Image.new('RGB', (w, h), 'black')
         draw = ImageDraw.Draw(img)
         for i in range(len(x_hex)):
-            color = col[i,0], col[i,1], col[i,2]
+            color = col[i, 0], col[i, 1], col[i, 2]
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img, interpolation='nearest', extent=(xmin, xmax, ymax, ymin), **kwargs)
+        ax.imshow(img, interpolation='nearest', extent=(
+            xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
-        N , ncols = 2*N, 2*ncols_even
-        rm = np.hstack([np.arange(0, N, 2*(ncols+1)), np.arange(ncols+1, N, 2*(ncols+1))]) # remove extra pixels
+        N, ncols = 2*N, 2*ncols_even
+        # remove extra pixels
+        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                        np.arange(ncols+1, N, 2*(ncols+1))])
 
         col = np.repeat(col, 2, axis=0)
         col = np.delete(col, rm, axis=0)
@@ -442,19 +481,20 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y, dx=None, d='ND', ax=None,
         jmin, jmax = 0, ncols
         if np.count_nonzero(np.logical_not(sel)) > 0:
             sel = np.repeat(sel, 2)
-            sel = np.delete(sel, rm, axis=0)                        
+            sel = np.delete(sel, rm, axis=0)
             isel, jsel = np.where(sel.reshape(nrows, ncols))
             imin, imax = np.min(isel)+1, np.max(isel)+1
             jmin, jmax = np.min(jsel)+1, np.max(jsel)
 
         scale = 1.*w/(jmax - jmin)
         h = np.int(scale*(imax - imin)*(3.**.5))
-        
+
         col = col.reshape(nrows, ncols, -1)
 
-        img = toimage(col[imin:imax,jmin:jmax,:])
+        img = toimage(col[imin:imax, jmin:jmax, :])
         img = img.resize(size=(w, h))
-        ax.imshow(img, interpolation='nearest', extent=(xmin, xmax, ymax, ymin), **kwargs)
+        ax.imshow(img, interpolation='nearest', extent=(
+            xmin, xmax, ymax, ymin), **kwargs)
     else:
         return
 
