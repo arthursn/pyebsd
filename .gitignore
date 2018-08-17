@@ -7,6 +7,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+build
+diltools.egg-info
+dist
+
 # C extensions
 *.so
 

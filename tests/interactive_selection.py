@@ -10,10 +10,10 @@ import pyebsd
 if 'fname_local' not in locals() or 'fname_local' not in globals():
     fname_local = ''
 
-# fname = os.path.join(pyebsd.DIR, 'data', 'QP170-375-30s.ang')
+# fname = os.path.join('..', 'data', 'QP170-375-30s.ang')
 # fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/ADI375-15.ang'
-fname = os.path.join(pyebsd.DIR, 'data', 'QP170-375-15_cropped.ang')
-# fname = os.path.join(pyebsd.DIR, 'data', 'dummy.ang')
+fname = os.path.join('..', 'data', 'QP170-375-15_cropped.ang')
+# fname = os.path.join('..', 'data', 'dummy.ang')
 # fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/Q170-1m.ang'
 # fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/QP170-375-0.ang'
 # fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/QP170-375-15.ang'
