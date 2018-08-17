@@ -21,7 +21,7 @@ try:
 
     plt.ion()
 except:
-    fname = os.path.join(pyebsd.DIR, 'data', 'QP170-375-15_cropped.ang')
+    fname = os.path.join('..', 'data', 'QP170-375-15_cropped.ang')
     scan = pyebsd.Scandata(fname)
 
     sel_fcc = (scan.ph == 2) & (scan.CI > .2)
@@ -87,3 +87,5 @@ R_fcc_inv_exp = R_fcc_inv_exp.reshape(-1, 3, 3)
 pyebsd.plot_PF(R_fcc_inv_exp, ax=ax, contour=True)
 pyebsd.plot_PF(R_fcc_inv, ax=ax, marker='.', color='r', ms=2)
 pyebsd.plot_PF(R_fcc_avg, ax=ax, marker='x', ms=5, color='r')
+
+plt.show()
