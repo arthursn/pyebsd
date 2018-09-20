@@ -37,6 +37,9 @@ ipf.lasso_selector()
 
 key = input('Press ENTER to process selected data ')
 
+# Disable interactive mode
+plt.ioff()
+
 # Plot IPF map of the selected area
 ipfselection = scan.plot_IPF(sel=ipf.sel, gray=scan.IQ)
 
@@ -47,3 +50,6 @@ pfbcc.set_title('Pole Figure bcc phase')
 # Plot pole figure of the fcc phase in the selected area
 pffcc = scan.plot_PF(sel=ipf.sel & (scan.ph == 2), contour=True)
 pffcc.set_title('Pole Figure fcc phase')
+
+# Show plots
+plt.show()
