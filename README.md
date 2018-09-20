@@ -22,7 +22,7 @@ pyebsd is not available yet at PyPI. In order to install the library, first down
 git clone https://github.com/arthursn/pyebsd
 ```
 
-Then install pyebsd by running setup.py:
+Then install pyebsd by running the `setup.py` file:
 
 ```bash
 python setup.py install
