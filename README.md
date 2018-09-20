@@ -38,8 +38,9 @@ python setup.py install --user
 
 Please notice that `setuptools` must be installed beforehand.
 
-If pyebsd is installed using `setup.py`, all dependencies should be automatically solved.
-The required libraries can be installed from the [Python Package Index](https://pypi.org) using pip:
+When pyebsd is installed using `setup.py`, all dependencies should be automatically solved.
+
+If the dependencies are not solved, the required libraries can be installed from the [Python Package Index](https://pypi.org) using pip:
 
 ```bash
 pip install numpy matplotlib scipy pillow
