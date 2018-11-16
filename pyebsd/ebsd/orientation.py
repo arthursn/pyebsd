@@ -272,7 +272,7 @@ def avg_orientation(R, sel=None, **kwargs):
         neg = tr < -1.
         tr[neg] = -tr[neg]
         Mprime[neg] = -Mprime[neg]
-        M_sel = Mprime[[list(range(N)), np.argmax(tr, axis=1)]]
+        M_sel = Mprime[(list(range(N)), np.argmax(tr, axis=1))]
         # Mprime = np.tensordot(M_sel, MrefT, axes=[[-1],[-2]])
         # for m in len(C):
         #     a, b = C[m].nonzero()

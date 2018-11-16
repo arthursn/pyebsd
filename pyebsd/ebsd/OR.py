@@ -32,7 +32,7 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
         sel = np.ndarray(len(R), dtype=bool)
         sel[:] = True
 
-    # Calculates average rotation matrix of parent phase
+    # Calculate average rotation matrix of parent phase
     R_prt = avg_orientation(R, sel=sel & (ph == prt), verbose=False)
     # Rotation matrices of child phases
     R_chd = R[sel & (ph == chd)]
@@ -65,9 +65,9 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
 
         isel[i] = np.argmax(tr, axis=1)
         trmax[i] = np.max(tr, axis=1)
-        V_sel[i] = V[[list(range(N)), isel[i]]]
+        V_sel[i] = V[(list(range(N)), isel[i])]
 
-    jsel = [np.argmax(trmax, axis=0), list(range(N))]
+    jsel = (np.argmax(trmax, axis=0), list(range(N)))
     isel = isel[jsel]
     tr = trmax[jsel]
     V = V_sel[jsel]
