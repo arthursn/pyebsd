@@ -45,9 +45,10 @@ class EBSDMap(object):
         return self.selector
 
 
-def get_color(uvw):
+def _get_color_IPF(uvw):
     """
-    Only valid for cubic system. Because of the symmetry in the cubic 
+    Only valid for cubic system. 
+    Because of the symmetry in the cubic 
     system, [u,v,w], [v,u,w], [w,u,v], and so on belong to the same 
     family of directions.
     What I do here is to sort u, v, and w and then select a specific 
@@ -79,7 +80,7 @@ def unit_triangle(n=512, **kwargs):
 
     col = np.ndarray(uvw.shape)
     sel = (w >= u) & (u >= v)
-    col[sel] = get_color(uvw[sel])
+    col[sel] = _get_color_IPF(uvw[sel])
     col[np.logical_not(sel)] = [255, 255, 255]
 
     img = toimage(col.reshape(n, n, 3))
@@ -408,7 +409,7 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
-    col = get_color(IPF(R, d))
+    col = _get_color_IPF(IPF(R, d))
 
     if N != R.shape[0]:
         print('N and R.shape differ')
@@ -450,12 +451,15 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
         edge_length = dx/3.**.5
 
         for i in range(6):
+            # coordinates of the vertices of each hexagonal tile
+            # in physical units (most commonly nm)
             x_hex[:, i] = x[sel] + np.sin(i*np.pi/3)*edge_length
             y_hex[:, i] = y[sel] + np.cos(i*np.pi/3)*edge_length
 
         scale = 1.*w/(xmax - xmin)
         h = np.int((ymax - ymin)*scale)
 
+        # coordinates of the vertices in pixels
         x_hex = (x_hex - xmin)*scale
         y_hex = (y_hex - ymin)*scale
 
