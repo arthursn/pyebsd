@@ -1,10 +1,7 @@
-import os
-
 import numpy as np
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
-from ..io import load_ang_file
 from .orientation import euler_rotation
 from .plotting import plot_property, plot_IPF, plot_PF
 
@@ -30,29 +27,32 @@ rcParams['savefig.pad_inches'] = 0.0
 
 
 class Scandata(object):
-    def __init__(self, data):
-        self.data = data[0]
-        self.grid = data[1]
-        self.dx = data[2]
-        self.dy = data[3]
-        self.ncols_odd = data[4]
-        self.ncols_even = data[5]
-        self.nrows = data[6]
-        self.header = data[7]
+    def __init__(self, data, grid, dx, dy,
+                 ncols_odd, ncols_even,
+                 nrows, header=''):
+        self.data = data  # pandas DataFrame
+        self.grid = grid  # string (e.g., hexgrid)
+        self.dx = dx  # float
+        self.dy = dy  # float
+        self.ncols_odd = ncols_odd  # int
+        self.ncols_even = ncols_even  # int
+        self.nrows = nrows  # int
+        self.header = header  # string
 
         # total number of columns
         self.ncols = self.ncols_odd + self.ncols_even
         self.N = len(self.data)
 
         self.ind = np.arange(self.N, dtype=int)
-        self.phi1 = self.data[:, 0]
-        self.Phi = self.data[:, 1]
-        self.phi2 = self.data[:, 2]
-        self.x = self.data[:, 3]
-        self.y = self.data[:, 4]
-        self.IQ = self.data[:, 5]
-        self.CI = self.data[:, 6]
-        self.ph = self.data[:, 7]
+        # .values: pandas Series to numpy array
+        self.phi1 = self.data.phi1.values
+        self.Phi = self.data.Phi.values
+        self.phi2 = self.data.phi2.values
+        self.x = self.data.x.values
+        self.y = self.data.y.values
+        self.IQ = self.data.IQ.values
+        self.CI = self.data.CI.values
+        self.ph = self.data.ph.values
 
         self._i = None  # row number
         self._j = None  # col number
@@ -159,6 +159,11 @@ class Scandata(object):
         **kwargs:
             Variables are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
+
+        Returns
+        -------
+        ebsdmap : EBSDMap object
+
         """
         ebsdmap = plot_IPF(self.R, self.nrows, self.ncols_even, self.ncols_odd,
                            self.x, self.y, self.dx, d, ax, sel, gray, tiling, w,
@@ -240,6 +245,11 @@ class Scandata(object):
             plt.contour(..., **kwargs)
         if contour and not fill:
             plt.contourf(..., **kwargs)
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes.Axes
+        
         """
         return plot_PF(self.R, None, proj, ax, sel, parent_or, contour, verbose, **kwargs)
 
@@ -248,12 +258,94 @@ class Scandata(object):
         plt.savefig(fname, **kwargs)
 
 
-def load_scandata(fname):
-    ext = os.path.splitext(fname)[-1]
+def _get_rectangle_surr_sel(scan, sel):
+    """
+    Select rectangle surrounding the selected data.
+    Some manipulations are necessary to ensure that 
+    ncols_odd = ncols_even + 1
+    """
+    xmin, xmax = scan.x[sel].min(), scan.x[sel].max()
+    ymin, ymax = scan.y[sel].min(), scan.y[sel].max()
 
-    if ext == '.ang':
-        data = load_ang_file(fname)
-    else:
-        raise Exception('File extension "{}" not supported'.format(ext))
+    imin = int(2.*xmin/scan.dx)
+    imax = int(2.*xmax/scan.dx)
+    jmin = int(ymin/scan.dy)
+    jmax = int(ymax/scan.dy)
 
-    return Scandata(data)
+    if (imin + jmin) % 2 == 1:  # if imin + jmin is odd
+        if imin > 0:
+            imin -= 1  # add column to the left (imin + jmin has to be even)
+        else:
+            jmin -= 1  # add row to the top
+
+    if (imin + imax) % 2 == 0:
+        imax += 1  # add column to the right (imin + imax has to be odd)
+
+    xmin = scan.dx*(2.*imin + 1.)/4.  # (imin*dx/2 + dx/4)
+    xmax = scan.dx*(2.*imax + 1.)/4.
+    ymin = scan.dy*(2.*jmin + 1.)/2.  # (jmin*dy + dy/2)
+    ymax = scan.dy*(2.*jmax + 1.)/2.
+
+    ncols_odd = int((imax - imin + 1)/2)  # just to make sure ncols_odd is int
+    ncols_even = ncols_odd - 1
+    nrows = jmax - jmin
+
+    # select rectangle surrounding the selected data
+    rect = (scan.x >= xmin) & (scan.x <= xmax) & \
+        (scan.y >= ymin) & (scan.y <= ymax)
+
+    # total number of points
+    N = int(nrows/2)*ncols_even + (nrows - int(nrows/2))*ncols_odd
+    if N != np.count_nonzero(rect):
+        raise Exception(('Something went wrong: expected number '
+                         'of points ({}) differs from what '
+                         'we got ({})').format(N, np.count_nonzero(rect)))
+
+    return ncols_odd, ncols_even, nrows, rect
+
+
+def selection_to_scandata(scan, sel):
+    """
+    Convert selection to new Scandata object
+
+    Arguments
+    ---------
+    scan : Scandata object
+        Original Scandata object
+    sel : numpy array
+        array of booleans corresponding to the selection
+
+    Returns
+    -------
+    newscan : Scandata object
+
+    """
+
+    # copy of scan.data numpy array to be exported
+    newdata = scan.data.copy()  # raw data
+
+    if sel is not None:
+        # Regions not belonging to selection have values set to default
+        newdata.loc[~sel, 'phi1'] = 4.
+        newdata.loc[~sel, 'Phi'] = 4.
+        newdata.loc[~sel, 'phi2'] = 4.
+        newdata.loc[~sel, 'IQ'] = -1
+        newdata.loc[~sel, 'CI'] = -2
+        newdata.loc[~sel, 'ph'] = -1
+        newdata.loc[~sel, 'intensity'] = -1
+        newdata.loc[~sel, 'fit'] = 0
+
+        # select rectangle surrounding the selected data
+        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surr_sel(scan, sel)
+
+        # data to be exported is a rectangle
+        newdata = newdata[rect]
+
+        # offset x and y so (xmin, ymin) becomes the origin (0, 0)
+        newdata.x -= newdata.x.min()
+        newdata.y -= newdata.y.min()
+
+    newscan = Scandata(newdata, scan.grid, scan.dx, scan.dy,
+                       ncols_odd, ncols_even, nrows, scan.header)
+
+    return newscan
