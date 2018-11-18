@@ -13,6 +13,7 @@ pyebsd runs in python 2 (>=2.7) and python 3 (>= 3.5) and uses the following non
 
 - numpy
 - matplotlib
+- pandas
 - scipy
 - pillow
 
@@ -43,7 +44,7 @@ When pyebsd is installed using `setup.py`, all dependencies should be automatica
 If the dependencies are not solved, the required libraries can be installed from the [Python Package Index](https://pypi.org) using pip:
 
 ```bash
-pip install numpy matplotlib scipy pillow
+pip install numpy matplotlib pandas scipy pillow
 ```
 # Basic usage
 

@@ -11,7 +11,7 @@ setup(
               'pyebsd.io', 'pyebsd.selection', 'pyebsd.draw',
               'pyebsd.misc'],
     include_package_data=True,
-    install_requires=['numpy', 'matplotlib',
+    install_requires=['numpy', 'matplotlib', 'pandas',
                       'scipy', 'pillow'],
     long_description=open('README.md').read(),
 )
