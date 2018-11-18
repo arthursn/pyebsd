@@ -28,7 +28,7 @@ ncols_odd, ncols_even = scan.ncols_odd, scan.ncols_even
 
 R = scan.R
 M = scan.M
-near = scan.neighbors
+near = scan.get_neighbors()
 
 C = pyebsd.list_symm()
 

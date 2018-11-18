@@ -1,9 +1,11 @@
+import os
+
 import numpy as np
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
+from ..io import load_ang_file
 from .orientation import euler_rotation
-from .load_data import load_ang_file
 from .plotting import plot_property, plot_IPF, plot_PF
 
 ssfonts = rcParams['font.sans-serif']
@@ -16,6 +18,8 @@ def _item2top(l, item):
     except:
         l.insert(0, item)
     return l
+
+
 ssfonts = _item2top(ssfonts, 'Helvetica')
 ssfonts = _item2top(ssfonts, 'Arial')
 
@@ -26,18 +30,17 @@ rcParams['savefig.pad_inches'] = 0.0
 
 
 class Scandata(object):
+    def __init__(self, data):
+        self.data = data[0]
+        self.grid = data[1]
+        self.dx = data[2]
+        self.dy = data[3]
+        self.ncols_odd = data[4]
+        self.ncols_even = data[5]
+        self.nrows = data[6]
+        self.header = data[7]
 
-    def __init__(self, fname):
-        self.fname = fname
-        raw = load_ang_file(fname)
-
-        self.data = raw[0]
-        self.grid = raw[1]
-        self.dx = raw[2]
-        self.dy = raw[3]
-        self.ncols_odd = raw[4]
-        self.ncols_even = raw[5]
-        self.nrows = raw[6]
+        # total number of columns
         self.ncols = self.ncols_odd + self.ncols_even
         self.N = len(self.data)
 
@@ -51,26 +54,54 @@ class Scandata(object):
         self.CI = self.data[:, 6]
         self.ph = self.data[:, 7]
 
+        self._i = None  # row number
+        self._j = None  # col number
+
+        # R describes the rotation from the crystal base to the mechanical
+        # coordinates of the EBSD system.
         self.R = euler_rotation(self.phi1, self.Phi, self.phi2)
+        self._M = None
 
         self.figs_maps = []
         self.axes_maps = []
 
     @property
     def M(self):
-        return self.R.transpose([0, 2, 1])
+        """
+        M describes the rotation from the mechanical coordinates to the
+        crystal base
+        """
+        if self._M is None:
+            self._M = self.R.transpose([0, 2, 1])
+        return self._M
 
     @property
     def i(self):
-        return self.ind//self.ncols
+        """
+        row number
+        """
+        if self._i is None:
+            self._i = self.ind//self.ncols
+        return self._i
 
     @property
     def j(self):
-        rem = self.ind % self.ncols
-        return rem//self.ncols_odd + 2*(rem % self.ncols_odd)
+        """
+        col number
+        """
+        if self._j is None:
+            rem = self.ind % self.ncols  # remainder
+            self._j = rem//self.ncols_odd + 2*(rem % self.ncols_odd)
+        return self._j
 
-    @property
-    def neighbors(self, distance=0):
+    def ij2ind(self, i, j):
+        """
+        i, j grid positions to pixel index (self.ind)
+        """
+        # 1 - self.N*(j/self.ncols) turns negative every i, j pair where j > ncols
+        return (1 - self.N*(j//self.ncols))*(i*self.ncols + (j % 2)*self.ncols_odd + (j//2))
+
+    def get_neighbors(self, distance=0):
         """
         Returns list of indices of the neighboring pixels for each pixel
         """
@@ -88,14 +119,6 @@ class Scandata(object):
         near = self.ij2ind(i_near, j_near)
         near[(near < 0) | (near >= self.N)] = -1
         return near.astype(int)
-
-    def ij2ind(self, i, j):
-        """
-        i, j grid positions to index
-        """
-        # 1 - self.N*(j/self.ncols) turns negative every i, j pair where j
-        # extrapolates ncols
-        return (1 - self.N*(j//self.ncols))*(i*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
     def plot_IPF(self, d='ND', ax=None, sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
@@ -226,4 +249,11 @@ class Scandata(object):
 
 
 def load_scandata(fname):
-    return Scandata(fname)
+    ext = os.path.splitext(fname)[-1]
+
+    if ext == '.ang':
+        data = load_ang_file(fname)
+    else:
+        raise Exception('File extension "{}" not supported'.format(ext))
+
+    return Scandata(data)
