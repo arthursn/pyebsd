@@ -2,8 +2,8 @@ import sys
 import time
 import numpy as np
 
-from ..crystal import list_vars, list_symm
-from .orientation import *
+from ..crystal import list_vars, list_symm, reduce_vars
+from .orientation import avg_orientation, euler_angles, euler_rotation
 
 
 def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
