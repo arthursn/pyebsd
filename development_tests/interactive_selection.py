@@ -17,7 +17,7 @@ basename = os.path.splitext(basename)[0]
 
 if fname != fname_local:
     fname_local = fname
-    scan = pyebsd.Scandata(fname_local)
+    scan = pyebsd.load_scandata(fname_local)
 
 plt.ion()
 

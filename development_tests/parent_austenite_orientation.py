@@ -22,7 +22,7 @@ try:
     plt.ion()
 except:
     fname = os.path.join('..', 'data', 'QP170-375-15_cropped.ang')
-    scan = pyebsd.Scandata(fname)
+    scan = pyebsd.load_scandata(fname)
 
     sel_fcc = (scan.ph == 2) & (scan.CI > .2)
     R_fcc = scan.R[sel_fcc]

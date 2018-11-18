@@ -50,4 +50,4 @@ if __name__ == '__main__':
     plt.show()
 
     # fname = os.path.join(pyebsd.DIR, 'data', 'QP170-375-15_cropped.ang')
-    # scan = pyebsd.Scandata(fname)
+    # scan = pyebsd.load_scandata(fname)

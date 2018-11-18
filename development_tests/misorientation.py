@@ -22,7 +22,7 @@ fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/QP170-375-15_cropped.ang'
 
 if (fname != fname_local) or reload_data == True:
     fname_local = fname
-    scan = pyebsd.Scandata(fname_local)
+    scan = pyebsd.load_scandata(fname_local)
 
 ncols_odd, ncols_even = scan.ncols_odd, scan.ncols_even
 
