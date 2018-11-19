@@ -81,12 +81,10 @@ class Scandata(object):
         row number (0 -> nrows - 1)
         """
         if self._i is None:
-            self._i = 2*self.ind//self.ncols
-            if self.nrows % 2 == 0:
-                self._i[1::2] += 1
-            else:
-                # when nrows is odd, last row is special
-                self._i[self._i != self.nrows - 1][1:2] += 1
+            self._i = 2*(self.ind//self.ncols)
+            shift = np.tile([0]*self.ncols_odd + [1] *
+                            self.ncols_even, self.nrows)
+            self._i += shift[:self.N]
         return self._i
 
     @property
@@ -119,12 +117,6 @@ class Scandata(object):
         j_near = np.vstack([j2_, j1_, j1, j2, j1, j1_]).T.astype(int)
         # y
         i_near = np.vstack([i0, i1_, i1_, i0, i1, i1]).T.astype(int)
-
-        # i_near = np.ndarray((self.N, 6), dtype=int)
-        # i_near[j0 % 2 == 0] = (np.vstack([i0, i1_, i1_, i0, i0, i0]).T)[
-        #     j0 % 2 == 0]
-        # i_near[j0 % 2 == 1] = (np.vstack([i0, i0, i0, i0, i1, i1]).T)[
-        #     j0 % 2 == 1]
 
         near = self.ij2ind(i_near, j_near)
         near[(near < 0) | (near >= self.N)] = -1
