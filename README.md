@@ -57,7 +57,6 @@ import pyebsd
 # So far, pyebsd only supports loading .ang files generated
 # by the TSL OIM software
 scan = pyebsd.load_scandata('path/to/ang/file')
-plt.show()
 ```
 
 Plot Inverse Pole Figure (IPF) map:
