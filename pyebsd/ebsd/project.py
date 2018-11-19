@@ -43,8 +43,8 @@ class Scandata(object):
         self.ncols = self.ncols_odd + self.ncols_even
         self.N = len(self.data)
 
-        self.ind = np.arange(self.N, dtype=int)
         # .values: pandas Series to numpy array
+        self.ind = self.data.index.values
         self.phi1 = self.data.phi1.values
         self.Phi = self.data.Phi.values
         self.phi2 = self.data.phi2.values
@@ -78,16 +78,21 @@ class Scandata(object):
     @property
     def i(self):
         """
-        row number
+        row number (0 -> nrows - 1)
         """
         if self._i is None:
-            self._i = self.ind//self.ncols
+            self._i = 2*self.ind//self.ncols
+            if self.nrows % 2 == 0:
+                self._i[1::2] += 1
+            else:
+                # when nrows is odd, last row is special
+                self._i[self._i != self.nrows - 1][1:2] += 1
         return self._i
 
     @property
     def j(self):
         """
-        col number
+        col number (0 -> ncols - 1)
         """
         if self._j is None:
             rem = self.ind % self.ncols  # remainder
@@ -99,7 +104,8 @@ class Scandata(object):
         i, j grid positions to pixel index (self.ind)
         """
         # 1 - self.N*(j/self.ncols) turns negative every i, j pair where j > ncols
-        return (1 - self.N*(j//self.ncols))*(i*self.ncols + (j % 2)*self.ncols_odd + (j//2))
+        return (1 - self.N*(j//self.ncols)) * \
+            ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
     def get_neighbors(self, distance=0):
         """
@@ -109,12 +115,16 @@ class Scandata(object):
         i1_, i1 = i0-1, i0+1
         j2_, j1_, j1, j2 = j0-2, j0-1, j0+1, j0+2
 
-        i_near = np.ndarray((self.N, 6), dtype=int)
+        # x
         j_near = np.vstack([j2_, j1_, j1, j2, j1, j1_]).T.astype(int)
-        i_near[j0 % 2 == 0] = (np.vstack([i0, i1_, i1_, i0, i0, i0]).T)[
-            j0 % 2 == 0]
-        i_near[j0 % 2 == 1] = (np.vstack([i0, i0, i0, i0, i1, i1]).T)[
-            j0 % 2 == 1]
+        # y
+        i_near = np.vstack([i0, i1_, i1_, i0, i1, i1]).T.astype(int)
+
+        # i_near = np.ndarray((self.N, 6), dtype=int)
+        # i_near[j0 % 2 == 0] = (np.vstack([i0, i1_, i1_, i0, i0, i0]).T)[
+        #     j0 % 2 == 0]
+        # i_near[j0 % 2 == 1] = (np.vstack([i0, i0, i0, i0, i1, i1]).T)[
+        #     j0 % 2 == 1]
 
         near = self.ij2ind(i_near, j_near)
         near[(near < 0) | (near >= self.N)] = -1
@@ -249,7 +259,7 @@ class Scandata(object):
         Returns
         -------
         ax : matplotlib.pyplot.axes.Axes
-        
+
         """
         return plot_PF(self.R, None, proj, ax, sel, parent_or, contour, verbose, **kwargs)
 
@@ -264,38 +274,48 @@ def _get_rectangle_surr_sel(scan, sel):
     Some manipulations are necessary to ensure that 
     ncols_odd = ncols_even + 1
     """
-    xmin, xmax = scan.x[sel].min(), scan.x[sel].max()
-    ymin, ymax = scan.y[sel].min(), scan.y[sel].max()
+    # x
+    ind_xmin = scan.data.x[sel].idxmin()
+    ind_xmax = scan.data.x[sel].idxmax()
+    # y
+    ind_ymin = scan.data.y[sel].idxmin()
+    ind_ymax = scan.data.y[sel].idxmax()
 
-    imin = int(2.*xmin/scan.dx)
-    imax = int(2.*xmax/scan.dx)
-    jmin = int(ymin/scan.dy)
-    jmax = int(ymax/scan.dy)
+    # j
+    jmin = scan.j[ind_xmin]
+    jmax = scan.j[ind_xmax]
+    # i
+    imin = scan.i[ind_ymin]
+    imax = scan.i[ind_ymax]
 
-    if (imin + jmin) % 2 == 1:  # if imin + jmin is odd
-        if imin > 0:
-            imin -= 1  # add column to the left (imin + jmin has to be even)
+    if (jmin + imin) % 2 == 1:  # if jmin + imin is odd
+        if jmin > 0:
+            jmin -= 1  # add column to the left (jmin + imin has to be even)
         else:
-            jmin -= 1  # add row to the top
+            imin -= 1  # add row to the top
 
-    if (imin + imax) % 2 == 0:
-        imax += 1  # add column to the right (imin + imax has to be odd)
+    if (jmax + imin) % 2 == 1:
+        if jmax < scan.ncols - 1:
+            jmax += 1  # add column to the right (jmax + imin has to be even)
+        else:
+            imin -= 1  # add row to the top
+            jmin -= 1  # add [another] columns to the left
 
-    xmin = scan.dx*(2.*imin + 1.)/4.  # (imin*dx/2 + dx/4)
-    xmax = scan.dx*(2.*imax + 1.)/4.
-    ymin = scan.dy*(2.*jmin + 1.)/2.  # (jmin*dy + dy/2)
-    ymax = scan.dy*(2.*jmax + 1.)/2.
+    xmin = scan.dx*(2.*jmin - 1.)/4.  # (jmin*dx/2 - dx/4)
+    xmax = scan.dx*(2.*jmax + 1.)/4.  # (jmax*dx/2 + dx/4)
+    ymin = scan.dy*(2.*imin - 1.)/2.  # (imin*dy - dy/2)
+    ymax = scan.dy*(2.*imax + 1.)/2.  # (imax*dy + dy/2)
 
-    ncols_odd = int((imax - imin + 1)/2)  # just to make sure ncols_odd is int
-    ncols_even = ncols_odd - 1
-    nrows = jmax - jmin
+    ncols_even = (jmax - jmin)//2
+    ncols_odd = ncols_even + 1
+    nrows = imax - imin + 1
 
     # select rectangle surrounding the selected data
     rect = (scan.x >= xmin) & (scan.x <= xmax) & \
         (scan.y >= ymin) & (scan.y <= ymax)
 
     # total number of points
-    N = int(nrows/2)*ncols_even + (nrows - int(nrows/2))*ncols_odd
+    N = ncols_even*(nrows//2) + ncols_odd*(nrows - nrows//2)
     if N != np.count_nonzero(rect):
         raise Exception(('Something went wrong: expected number '
                          'of points ({}) differs from what '
