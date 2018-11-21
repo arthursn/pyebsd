@@ -27,6 +27,48 @@ rcParams['savefig.pad_inches'] = 0.0
 
 
 class Scandata(object):
+    __first_neighbors_hexgrid = np.array([
+        [-2, 0],
+        [-1, -1],
+        [1, -1],
+        [2, 0],
+        [1, 1],
+        [-1, 1]
+    ], dtype=int)
+
+    neighbors_hexgrid = [
+        # 1st neighbors
+        __first_neighbors_hexgrid,
+        # 2nd neighbors
+        np.array([
+            [-3, -1],
+            [0, -2],
+            [3, -1],
+            [3, 1],
+            [0, 2],
+            [-3, 1]
+        ], dtype=int),
+        # 3rd neighbors
+        2*__first_neighbors_hexgrid,
+        # 4th neighbors
+        np.array([
+            [-5, -1],
+            [-4, -2],
+            [-1, -3],
+            [1, -3],
+            [4, -2],
+            [5, -1],
+            [5, 1],
+            [4, 2],
+            [1, 3],
+            [-1, 3],
+            [-4, 2],
+            [-5, 1],
+        ], dtype=int),
+        # 5th neighbors
+        3*__first_neighbors_hexgrid
+    ]
+
     def __init__(self, data, grid, dx, dy,
                  ncols_odd, ncols_even,
                  nrows, header=''):
@@ -105,22 +147,27 @@ class Scandata(object):
         return (1 - self.N*(j//self.ncols)) * \
             ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
-    def get_neighbors(self, distance=0):
+    def get_neighbors(self, distance=1, perimeteronly=True):
         """
         Returns list of indices of the neighboring pixels for each pixel
         """
-        i0, j0 = self.i, self.j
-        i1_, i1 = i0-1, i0+1
-        j2_, j1_, j1, j2 = j0-2, j0-1, j0+1, j0+2
 
+        if perimeteronly:
+            j_shift, i_shift = self.neighbors_hexgrid[distance-1].T
+        else:
+            j_shift, i_shift = np.vstack(self.neighbors_hexgrid[:distance]).T
+
+        j0, i0 = self.j, self.i
         # x
-        j_near = np.vstack([j2_, j1_, j1, j2, j1, j1_]).T.astype(int)
+        j_neighbors = np.vstack(
+            [j0 + shift for shift in j_shift]).T.astype(int)
         # y
-        i_near = np.vstack([i0, i1_, i1_, i0, i1, i1]).T.astype(int)
+        i_neighbors = np.vstack(
+            [i0 + shift for shift in i_shift]).T.astype(int)
 
-        near = self.ij2ind(i_near, j_near)
-        near[(near < 0) | (near >= self.N)] = -1
-        return near.astype(int)
+        neighbors_ind = self.ij2ind(i_neighbors, j_neighbors)
+        neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
+        return neighbors_ind.astype(int)
 
     def plot_IPF(self, d='ND', ax=None, sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
