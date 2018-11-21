@@ -99,14 +99,22 @@ class Scandata(object):
         self._i = None  # row number
         self._j = None  # col number
 
-        # R describes the rotation from the crystal base to the mechanical
-        # coordinates of the EBSD system.
-        self.R = euler_rotation(self.phi1, self.Phi, self.phi2)
+        self._R = None
         self._M = None
 
         self.figs_maps = []
         self.axes_maps = []
 
+    @property
+    def R(self):
+        """
+        R describes the rotation from the crystal base to the mechanical
+        coordinates of the EBSD system.
+        """
+        if self._R is None:
+            self._R = euler_rotation(self.phi1, self.Phi, self.phi2)
+        return self._R
+    
     @property
     def M(self):
         """
