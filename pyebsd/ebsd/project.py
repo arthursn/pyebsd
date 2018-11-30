@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
-from .orientation import euler_rotation
+from .orientation import euler_rotation, misorientation
 from .plotting import plot_property, plot_IPF, plot_PF
 
 ssfonts = rcParams['font.sans-serif']
@@ -69,8 +69,7 @@ class Scandata(object):
         3*__first_neighbors_hexgrid
     ]
 
-    def __init__(self, data, grid, dx, dy,
-                 ncols_odd, ncols_even,
+    def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even,
                  nrows, header=''):
         self.data = data  # pandas DataFrame
         self.grid = grid  # string (e.g., hexgrid)
@@ -114,7 +113,7 @@ class Scandata(object):
         if self._R is None:
             self._R = euler_rotation(self.phi1, self.Phi, self.phi2)
         return self._R
-    
+
     @property
     def M(self):
         """
@@ -151,7 +150,8 @@ class Scandata(object):
         """
         i, j grid positions to pixel index (self.ind)
         """
-        # 1 - self.N*(j/self.ncols) turns negative every i, j pair where j > ncols
+        # 1 - self.N*(j/self.ncols) turns negative every i, j
+        # pair where j > ncols
         return (1 - self.N*(j//self.ncols)) * \
             ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
@@ -159,10 +159,11 @@ class Scandata(object):
         """
         Returns list of indices of the neighboring pixels for each pixel
         """
-
         if perimeteronly:
+            # only pixels in the perimeter
             j_shift, i_shift = self.neighbors_hexgrid[distance-1].T
         else:
+            # including inner pixels
             j_shift, i_shift = np.vstack(self.neighbors_hexgrid[:distance]).T
 
         j0, i0 = self.j, self.i
@@ -180,7 +181,7 @@ class Scandata(object):
     def plot_IPF(self, d='ND', ax=None, sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
         """
-        Plot inverse pole figure
+        Plot inverse pole figure map
 
         Parameters
         ----------
@@ -232,6 +233,9 @@ class Scandata(object):
     def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
                       sel=None, gray=None, tiling='rect', w=2048,
                       scalebar=True, verbose=True, **kwargs):
+        """
+        Plot any kind of property
+        """
         ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd,
                                 self.x, self.y, self.dx, ax, colordict, colorfill,
                                 sel, gray, tiling, w, scalebar, verbose, **kwargs)
@@ -242,7 +246,27 @@ class Scandata(object):
     def plot_phase(self, ax=None, colordict={'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]},
                    colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
                    w=2048, scalebar=True, verbose=True, **kwargs):
+        """
+        Plot phases map 
+        """
         ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray,
+                                     tiling, w, scalebar, verbose, **kwargs)
+        self.figs_maps.append(ebsdmap.ax.get_figure())
+        self.axes_maps.append(ebsdmap.ax)
+        return ebsdmap
+
+    def plot_KAM(self, distance=1, perimeteronly=True, ax=None, colordict=None,
+                 colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
+                 w=2048, scalebar=True, verbose=True, **kwargs):
+        """
+        Plot Kernell average misorientation map
+        """
+        neighbors = self.get_neighbors(distance, perimeteronly)
+        nneighbors = neighbors.shape[1]
+        misang = misorientation(self.M, neighbors, sel)
+        KAM = np.sum(misang, axis=1)/nneighbors
+
+        ebsdmap = self.plot_property(KAM, ax, colordict, colorfill, sel, gray,
                                      tiling, w, scalebar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)

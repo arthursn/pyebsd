@@ -301,9 +301,10 @@ def avg_orientation(R, sel=None, **kwargs):
 
 
 def misorientation(M, neighbors, sel=None):
+    nneighbors = neighbors.shape[1]
     N = len(M)
     C = list_symm()
-    tr = np.ndarray((N, 6))
+    tr = np.ndarray((N, nneighbors))
     tr.fill(-1)
 
     if not isinstance(sel, np.ndarray):
@@ -311,7 +312,7 @@ def misorientation(M, neighbors, sel=None):
         sel.fill(True)
 
     t0 = time.time()
-    for k in range(6):
+    for k in range(nneighbors):
         ok = (neighbors[:, k] > 0) & sel & sel[neighbors[:, k]]
         # np.matmul(M[neighbors[ok,k]], M[ok].transpose([0,2,1]))
         S = np.einsum('ijk,imk->ijm', M[neighbors[ok, k]], M[ok])
