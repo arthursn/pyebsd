@@ -206,5 +206,9 @@ class RectangleSelector2(RectangleSelector):
         if self._onselect is not None:
             self._onselect()
 
+    def clear(self):
+        self.set_visible(False)
+        self.update()
+
     def disconnect(self):
         self.disconnect_events()

@@ -26,12 +26,26 @@ class EBSDMap(object):
         self.ax = ax
         self.fig = fig
 
-        self.selector = None
+        self._selector = None
 
     @property
     def sel(self):
-        if self.selector:
+        if self.selector is not None:
             return self.selector.sel
+
+    @property
+    def selector(self):
+        return self._selector
+
+    @selector.setter
+    def selector(self, selector_widget):
+        if self._selector is not None:
+            try:
+                self._selector.clear()
+            except:
+                pass
+            self._selector.disconnect()
+        self._selector = selector_widget
 
     def lasso_selector(self, lineprops=dict(color='white')):
         self.selector = LassoSelector2(
@@ -112,7 +126,7 @@ def unit_triangle(n=512, **kwargs):
     ax.set_xlim(-.01, xmax+.01)
     ax.set_ylim(-.01, ymax+.01)
 
-    return ax, img
+    return ax
 
 
 def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
