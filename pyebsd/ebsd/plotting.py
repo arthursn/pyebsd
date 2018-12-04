@@ -10,7 +10,8 @@ from itertools import permutations
 
 from .orientation import euler_rotation, PF, IPF
 from ..crystal import stereographic_projection
-from ..draw import modify_show, set_tight_plt, draw_circle_frame, toimage, ScaleBar
+from ..draw import modify_show, set_tight_plt, \
+    draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
 
 
@@ -59,51 +60,93 @@ class EBSDMap(object):
         return self.selector
 
 
-def _get_color_IPF(uvw):
+def get_color_IPF(uvw, whitespot=[48, 20, 83], pwr=.75):
     """
-    Only valid for cubic system. 
-    Because of the symmetry in the cubic 
-    system, [u,v,w], [v,u,w], [w,u,v], and so on belong to the same 
-    family of directions.
-    What I do here is to sort u, v, and w and then select a specific 
-    variant in which the order of u, v, w is 1, 0, 2.
+    Get the IPF color(s) of a given uvw direction or list of directions.
+    So far it is only valid for cubic system. 
+    Because of the symmetry in the cubic system, [u,v,w], [v,u,w], [w,u,v]
+    belong to the same family of directions.
+
+    u, v, w are first sorted and then a specific variant is selected where
+    the order of u, v, w is 1, 0, 2 (i.e., w >= u >= v).
     """
+    if isinstance(uvw, (list, tuple)):
+        uvw = np.array(uvw)
+
+    ndim = uvw.ndim
+    if ndim == 1:
+        uvw = uvw.reshape(1, -1)
+
     uvw = np.abs(uvw)
+    # Sort u, v, w
     uvw = np.sort(uvw, axis=1)
+    # Select variants where w >= u >= v
     uvw = uvw[:, [1, 0, 2]]
 
-    a, b, c = uvw[:, 2]-uvw[:, 0], uvw[:, 0]-uvw[:, 1], uvw[:, 1]
-    a, b, c = (.8*a)**.75, b**.75, (1.4*c)**.75
-    rgb = np.array([a, b, c])
-    M = np.max(rgb, axis=0)
-    rgb = rgb*255/M
-    rgb = np.ndarray.astype(rgb, int)
-    return rgb.T
+    R = uvw[:, 2] - uvw[:, 0]
+    G = uvw[:, 0] - uvw[:, 1]
+    B = uvw[:, 1]
+
+    # whitespot: white spot in the unit triangle
+    # Select variant where w >= u >= v
+    whitespot = np.sort(whitespot)
+    whitespot = whitespot[[1, 0, 2]]
+
+    kR = whitespot[2] - whitespot[0]
+    kG = whitespot[0] - whitespot[1]
+    kB = whitespot[1]
+
+    R = (R/kR)**pwr
+    G = (G/kG)**pwr
+    B = (B/kB)**pwr
+
+    rgb = np.array([R, G, B])
+    rgbmax = np.max(rgb, axis=0)
+    # normalize rgb from 0 to 1 and then from 0 to 255
+    rgb = rgb*255/rgbmax
+
+    # rgb to int and invert axes (transpose)
+    rgb = np.ndarray.astype(rgb, int).T
+
+    if ndim == 1:
+        rgb = rgb.ravel()
+
+    return rgb
 
 
-def unit_triangle(n=512, **kwargs):
+def unit_triangle(ax=None, n=512, whitespot=[48, 20, 83], pwr=.75):
     """
     Only valid for cubic system
     """
+    # x and y max values in the stereographic projection corresponding to
+    # the unit triangle
     xmax, ymax = 1./(1.+2.**.5), 1./(1.+3.**.5)
 
+    # map n x n square around unit triangle
     xp, yp = np.meshgrid(np.linspace(0, xmax, n), np.linspace(0, ymax, n))
     xp, yp = xp.ravel(), yp.ravel()
+    # convert projected coordinates (xp, yp) to uvw directions
     u, v, w = 2*xp, 2*yp, 1-xp**2-yp**2
     uvw = np.vstack([u, v, w]).T
 
     col = np.ndarray(uvw.shape)
+    # select directions that will fit inside the unit triangle, i.e.,
+    # only those where w >= u >= v
     sel = (w >= u) & (u >= v)
-    col[sel] = _get_color_IPF(uvw[sel])
-    col[np.logical_not(sel)] = [255, 255, 255]
+    # uvw directions to corresponding color
+    col[sel] = get_color_IPF(uvw[sel], whitespot, pwr)
+    # fill points outside the unit triangle in white
+    col[~sel] = [255, 255, 255]
 
     img = toimage(col.reshape(n, n, 3))
 
-    fig, ax = plt.subplots(facecolor='white')
+    if ax is None:
+        fig, ax = plt.subplots(facecolor='white')
+
     ax.set_aspect('equal')
     ax.axis('off')
     ax.imshow(img, interpolation='None', origin='lower',
-              extent=(0, xmax, 0, ymax), **kwargs)
+              extent=(0, xmax, 0, ymax))
 
     # Draw borders of unit triangle
     t = np.linspace(0, 1., n)
@@ -423,7 +466,7 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
-    col = _get_color_IPF(IPF(R, d))
+    col = get_color_IPF(IPF(R, d))
 
     if N != R.shape[0]:
         print('N and R.shape differ')
