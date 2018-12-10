@@ -149,6 +149,43 @@ class Scandata(object):
     def ij2ind(self, i, j):
         """
         i, j grid positions to pixel index (self.ind)
+        
+        n : ncols_odd
+        m : ncols_even
+        N : ncols_odd + ncols_even
+        
+        ----------------------------------------
+                  indices ind
+         0     1     2       n-2   n-1
+         *     *     *  ...   *     *
+            n    n+1            N-1
+            *     *              *     
+         N    N+1   N+2
+         *     *     *  ...   *     *
+                         .
+                         .
+                         .
+
+            *     *     ...      *
+
+         *     *     *  ...   *     *
+
+        ----------------------------------------
+                   columns j
+         0  1  2  3  4             N-1
+         *     *     *  ...   *     *   (row 0)
+
+            *     *              *      (row 1)
+
+         *     *     *  ...   *     *   (row 2)
+                         .
+                         .
+                         .
+
+            *     *     ...      *      (row i)
+
+         *     *     *  ...   *     *   (row i+1)
+
         """
         # 1 - self.N*(j/self.ncols) turns negative every i, j
         # pair where j > ncols

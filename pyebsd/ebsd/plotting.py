@@ -60,7 +60,33 @@ class EBSDMap(object):
         return self.selector
 
 
-def get_color_IPF(uvw, whitespot=[48, 20, 83], pwr=.75):
+def _calculate_barycenter_unit_triangle():
+    from ..crystal import projection_to_direction
+
+    # Barycenter half circular cap
+    # integrate (2-(x+1)^2)^0.5 from (3^0.5-1)/2 to 2^0.5 - 1
+    Ac = (np.pi - 3)/12  # area
+    # integrate x*(2-(x+1)^2)^0.5 from (3^0.5-1)/2 to 2^0.5 - 1
+    AcCxc = (-2 + 3*3**.5 - np.pi)/12  # area times Cx
+    # integrate y*((2-y^2)^0.5 - 1 - (3^0.5-1)/2 ) from 0 to (3^0.5-1)/2
+    # or
+    # integrate (2-(x+1)^2)/2 from (3^0.5-1)/2 to 2^0.5 - 1
+    AcCyc = (-7 + 16*2**.5 - 9*3**.5)/24  # area times Cy
+
+    # Barycenter isosceles right triangle
+    At = (2 - 3**.5)/4  # area
+    Cxt = (3**.5 - 1)/3  # Cx
+    Cyt = (3**.5 - 1)/6  # Cy
+
+    # Calculate barycenter by decomposition
+    A = Ac + At
+    Cx = (AcCxc + At*Cxt)/A
+    Cy = (AcCyc + At*Cyt)/A
+
+    return projection_to_direction([Cx, Cy])
+
+
+def get_color_IPF(uvw, **kwargs):
     """
     Get the IPF color(s) of a given uvw direction or list of directions.
     So far it is only valid for cubic system. 
@@ -88,6 +114,10 @@ def get_color_IPF(uvw, whitespot=[48, 20, 83], pwr=.75):
     B = uvw[:, 1]
 
     # whitespot: white spot in the unit triangle
+    # By default, whitespot is in the barycenter of the unit triangle
+    whitespot = kwargs.pop('whitespot', [0.48846011, 0.22903335, 0.84199195])
+    pwr = kwargs.pop('pwr', .75)
+
     # Select variant where w >= u >= v
     whitespot = np.sort(whitespot)
     whitespot = whitespot[[1, 0, 2]]
@@ -114,13 +144,13 @@ def get_color_IPF(uvw, whitespot=[48, 20, 83], pwr=.75):
     return rgb
 
 
-def unit_triangle(ax=None, n=512, whitespot=[48, 20, 83], pwr=.75):
+def unit_triangle(ax=None, n=512, **kwargs):
     """
     Only valid for cubic system
     """
     # x and y max values in the stereographic projection corresponding to
     # the unit triangle
-    xmax, ymax = 1./(1.+2.**.5), 1./(1.+3.**.5)
+    xmax, ymax = 2.**.5 - 1, (3.**.5 - 1)/2.
 
     # map n x n square around unit triangle
     xp, yp = np.meshgrid(np.linspace(0, xmax, n), np.linspace(0, ymax, n))
@@ -134,7 +164,7 @@ def unit_triangle(ax=None, n=512, whitespot=[48, 20, 83], pwr=.75):
     # only those where w >= u >= v
     sel = (w >= u) & (u >= v)
     # uvw directions to corresponding color
-    col[sel] = get_color_IPF(uvw[sel], whitespot, pwr)
+    col[sel] = get_color_IPF(uvw[sel], **kwargs)
     # fill points outside the unit triangle in white
     col[~sel] = [255, 255, 255]
 
@@ -161,11 +191,11 @@ def unit_triangle(ax=None, n=512, whitespot=[48, 20, 83], pwr=.75):
     ax.plot(x, y, 'k-', lw=2)
 
     ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(
-        0, -20), textcoords='offset points', ha='center', va='center', size=30)
+        0, -10), textcoords='offset points', ha='center', va='top', size=30)
     ax.annotate('101', xy=stereographic_projection([1, 0, 1]), xytext=(
-        0, -20), textcoords='offset points', ha='center', va='center', size=30)
+        0, -10), textcoords='offset points', ha='center', va='top', size=30)
     ax.annotate('111', xy=stereographic_projection([1, 1, 1]), xytext=(
-        0, 20), textcoords='offset points', ha='center', va='center', size=30)
+        0, 10), textcoords='offset points', ha='center', va='bottom', size=30)
     ax.set_xlim(-.01, xmax+.01)
     ax.set_ylim(-.01, ymax+.01)
 

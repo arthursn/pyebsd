@@ -184,7 +184,7 @@ def IPF(R, d='ND'):
 
     M = R.transpose([0, 2, 1])  # M = R^T
     uvw = np.dot(M, d)  # dot product M.D
-    uvw = uvw/np.linalg.norm(uvw, axis=1).reshape(-1, 1)  # normalizes uvw
+    uvw = uvw/np.linalg.norm(uvw, axis=1).reshape(-1, 1)  # normalize uvw
     return uvw
 
 
@@ -224,6 +224,7 @@ def PF(R, proj=[1, 0, 0], parent_or=None):
     sgn = np.sign(dm[:, 2, :])  # ndarray shape(N, nvar)
     sgn[sgn == 0.] = 1.  # change behavior of np.sign to x = 0
 
+    # coordinates in the stereographic projection
     xp = sgn*dm[:, 0, :]/(np.abs(dm[:, 2, :]) + 1.)
     yp = sgn*dm[:, 1, :]/(np.abs(dm[:, 2, :]) + 1.)
 
