@@ -1,14 +1,15 @@
 import numpy as np
 
 
-def uvw_label(uvw, s=r'\gamma'):
+def uvw_label(uvw, s=r'$_\gamma$'):
     label = r'$['
     for index in uvw:
         if index < 0:
             label += '\\bar{%d}' % np.abs(index)
         else:
             label += '%d' % index
-    label += ']_' + s + '$'
+    label += ']$'
+    label += s
     return label
 
 

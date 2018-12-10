@@ -30,8 +30,8 @@ def stereographic_projection(d, norm=True, coord='cartesian'):
     Returns the coordinates of the stereographic projection of a direction 'd'
     """
     d = np.asarray(d)
-    ndim = np.ndim(d)
-    shp = np.shape(d)
+    ndim = d.ndim
+    shp = d.shape
 
     if 3 not in shp:
         return
@@ -61,17 +61,33 @@ def stereographic_projection(d, norm=True, coord='cartesian'):
     return c0, c1
 
 
-def proj2direction(c0, c1):
-    d2 = (1-c0**2.-c1**2.)/(1+c0**2.+c1**2.)
-    d = [c0*(1.+d2), c1*(1.+d2), d2]
-    return d
+def projection_to_direction(xy):
+    xy = np.asarray(xy)
+    ndim = xy.ndim
+
+    if ndim == 1:
+        xy = xy.reshape(1, -1)
+
+    x = xy[:,0]
+    y = xy[:,1]
+
+    uvw = np.ndarray((len(xy), 3))
+
+    uvw[:,2] = (1. - x**2. - y**2.)/(1. + x**2. + y**2.)
+    uvw[:,0] = x*(1. + uvw[:,2])
+    uvw[:,1] = y*(1. + uvw[:,2])
+
+    if ndim == 1:
+        uvw = uvw.ravel()
+    # d = [c0*(1.+d2), c1*(1.+d2), d2]
+    return uvw
 
 
 def mis(A, B, out='deg', math='avg', **kwargs):
     """
     Calculates the misorientation between A e B
     """
-    
+
     Adim, Bdim = np.ndim(A), np.ndim(B)
 
     if Bdim > Adim:
