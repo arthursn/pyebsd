@@ -89,12 +89,15 @@ def _calculate_barycenter_unit_triangle():
 def get_color_IPF(uvw, **kwargs):
     """
     Get the IPF color(s) of a given uvw direction or list of directions.
-    So far it is only valid for cubic system. 
-    Because of the symmetry in the cubic system, [u,v,w], [v,u,w], [w,u,v]
-    belong to the same family of directions.
-
-    u, v, w are first sorted and then a specific variant is selected where
-    the order of u, v, w is 1, 0, 2 (i.e., w >= u >= v).
+    
+    So far it is only implemented for the cubic system.
+    It is first necessary to find the direction (in the family of directions)
+    that falls inside the unit triangle. Instead of calculating all directions
+    using the 24 symmetry operators, this function explores some properties
+    of the cubic system. 
+    In order to a given uvw direction fall inside the unit triangle (delimited
+    by the directions 001, 101, and 111), it suffices that u, v, and w are all
+    positive numbers and w >= u >= v.
     """
     if isinstance(uvw, (list, tuple)):
         uvw = np.array(uvw)
@@ -429,7 +432,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img, interpolation='nearest', extent=(
+        ax.imshow(img, interpolation='None', extent=(
             xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
         N, ncols = 2*N, 2*ncols_even
@@ -456,7 +459,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
         img = toimage(col[imin:imax, jmin:jmax, :])
         img = img.resize(size=(w, h))
-        ax.imshow(img, interpolation='nearest', extent=(
+        ax.imshow(img, interpolation='None', extent=(
             xmin, xmax, ymax, ymin), **kwargs)
     else:
         return
@@ -557,7 +560,7 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img, interpolation='nearest', extent=(
+        ax.imshow(img, interpolation='None', extent=(
             xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
         N, ncols = 2*N, 2*ncols_even
@@ -584,7 +587,7 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
 
         img = toimage(col[imin:imax, jmin:jmax, :])
         img = img.resize(size=(w, h))
-        ax.imshow(img, interpolation='nearest', extent=(
+        ax.imshow(img, interpolation='None', extent=(
             xmin, xmax, ymax, ymin), **kwargs)
     else:
         return
