@@ -14,7 +14,7 @@ scan = pyebsd.load_scandata(angfile)
 # enable matplotlib interactive mode
 plt.ion()
 # plot IPF
-ipf = scan.plot_IPF(gray=scan.IQ)
+ipf = scan.plot_IPF(gray=scan.IQ, sel=scan.ph==2)
 # enable lasso selector
 ipf.lasso_selector()
 
@@ -31,6 +31,6 @@ pyebsd.save_ang_file('selection.ang', scan, ipf.sel)
 # load selection.ang
 scansel = pyebsd.load_scandata('selection.ang')
 # plot ipf from selection
-scansel = scansel.plot_IPF(gray=scansel.IQ)
+ipfscansel = scansel.plot_IPF(gray=scansel.IQ)
 
 plt.show()
