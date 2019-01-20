@@ -9,7 +9,7 @@ import pyebsd
 
 def angle_OR_vars(V, ax=None):
     pairs = list(combinations(list(range(len(V))), 2))
-    C = pyebsd.list_symm()
+    C = pyebsd.list_cubic_symmetry_operators()
     T = np.dot(C, V).transpose([2, 0, 1, 3])
     mis = [pyebsd.mis(T[p[0]], V[p[1]].T, math='min') for p in pairs]
 

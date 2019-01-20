@@ -2,7 +2,7 @@ import sys
 import time
 import numpy as np
 
-from ..crystal import list_vars, list_symm, reduce_vars, mis
+from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, reduce_vars, mis
 
 
 def minimize_disorientation(V, V0, **kwargs):
@@ -211,7 +211,7 @@ def PF(R, proj=[1, 0, 0], parent_or=None):
         R = np.tensordot(R_prime, R, axes=[[-1], [-2]]).transpose([1, 0, 2])
 
     N = R.shape[0]
-    var = list_vars(d=proj)
+    var = list_cubic_family_directions(d=proj)
     nvar = len(var)
     norm = np.linalg.norm(proj)
 
@@ -258,7 +258,7 @@ def avg_orientation(R, sel=None, **kwargs):
 
     N = len(M_sel)
     MrefT = M_sel[N//2].T
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
 
     # tr = np.ndarray((M_sel.shape[0], len(C)))
     # vectorized is passed to euler_angles, which in turn is passed
@@ -304,7 +304,7 @@ def avg_orientation(R, sel=None, **kwargs):
 def misorientation(M, neighbors, sel=None):
     nneighbors = neighbors.shape[1]
     N = len(M)
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
     tr = np.ndarray((N, nneighbors))
     tr.fill(-1)
 

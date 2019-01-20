@@ -41,7 +41,7 @@ i, j = scan.i, scan.j
 R = scan.R
 M = scan.M
 
-C = pyebsd.list_symm()
+C = pyebsd.list_cubic_symmetry_operators()
 # print i, j, ind
 
 i_near = np.ndarray(6, dtype=int)

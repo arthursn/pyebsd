@@ -1,4 +1,4 @@
-from pyebsd import list_symm, list_vars, OR, OR_exp, tr2ang
+from pyebsd import list_cubic_symmetry_operators, list_cubic_family_directions, OR, OR_exp, tr2ang
 from itertools import combinations
 
 
@@ -15,8 +15,8 @@ def angle_2ds(V, ds='cpp'):
     else:
         d_prt, d_chd = ds[0], ds[1]
 
-    v = np.dot(V, list_vars(d_prt).T)/np.linalg.norm(d_prt)  # directions
-    v = np.dot(list_vars(d_chd), v)/np.linalg.norm(d_chd)  # cosine
+    v = np.dot(V, list_cubic_family_directions(d_prt).T)/np.linalg.norm(d_prt)  # directions
+    v = np.dot(list_cubic_family_directions(d_chd), v)/np.linalg.norm(d_chd)  # cosine
     v = np.abs(v)
     v[v > 1] = 1.  # if v[i] == 1.000...1 np.arccos crashes
     v = np.degrees(np.arccos(v))  # angle in degrees
@@ -33,7 +33,7 @@ def angle_2ds(V, ds='cpp'):
 filt = sel & (scan.CI > .2)
 V, V0, R_fcc, jvariants = OR_exp(R=scan.R, ph=scan.ph, sel=filt)
 
-C = list_symm()
+C = list_cubic_symmetry_operators()
 KS = OR()
 Vr = KS[1]  # reference
 

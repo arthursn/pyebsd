@@ -24,7 +24,7 @@
 #     M_chd = R_chd.transpose([0,2,1])
 #     N = len(M_chd)
 
-#     C = list_symm()
+#     C = list_cubic_symmetry_operators()
 #     T = np.tensordot(C, M_prt, axes=[[-1],[-2]]).transpose([0,2,1]) # T : ndarray shape(24, 3, 3)
 #     U = np.tensordot(M_chd, T, axes=[[-1],[-2]]).transpose([0,2,1,3]) # U : ndarray shape(N, 24, 3, 3)
 
@@ -76,11 +76,11 @@
 #     # is set. i.e., the variants are chosen according to the criteria
 #     # np.abs(np.dot(d,n)) <= trunc (1e-8)
 #     if np.abs(np.dot(p_prt, d_prt)) > trunc:
-#         ds = list_vars(d_prt)
+#         ds = list_cubic_family_directions(d_prt)
 #         sel = np.abs(np.asarray([np.dot(p_prt, d) for d in ds])) <= trunc
 #         d_prt = ds[sel][0]
 #     if np.abs(np.dot(p_chd, d_chd)) > trunc:
-#         ds = list_vars(d_chd)
+#         ds = list_cubic_family_directions(d_chd)
 #         sel = np.abs(np.asarray([np.dot(p_chd, d) for d in ds])) <= trunc
 #         d_chd = ds[sel][0]
 
@@ -93,7 +93,7 @@
 #     M_chd = np.array([d_chd,-np.cross(d_chd,p_chd),p_chd]).T
 
 #     V0 = np.dot(M_chd, M_prt.T)
-#     C = list_symm()
+#     C = list_cubic_symmetry_operators()
 #     V = np.tensordot(V0, C, axes=[[-1],[-2]]).transpose([1,0,2])
 
 #     return reduce_vars(V)

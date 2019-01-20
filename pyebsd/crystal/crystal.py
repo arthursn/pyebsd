@@ -2,7 +2,7 @@ import numpy as np
 from itertools import permutations
 
 
-def list_symm(**kwargs):
+def list_cubic_symmetry_operators(**kwargs):
     """
     List symmetry matrices for cubic symmetry group 
     """
@@ -16,11 +16,11 @@ def list_symm(**kwargs):
     return np.vstack([C1, C2, C3, C4])
 
 
-def list_vars(d):
+def list_cubic_family_directions(d):
     """
     List all the variants of a family of directions 'd'
     """
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
     var = set([tuple(v) for v in np.dot(C, d)])
     return np.asarray(list(var))
 
@@ -158,7 +158,7 @@ def reduce_vars(V, trunc=1e-3):
         them equivalent to each other.
         Default: 1e-3
     """
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
 
     pairs = []
     N = len(V)

@@ -2,7 +2,7 @@ import sys
 import time
 import numpy as np
 
-from ..crystal import list_vars, list_symm, reduce_vars
+from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, reduce_vars
 from .orientation import avg_orientation, euler_angles, euler_rotation
 
 
@@ -42,7 +42,7 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     N = len(M_chd)
 
     # Get symmetry matrices
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
     # T : ndarray shape(24, 3, 3)
     T = np.tensordot(C, M_prt, axes=[[-1], [-2]]).transpose([0, 2, 1])
     # U : ndarray shape(N, 24, 3, 3)
@@ -106,11 +106,11 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     # a tolerance 'trunc' is set. i.e., the variants are chosen
     # according to the criteria np.abs(np.dot(d,n)) <= trunc (1e-8)
     if np.abs(np.dot(p_prt, d_prt)) > trunc:
-        ds = list_vars(d_prt)
+        ds = list_cubic_family_directions(d_prt)
         sel = np.abs(np.asarray([np.dot(p_prt, d) for d in ds])) <= trunc
         d_prt = ds[sel][0]
     if np.abs(np.dot(p_chd, d_chd)) > trunc:
-        ds = list_vars(d_chd)
+        ds = list_cubic_family_directions(d_chd)
         sel = np.abs(np.asarray([np.dot(p_chd, d) for d in ds])) <= trunc
         d_chd = ds[sel][0]
 
@@ -123,7 +123,7 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     M_chd = np.array([d_chd, -np.cross(d_chd, p_chd), p_chd]).T
 
     V0 = np.dot(M_chd, M_prt.T)
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
     V = np.tensordot(V0, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
 
     return reduce_vars(V)
