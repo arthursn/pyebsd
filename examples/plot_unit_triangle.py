@@ -4,27 +4,36 @@ import pyebsd
 
 
 fig, ax = plt.subplots()
-
-whitespot = [48, 20, 83]
 pyebsd.unit_triangle(ax=ax)
-
-# xp, yp = pyebsd.stereographic_projection(whitespot)
-# ax.plot(xp, yp, 'kx')
-
 ax.text(0, 1, ('Default color palette\n'
-               'White spot in the direction [48, 20, 83]'),
+               'White spot in the barycenter of the unit triangle'),
         transform=ax.transAxes)
 
+# --------------------------------------------------
+
+whitespot = [24, 11, 42]
 
 fig, ax = plt.subplots()
+pyebsd.unit_triangle(ax=ax, whitespot=whitespot)
+ax.text(0, 1, 'White spot in the direction {}'.format(whitespot),
+        transform=ax.transAxes)
+
+# --------------------------------------------------
+
+whitespot = [48, 20, 83]
+
+fig, ax = plt.subplots()
+pyebsd.unit_triangle(ax=ax, whitespot=whitespot)
+ax.text(0, 1, 'White spot in the direction {}'.format(whitespot),
+        transform=ax.transAxes)
+
+# --------------------------------------------------
 
 whitespot = [2, 1, 3]
+
+fig, ax = plt.subplots()
 pyebsd.unit_triangle(ax=ax, whitespot=whitespot)
-
-# xp, yp = pyebsd.stereographic_projection(whitespot)
-# ax.plot(xp, yp, 'kx')
-
-ax.text(0, 1, 'White spot in the direction [2, 1, 3]',
+ax.text(0, 1, 'White spot in the direction {}'.format(whitespot),
         transform=ax.transAxes)
 
 plt.show()
