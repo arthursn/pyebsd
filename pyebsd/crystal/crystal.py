@@ -146,10 +146,10 @@ def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
     return x
 
 
-def reduce_vars(V, trunc=1e-3):
+def reduce_cubic_transformations(V, trunc=1e-3):
     """
-    Returns a reduced number of crystal bases after removing those who are
-    equivalent to another already listed.
+    Remove redudant transformations (rotations) and returns a reduced
+    number of matrices.
 
     V : ndarray shape(N,3,3)
         List of N 3x3 arrays (matrices) representing crystal bases.

@@ -2,7 +2,7 @@ import sys
 import time
 import numpy as np
 
-from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, reduce_vars
+from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, reduce_cubic_transformations
 from .orientation import avg_orientation, euler_angles_from_rotation_matrices, rotation_matrices_from_euler_angles
 
 
@@ -126,4 +126,4 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     C = list_cubic_symmetry_operators()
     V = np.tensordot(V0, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
 
-    return reduce_vars(V)
+    return reduce_cubic_transformations(V)

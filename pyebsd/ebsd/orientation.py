@@ -10,9 +10,9 @@ def minimize_disorientation(V, V0, **kwargs):
     Calculates the orientation that truly minimizes the disorientation
     between the list of orientations V and a single orientation V0.
     """
-    n = kwargs.pop('n', 5)
-    maxdev = kwargs.pop('maxdev', .25)
-    it = kwargs.pop('it', 3)
+    n = kwargs.pop('n', 5)  # grid size
+    maxdev = kwargs.pop('maxdev', .25)  # maximum deviation
+    it = kwargs.pop('it', 3)  # number of iterations
     verbose = kwargs.pop('verbose', False)
     plot = kwargs.pop('plot', False)
     if verbose:
@@ -54,12 +54,24 @@ def rotation_matrices_from_euler_angles(phi1, Phi, phi2, conv='zxz', **kwargs):
     Given 3 Euler angles, calculates matrix R that describes the
     transformation (rotation) from the crystal base to the mechanical
     coordinates of the EBSD system. If the Euler angles are provided 
-    as arrays shape(N), the output matrix will be in the form 
-    shape(N,3,3)
+    as a iterable of length N (numpy array, list, tuple), the output
+    will be in the form of a 3D array with shape (N,3,3)
 
-    phi1 : float or array(N)
-    Phi : float or array(N)
-    phi2 : float or array(N)
+    Parameters:
+    -----------
+    phi1 : float or list, tuple, or array(N)
+    Phi : float or list, tuple, or array(N)
+    phi2 : float or list, tuple, or array(N)
+        Euler angles
+
+    conv : string (optional)
+        Rotation convention
+        Default: zxz (Bunge notation)
+
+    **kwargs :
+        verbose : boolean
+            If True (default), print calculation time
+
     """
     t0 = time.time()
     verbose = kwargs.pop('verbose', True)
@@ -70,7 +82,13 @@ def rotation_matrices_from_euler_angles(phi1, Phi, phi2, conv='zxz', **kwargs):
     if np.ndim(phi1) == 0:
         N = 1
     else:
-        N = len(phi1)
+        phi1 = np.asarray(phi1)
+        Phi = np.asarray(Phi)
+        phi2 = np.asarray(phi2)
+        if len(phi1) == len(Phi) and len(phi1) == len(phi2):
+            N = len(phi1)
+        else:
+            raise Exception('Lengths of phi1, Phi, and phi2 differ')
 
     cphi1, sphi1 = np.cos(phi1), np.sin(phi1)
     cPhi, sPhi = np.cos(Phi), np.sin(Phi)
@@ -101,10 +119,11 @@ def rotation_matrices_from_euler_angles(phi1, Phi, phi2, conv='zxz', **kwargs):
     else:
         raise Exception('Convention {} not supported'.format(conv))
 
-    if verbose:
-        sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
     if np.ndim(phi1) == 0:
         R = R.reshape(3, 3)
+    
+    if verbose:
+        sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
     return R
 
@@ -112,15 +131,39 @@ def rotation_matrices_from_euler_angles(phi1, Phi, phi2, conv='zxz', **kwargs):
 def euler_angles_from_rotation_matrices(R, conv='zxz', **kwargs):
     """
     Calculates the Euler angles in a given rotation convention from
-    the transformation matrix R.
+    the transformation matrix R or a list of rotations matrices R.
+
+    Parameters:
+    -----------
+    R : numpy array shape(3, 3) or shape(N, 3, 3)
+        Rotation matrix or list or rotation matrices
+
+    conv : string (optional)
+        Rotation convention
+        Default: zxz (Bunge notation)
+
+    **kwargs :
+        verbose : boolean
+            If True (default), print calculation time
+        avg : boolean
+            If True, calculates the Euler angles corresponding to the
+            average orientation.
+            If False (default), simply calculates the Euler angles for
+            each rotation matrix provided.
+
     """
-    verbose = kwargs.get('verbose', False)
 
     Rdim = np.ndim(R)
     if Rdim == 2:
         R = R.reshape(1, 3, 3)
 
     if not kwargs.pop('avg', False):
+        t0 = time.time()
+        verbose = kwargs.pop('verbose', True)
+        if verbose:
+            sys.stdout.write('Calculating Euler angles... ')
+            sys.stdout.flush()
+
         Phi = np.arccos(R[:, 2, 2])
         sPhi = np.sin(Phi)
         cphi1, cphi2 = -R[:, 1, 2]/sPhi, R[:, 2, 1]/sPhi
@@ -140,6 +183,9 @@ def euler_angles_from_rotation_matrices(R, conv='zxz', **kwargs):
 
         if Rdim == 2:
             phi1, Phi, phi2 = phi1[0], Phi[0], phi2[0]
+      
+        if verbose:
+            sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
     else:
         Phi = np.arccos(np.mean(R[:, 2, 2]))
         sPhi = np.sin(Phi)
@@ -149,7 +195,7 @@ def euler_angles_from_rotation_matrices(R, conv='zxz', **kwargs):
         R_avg = rotation_matrices_from_euler_angles(phi1, Phi, phi2, verbose=False)
         # n=kwargs.pop('n', 5), maxdev=kwargs.pop('maxdev', .25)
         R_avg = minimize_disorientation(R, R_avg, **kwargs)
-        phi1, Phi, phi2 = euler_angles_from_rotation_matrices(R_avg, verbose=False)  # recursive
+        phi1, Phi, phi2 = euler_angles_from_rotation_matrices(R_avg)  # recursive
 
     return phi1, Phi, phi2
 
