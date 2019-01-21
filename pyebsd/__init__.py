@@ -1,6 +1,5 @@
 from .ebsd import *
 from .io import *
-from .crystal import *
 from .selection import *
 from .draw import *
 from .misc import *

@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from itertools import permutations
 
-from .orientation import rotation_matrices_from_euler_angles, PF, IPF
-from ..crystal import stereographic_projection
-from ..draw import modify_show, set_tight_plt, \
-    draw_circle_frame, toimage, ScaleBar
+from .orientation import (rotation_matrices_from_euler_angles,
+                          PF, IPF,
+                          stereographic_projection)
+from ..draw import (modify_show, set_tight_plt, draw_circle_frame,
+                    toimage, ScaleBar)
 from ..selection import LassoSelector2, RectangleSelector2
 
 
@@ -89,7 +90,7 @@ def _calculate_barycenter_unit_triangle():
 def get_color_IPF(uvw, **kwargs):
     """
     Get the IPF color(s) of a given uvw direction or list of directions.
-    
+
     So far it is only implemented for the cubic system.
     It is first necessary to find the direction (in the family of directions)
     that falls inside the unit triangle. Instead of calculating all directions
