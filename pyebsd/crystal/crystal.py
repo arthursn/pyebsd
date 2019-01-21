@@ -83,7 +83,7 @@ def projection_to_direction(xy):
     return uvw
 
 
-def mis(A, B, out='deg', math='avg', **kwargs):
+def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
     """
     Calculates the misorientation between A e B
     """

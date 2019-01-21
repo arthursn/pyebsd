@@ -2,7 +2,7 @@ import sys
 import time
 import numpy as np
 
-from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, reduce_vars, mis
+from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, misorientation_two_rotations
 
 
 def minimize_disorientation(V, V0, **kwargs):
@@ -26,8 +26,8 @@ def minimize_disorientation(V, V0, **kwargs):
         theta, phi, psi = np.meshgrid(t, t, t)
         theta, phi, psi = np.radians(theta.ravel()), np.radians(
             phi.ravel()), np.radians(psi.ravel())
-        A = euler_rotation(theta, phi, psi, conv='xyz', verbose=False)
-        B = mis(V, np.tensordot(A, V0,
+        A = rotation_matrices_from_euler_angles(theta, phi, psi, conv='xyz', verbose=False)
+        B = misorientation_two_rotations(V, np.tensordot(A, V0,
                                 axes=[[-1], [-2]]).transpose([0, 2, 1]),
                 out='tr', **kwargs)
         imax = np.argmax(B)  # get index of maximum trace value
@@ -49,7 +49,7 @@ def minimize_disorientation(V, V0, **kwargs):
     return V0
 
 
-def euler_rotation(phi1, Phi, phi2, conv='zxz', **kwargs):
+def rotation_matrices_from_euler_angles(phi1, Phi, phi2, conv='zxz', **kwargs):
     """
     Given 3 Euler angles, calculates matrix R that describes the
     transformation (rotation) from the crystal base to the mechanical
@@ -109,7 +109,7 @@ def euler_rotation(phi1, Phi, phi2, conv='zxz', **kwargs):
     return R
 
 
-def euler_angles(R, conv='zxz', **kwargs):
+def euler_angles_from_rotation_matrices(R, conv='zxz', **kwargs):
     """
     Calculates the Euler angles in a given rotation convention from
     the transformation matrix R.
@@ -146,10 +146,10 @@ def euler_angles(R, conv='zxz', **kwargs):
         cphi1, cphi2 = -np.mean(R[:, 1, 2])/sPhi, np.mean(R[:, 2, 1])/sPhi
         sphi1, sphi2 = np.mean(R[:, 0, 2])/sPhi, np.mean(R[:, 2, 0])/sPhi
         phi1, phi2 = np.arctan2(sphi1, cphi1), np.arctan2(sphi2, cphi2)
-        R_avg = euler_rotation(phi1, Phi, phi2, verbose=False)
+        R_avg = rotation_matrices_from_euler_angles(phi1, Phi, phi2, verbose=False)
         # n=kwargs.pop('n', 5), maxdev=kwargs.pop('maxdev', .25)
         R_avg = minimize_disorientation(R, R_avg, **kwargs)
-        phi1, Phi, phi2 = euler_angles(R_avg, verbose=False)  # recursive
+        phi1, Phi, phi2 = euler_angles_from_rotation_matrices(R_avg, verbose=False)  # recursive
 
     return phi1, Phi, phi2
 
@@ -243,7 +243,7 @@ def avg_orientation(R, sel=None, **kwargs):
     Average orientation
     """
     t0 = time.time()
-    # verbose is pased to 'euler_angles', so use kwargs.get, not kwargs.pop
+    # verbose is pased to 'euler_angles_from_rotation_matrices', so use kwargs.get, not kwargs.pop
     verbose = kwargs.get('verbose', True)
     if verbose:
         sys.stdout.write('Calculating average orientation... ')
@@ -261,7 +261,7 @@ def avg_orientation(R, sel=None, **kwargs):
     C = list_cubic_symmetry_operators()
 
     # tr = np.ndarray((M_sel.shape[0], len(C)))
-    # vectorized is passed to euler_angles, which in turn is passed
+    # vectorized is passed to euler_angles_from_rotation_matrices, which in turn is passed
     # to minimize_disorientation, so use kwargs.get, not kwargs.pop
     if kwargs.get('vectorized', True):
         # 4 dimensional numpy narray(N,24,3,3)
@@ -291,8 +291,8 @@ def avg_orientation(R, sel=None, **kwargs):
             M_sel[i] = Mprime[np.argmax(tr)]
 
     R_sel = np.transpose(M_sel, [0, 2, 1])
-    phi1, Phi, phi2 = euler_angles(R_sel, avg=True, **kwargs)  # verbose=True
-    R_avg = euler_rotation(phi1, Phi, phi2, verbose=False)
+    phi1, Phi, phi2 = euler_angles_from_rotation_matrices(R_sel, avg=True, **kwargs)  # verbose=True
+    R_avg = rotation_matrices_from_euler_angles(phi1, Phi, phi2, verbose=False)
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))

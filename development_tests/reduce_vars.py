@@ -10,7 +10,7 @@ def remove_redundant_variants(V, trunc=1e-3):
         them equivalent to each other.
         Default: 1e-3
     """
-    C = list_symm()
+    C = list_cubic_symmetry_operators()
 
     pairs = []
     N = len(V)

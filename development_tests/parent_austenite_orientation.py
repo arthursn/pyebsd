@@ -21,7 +21,7 @@ try:
 
     plt.ion()
 except:
-    fname = os.path.join('..', 'data', 'QP170-375-15_cropped.ang')
+    fname = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
     scan = pyebsd.load_scandata(fname)
 
     sel_fcc = (scan.ph == 2) & (scan.CI > .2)
@@ -36,7 +36,7 @@ except:
     R_bcc = scan.R[sel_bcc]
     M_bcc = R_bcc.transpose([0, 2, 1])
 
-    C = pyebsd.list_symm()
+    C = pyebsd.list_cubic_symmetry_operators()
     # # 4 dimensional numpy narray(N,24,3,3)
     # Mprime = np.tensordot(C, M_bcc,
     #                       axes=[[-1], [-2]]).transpose([2, 0, 1, 3])

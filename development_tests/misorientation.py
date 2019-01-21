@@ -13,12 +13,8 @@ if 'fname_local' not in locals() or 'fname_local' not in globals():
     fname_local = ''
 
 reload_data = False
-# fname = os.path.join(pyebsd.DIR, 'data', 'QP170-375-30s.ang')
-fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/QP170-375-15_cropped.ang'
-# fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/QP170-375-30s.ang'
-# fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/ADI375-15.ang'
-# fname = '/home/arthur/Documents/Tohoku2016/EBSD/ang/Q.ang'
-# fname = os.path.join(pyebsd.DIR, 'data', 'dummy.ang')
+fname = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
+
 
 if (fname != fname_local) or reload_data == True:
     fname_local = fname
@@ -30,7 +26,7 @@ R = scan.R
 M = scan.M
 near = scan.get_neighbors()
 
-C = pyebsd.list_symm()
+C = pyebsd.list_cubic_symmetry_operators()
 
 tr = np.ndarray((scan.N, 6))
 tr.fill(-1)

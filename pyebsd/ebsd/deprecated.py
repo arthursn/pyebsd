@@ -51,8 +51,8 @@
 #     tr = trmax[jsel]
 #     V = V_sel[jsel]
 
-#     phi1, Phi, phi2 = euler_angles(V_sel[jsel], avg=True, **kwargs)
-#     V0 = euler_rotation(phi1, Phi, phi2, verbose=False)
+#     phi1, Phi, phi2 = euler_angles_from_rotation_matrices(V_sel[jsel], avg=True, **kwargs)
+#     V0 = rotation_matrices_from_euler_angles(phi1, Phi, phi2, verbose=False)
 
 #     if verbose:
 #         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))

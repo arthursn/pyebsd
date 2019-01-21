@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from ..crystal import list_cubic_family_directions, list_cubic_symmetry_operators, reduce_vars
-from .orientation import avg_orientation, euler_angles, euler_rotation
+from .orientation import avg_orientation, euler_angles_from_rotation_matrices, rotation_matrices_from_euler_angles
 
 
 def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
@@ -72,9 +72,9 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     tr = trmax[jsel]
     V = V_sel[jsel]
 
-    phi1, Phi, phi2 = euler_angles(V_sel[jsel], avg=True, **kwargs)
+    phi1, Phi, phi2 = euler_angles_from_rotation_matrices(V_sel[jsel], avg=True, **kwargs)
     # Average OR matrix
-    Vavg = euler_rotation(phi1, Phi, phi2, verbose=False)
+    Vavg = rotation_matrices_from_euler_angles(phi1, Phi, phi2, verbose=False)
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))

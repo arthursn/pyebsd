@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from itertools import permutations
 
-from .orientation import euler_rotation, PF, IPF
+from .orientation import rotation_matrices_from_euler_angles, PF, IPF
 from ..crystal import stereographic_projection
 from ..draw import modify_show, set_tight_plt, \
     draw_circle_frame, toimage, ScaleBar
@@ -218,7 +218,7 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
         Transformation matrix from the crystal coordinates to the 
         mechanical coordinates (EBSD system). Can be calculated 
         directly from the Euler angles provided by the EBSD system 
-        using 'pyebsd.euler_rotation'
+        using 'pyebsd.rotation_matrices_from_euler_angles'
     M : numpy ndarray shape(N,3,3)
         Transformation matrix from the mechanical coordinates to the 
         crystal coordinates. M is the inverse (transposed) matrix of 
