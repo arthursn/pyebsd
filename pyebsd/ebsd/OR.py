@@ -5,8 +5,8 @@ import numpy as np
 from .orientation import (list_cubic_family_directions,
                           list_cubic_symmetry_operators,
                           reduce_cubic_transformations, avg_orientation,
-                          euler_angles_from_rotation_matrices,
-                          rotation_matrices_from_euler_angles)
+                          rotation_matrix_to_euler_angles,
+                          euler_angles_to_rotation_matrix)
 
 
 def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
@@ -75,10 +75,10 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     tr = trmax[jsel]
     V = V_sel[jsel]
 
-    phi1, Phi, phi2 = euler_angles_from_rotation_matrices(
+    phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
         V_sel[jsel], avg=True, **kwargs)
     # Average OR matrix
-    Vavg = rotation_matrices_from_euler_angles(phi1, Phi, phi2, verbose=False)
+    Vavg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False)
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))

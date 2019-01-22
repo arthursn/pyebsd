@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from itertools import permutations
 
-from .orientation import (rotation_matrices_from_euler_angles,
+from .orientation import (euler_angles_to_rotation_matrix,
                           PF, IPF,
                           stereographic_projection)
 from ..draw import (modify_show, set_tight_plt, draw_circle_frame,
@@ -62,7 +62,7 @@ class EBSDMap(object):
 
 
 def _calculate_barycenter_unit_triangle():
-    from ..crystal import projection_to_direction
+    from ..crystal import stereographic_projection_to_direction
 
     # Barycenter half circular cap
     # integrate (2-(x+1)^2)^0.5 from (3^0.5-1)/2 to 2^0.5 - 1
@@ -84,7 +84,7 @@ def _calculate_barycenter_unit_triangle():
     Cx = (AcCxc + At*Cxt)/A
     Cy = (AcCyc + At*Cyt)/A
 
-    return projection_to_direction([Cx, Cy])
+    return stereographic_projection_to_direction([Cx, Cy])
 
 
 def get_color_IPF(uvw, **kwargs):
@@ -219,7 +219,7 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
         Transformation matrix from the crystal coordinates to the 
         mechanical coordinates (EBSD system). Can be calculated 
         directly from the Euler angles provided by the EBSD system 
-        using 'pyebsd.rotation_matrices_from_euler_angles'
+        using 'pyebsd.euler_angles_to_rotation_matrix'
     M : numpy ndarray shape(N,3,3)
         Transformation matrix from the mechanical coordinates to the 
         crystal coordinates. M is the inverse (transposed) matrix of 

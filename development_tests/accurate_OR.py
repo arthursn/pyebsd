@@ -1,4 +1,4 @@
-from pyebsd import list_cubic_symmetry_operators, list_cubic_family_directions, OR, OR_exp, tr2ang
+from pyebsd import list_cubic_symmetry_operators, list_cubic_family_directions, OR, OR_exp, trace_to_angle
 from itertools import combinations
 
 
@@ -54,7 +54,7 @@ if tr[n, m] < 0:
 D_KS = np.dot(V, Vr.T)  # deviation from KS
 tr_KS = np.trace(D_KS, axis1=1, axis2=2)
 mis_KS = np.zeros(scan.N)
-mis_KS[filt & (scan.ph == 1)] = tr2ang(tr_KS)
+mis_KS[filt & (scan.ph == 1)] = trace_to_angle(tr_KS)
 mapks = scan.plot_property(mis_KS, sel=filt & (scan.ph == 1),
                            vmin=0, vmax=5., gray=scan.IQ, tiling='hex')
 ax7, fig7 = mapks.ax, mapks.fig

@@ -30,7 +30,7 @@ def plot_unit_triangle(ax=None, n=512, **kwargs):
     col[~sel] = [255, 255, 255]
 
     # Centroid calculated by numerical method
-    print(pyebsd.projection_to_direction([xp[sel].mean(), yp[sel].mean()]))
+    print(pyebsd.stereographic_projection_to_direction([xp[sel].mean(), yp[sel].mean()]))
 
     img = toimage(col.reshape(n, n, 3))
 
@@ -86,7 +86,7 @@ A = Ac + At
 Cx = (AcCxc + At*Cxt)/A
 Cy = (AcCyc + At*Cyt)/A
 
-whitespot = pyebsd.projection_to_direction([Cx, Cy])
+whitespot = pyebsd.stereographic_projection_to_direction([Cx, Cy])
 
 print(whitespot)
 

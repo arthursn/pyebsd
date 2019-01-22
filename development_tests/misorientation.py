@@ -66,13 +66,13 @@ travg[nneg == 6] = fill  # points who don't have any neighbor
 trmax = np.max(tr, axis=1)
 
 
-def tr2ang(tr):
+def trace_to_angle(tr):
     return np.degrees(np.arccos((tr-1.)/2.))
 
 
-scan.plot_property(tr2ang(travg), vmax=2, tiling='hex', w=4096)
+scan.plot_property(trace_to_angle(travg), vmax=2, tiling='hex', w=4096)
 
-mis = tr2ang(tr[tr > fill])
+mis = trace_to_angle(tr[tr > fill])
 
 fig2, ax2 = plt.subplots()
 ax2.hist(mis[mis > 2].ravel(), bins=200, density=True)

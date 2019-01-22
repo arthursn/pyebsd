@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
-from pyebsd import rotation_matrices_to_euler_angles_to_rotation_matrices, misorientation
+from pyebsd import rotation_matrices_to_euler_angles_to_rotation_matrix, misorientation
 from pyebsd import plot_property, plot_IPF, plot_PF
 
 ssfonts = rcParams['font.sans-serif']
@@ -111,7 +111,7 @@ class Scandata(object):
         coordinates of the EBSD system.
         """
         if self._R is None:
-            self._R = rotation_matrices_to_euler_angles_to_rotation_matrices(self.phi1, self.Phi, self.phi2)
+            self._R = rotation_matrices_to_euler_angles_to_rotation_matrix(self.phi1, self.Phi, self.phi2)
         return self._R
 
     @property
