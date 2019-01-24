@@ -9,7 +9,7 @@ from .orientation import (list_cubic_family_directions,
                           euler_angles_to_rotation_matrix)
 
 
-def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
+def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     """
     Calculates the accurate orientation relationship between parent
     and child phases.
@@ -36,12 +36,10 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
         sel[:] = True
 
     # Calculate average rotation matrix of parent phase
-    R_prt = avg_orientation(R, sel=sel & (ph == prt), verbose=False)
+    M_prt = avg_orientation(M, sel=sel & (ph == prt), verbose=False)
     # Rotation matrices of child phases
-    R_chd = R[sel & (ph == chd)]
+    M_chd = M[sel & (ph == chd)]
 
-    M_prt = R_prt.T
-    M_chd = R_chd.transpose([0, 2, 1])
     N = len(M_chd)
 
     # Get symmetry matrices
@@ -84,12 +82,12 @@ def OR_exp(R, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
     # Delete arrays
-    del R_chd, M_prt, M_chd, T, U, D, V_sel
+    del M_chd, T, U, D, V_sel
 
     # Return the OR matrices V for each pixel,
     # the average OR matrix Vavg, and the
     # rotation matrix of the parent phase
-    return V, Vavg, R_prt, isel
+    return V, Vavg, M_prt, isel
 
 
 def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):

@@ -98,31 +98,32 @@ class Scandata(object):
         self._i = None  # row number
         self._j = None  # col number
 
-        self._R = None
         self._M = None
+        self._R = None
 
         self.figs_maps = []
         self.axes_maps = []
 
     @property
-    def R(self):
-        """
-        R describes the rotation from the crystal base to the mechanical
-        coordinates of the EBSD system.
-        """
-        if self._R is None:
-            self._R = euler_angles_to_rotation_matrix(self.phi1, self.Phi, self.phi2)
-        return self._R
-
-    @property
     def M(self):
         """
-        M describes the rotation from the mechanical coordinates to the
-        crystal base
+        M describes the rotation from the sample coordinate frame to the
+        crystal coordinate frame
         """
         if self._M is None:
             self._M = self.R.transpose([0, 2, 1])
         return self._M
+
+    @property
+    def R(self):
+        """
+        R describes the rotation from the crystal coordinate frame to the
+        sample coordinate frame of the EBSD system.
+        """
+        if self._R is None:
+            self._R = euler_angles_to_rotation_matrix(
+                self.phi1, self.Phi, self.phi2)
+        return self._R
 
     @property
     def i(self):
@@ -149,11 +150,11 @@ class Scandata(object):
     def ij2ind(self, i, j):
         """
         i, j grid positions to pixel index (self.ind)
-        
+
         n : ncols_odd
         m : ncols_even
         N : ncols_odd + ncols_even
-        
+
         ----------------------------------------
                   indices ind
          0     1     2       n-2   n-1
@@ -260,7 +261,7 @@ class Scandata(object):
         ebsdmap : EBSDMap object
 
         """
-        ebsdmap = plot_IPF(self.R, self.nrows, self.ncols_even, self.ncols_odd,
+        ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd,
                            self.x, self.y, self.dx, d, ax, sel, gray, tiling, w,
                            scalebar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
@@ -309,7 +310,7 @@ class Scandata(object):
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, parent_or=None,
+    def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None,
                 contour=False, verbose=True, **kwargs):
         """
         Plot pole figure
@@ -325,10 +326,10 @@ class Scandata(object):
             Array with boolean [True, False] values indicating which data points 
             should be plotted
             Default: None
-        parent_or : numpy ndarray shape(3, 3)
-            Orientation matrix of the parent phase. The pole figure is rotated 
-            until the axes coincides with the orientation 'parent_or'
-            Default: None
+        rotation : list or array shape(3,3)
+            Rotation matrix that rotates the pole figure.
+            The columns of the matrix correspond to the directions parallel to 
+            the axes of the pole figure.
         contour : boolean
             contour=True plots the pole figure using contour plot
             Default: False
@@ -369,14 +370,14 @@ class Scandata(object):
         ax : matplotlib.pyplot.axes.Axes
 
         """
-        return plot_PF(self.R, None, proj, ax, sel, parent_or, contour, verbose, **kwargs)
+        return plot_PF(None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs)
 
     def savefig(self, fname, **kwargs):
         kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
         plt.savefig(fname, **kwargs)
 
 
-def _get_rectangle_surr_sel(scan, sel):
+def _get_rectangle_surrounding_selection(scan, sel):
     """
     Select rectangle surrounding the selected data.
     Some manipulations are necessary to ensure that 
@@ -464,7 +465,7 @@ def selection_to_scandata(scan, sel):
         newdata.loc[~sel, 'fit'] = 0
 
         # select rectangle surrounding the selected data
-        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surr_sel(scan, sel)
+        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection(scan, sel)
 
         # data to be exported is a rectangle
         newdata = newdata[rect]

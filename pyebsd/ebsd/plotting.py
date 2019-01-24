@@ -206,8 +206,8 @@ def unit_triangle(ax=None, n=512, **kwargs):
     return ax
 
 
-def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
-            sel=None, parent_or=None, contour=False, verbose=True, **kwargs):
+def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
+            rotation=None, contour=False, verbose=True, **kwargs):
     """
     The user should provide either R or M. It's more convenient to use
     R values when plotting raw experimental data. M should be used 
@@ -215,15 +215,9 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
 
     Parameters
     ----------
-    R : numpy ndarray shape(N,3,3)
-        Transformation matrix from the crystal coordinates to the 
-        mechanical coordinates (EBSD system). Can be calculated 
-        directly from the Euler angles provided by the EBSD system 
-        using 'pyebsd.euler_angles_to_rotation_matrix'
     M : numpy ndarray shape(N,3,3)
-        Transformation matrix from the mechanical coordinates to the 
-        crystal coordinates. M is the inverse (transposed) matrix of 
-        R (M = R^-1)
+        Transformation matrix from the sample coordinate frame to
+        the crystal coordinate frame.
     proj : list or numpy array(3) (optional)
         Family of direction projected in the pole figure.
         Default: [1,0,0]
@@ -233,16 +227,21 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
         Array with boolean [True, False] values indicating which data 
         points should be plotted
         Default: None
-    parent_or : numpy ndarray shape(3, 3)
-        Orientation matrix of the parent phase. The pole figure is 
-        rotated until the axes coincides with the orientation 
-        'parent_or'
+    rotation : list or array shape(3,3)
+        Rotation matrix that rotates the pole figure.
+        The columns of the matrix correspond to the directions parallel to 
+        the axes of the pole figure.
         Default: None
     contour : [True, False]
         contour=True plots the pole figure using contour plot
         Default: False
 
     **kwargs:
+        R : numpy ndarray shape(N,3,3)
+            If M is not provided, R has to be provided instead.
+            Transformation matrix from the crystal coordinate frame to 
+            the sample coordinate frame (EBSD system). 
+            R is the inverse/transposed matrix of M (R = M^-1) 
         lw_frame : float
             line width of PF frame
             Default: 0.5
@@ -270,6 +269,8 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
     if contour and not fill:
         plt.contourf(..., **kwargs)
     """
+    R = kwargs.pop('R', None)
+    
     if isinstance(R, np.ndarray):
         if R.ndim == 2:
             R = R.reshape(1, 3, 3)
@@ -278,7 +279,7 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
             M = M.reshape(1, 3, 3)
         R = M.transpose([0, 2, 1])
     else:
-        return
+        raise Exception('M or R has to be provided')
 
     if verbose:
         t0 = time.time()
@@ -286,7 +287,7 @@ def plot_PF(R=None, M=None, proj=[1, 0, 0], ax=None,
         sys.stdout.flush()
 
     # gets Cartesian coordinates of PF projections
-    xp, yp = PF(R, proj=proj, parent_or=parent_or)
+    xp, yp = PF(R, proj=proj, rotation=rotation)
 
     if isinstance(sel, np.ndarray):  # selected values
         xp, yp = xp[sel], yp[sel]
@@ -482,7 +483,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     return EBSDMap(x, y, img, ax, fig)
 
 
-def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
+def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
              dx=None, d='ND', ax=None, sel=None, gray=None, tiling='rect',
              w=2048, scalebar=True, verbose=True, **kwargs):
     """
@@ -500,15 +501,15 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
-    col = get_color_IPF(IPF(R, d))
+    col = get_color_IPF(IPF(M, d))
 
-    if N != R.shape[0]:
-        print('N and R.shape differ')
+    if N != M.shape[0]:
+        print('N and M.shape differ')
         return
 
     if isinstance(sel, np.ndarray):
         if N != sel.shape[0]:
-            print('R.shape and sel.shape differ')
+            print('M.shape and sel.shape differ')
             return
         else:
             col[np.logical_not(sel)] = [0, 0, 0]  # RGB
@@ -518,7 +519,7 @@ def plot_IPF(R, nrows, ncols_even, ncols_odd, x, y,
 
     if isinstance(gray, np.ndarray):
         if N != gray.shape[0]:
-            print('R.shape and gray.shape differ')
+            print('M.shape and gray.shape differ')
             return
         else:
             gray = gray.reshape(-1, 1)/np.max(gray)

@@ -35,7 +35,8 @@ def stereographic_projection(d, norm=True, coord='cartesian'):
     if norm:
         d = d/np.linalg.norm(d, axis=0)
 
-    c0, c1 = d[0]/(1.+d[2]), d[1]/(1.+d[2])
+    c0 = d[0]/(1. + d[2])
+    c1 = d[1]/(1. + d[2])
 
     if coord == 'polar':
         r = (c0**2. + c1**2.)**.5
@@ -74,23 +75,21 @@ def stereographic_projection_to_direction(xy):
 """ Misorientation functions """
 
 
-def avg_orientation(R, sel=None, **kwargs):
+def avg_orientation(M, sel=None, **kwargs):
     """
     Average orientation
     """
-    t0 = time.time()
     # verbose is pased to 'rotation_matrix_to_euler_angles', so use kwargs.get, not kwargs.pop
     verbose = kwargs.get('verbose', True)
     if verbose:
+        t0 = time.time()
         sys.stdout.write('Calculating average orientation... ')
         sys.stdout.flush()
 
     if isinstance(sel, np.ndarray):
-        R_sel = R[sel]
+        M_sel = M[sel]
     else:
-        R_sel = R
-    # M = R^-1 = R^T
-    M_sel = np.transpose(R_sel, axes=[0, 2, 1])
+        M_sel = M
 
     N = len(M_sel)
     MrefT = M_sel[N//2].T
@@ -126,16 +125,17 @@ def avg_orientation(R, sel=None, **kwargs):
             Mprime[neg] = -Mprime[neg]
             M_sel[i] = Mprime[np.argmax(tr)]
 
-    R_sel = np.transpose(M_sel, [0, 2, 1])
+    R_sel = M_sel.transpose([0, 2, 1])
     phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
         R_sel, avg=True, **kwargs)  # verbose=True
-    R_avg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False)
+
+    M_avg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False).T
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
-    del D, Mprime, M_sel
-    return R_avg
+    del D, Mprime, M_sel, R_sel
+    return M_avg
 
 
 def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
@@ -201,31 +201,41 @@ def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
     return x
 
 
-def misorientation(M, neighbors, sel=None):
+def misorientation(M, neighbors, sel=None, **kwargs):
+    verbose = kwargs.pop('verbose', True)
+    if verbose:
+        t0 = time.time()
+
+    N = M.shape[0]
     nneighbors = neighbors.shape[1]
-    N = len(M)
+
     C = list_cubic_symmetry_operators()
-    tr = np.ndarray((N, nneighbors))
-    tr.fill(-1)
+
+    # 2D array to store trace values; all values initialized as -1
+    tr = np.full((N, nneighbors), -1., dtype=float)
 
     if not isinstance(sel, np.ndarray):
-        sel = np.ndarray(M.shape[0], dtype=bool)
-        sel.fill(True)
+        sel = np.full(N, True, dtype=bool)
 
-    t0 = time.time()
     for k in range(nneighbors):
         ok = (neighbors[:, k] > 0) & sel & sel[neighbors[:, k]]
+        # The einsum below is equivalent to:
         # np.matmul(M[neighbors[ok,k]], M[ok].transpose([0,2,1]))
         S = np.einsum('ijk,imk->ijm', M[neighbors[ok, k]], M[ok])
+
         for m in range(len(C)):
             a, b = C[m].nonzero()
             # Trace using Einsum. Equivalent to (S[:,a,b]*C[m,a,b]).sum(axis=1)
             T = np.abs(np.einsum('ij,j->i', S[:, a, b], C[m, a, b]))
             tr[ok, k] = np.max(np.vstack([tr[ok, k], T]), axis=0)
-        print(k)
+
+        if verbose:
+            print(k)
+
     del S, T
 
-    print(time.time()-t0)
+    if verbose:
+        print(time.time()-t0)
 
     tr[tr > 3.] = 3.
 
@@ -253,11 +263,11 @@ def minimize_disorientation(V, V0, **kwargs):
         theta, phi, psi = np.meshgrid(t, t, t)
         theta, phi, psi = np.radians(theta.ravel()), np.radians(
             phi.ravel()), np.radians(psi.ravel())
-        A = euler_angles_to_rotation_matrix(
-            theta, phi, psi, conv='xyz', verbose=False)
-        B = misorientation_two_rotations(V, np.tensordot(A, V0,
-                                                         axes=[[-1], [-2]]).transpose([0, 2, 1]),
-                                         out='tr', **kwargs)
+        A = euler_angles_to_rotation_matrix(theta, phi, psi,
+                                            conv='xyz', verbose=False)
+        B = misorientation_two_rotations(
+            V, np.tensordot(A, V0, axes=[[-1], [-2]]).transpose([0, 2, 1]),
+            out='tr', **kwargs)
         imax = np.argmax(B)  # get index of maximum trace value
         if verbose:
             dth = np.degrees(np.arccos((np.trace(A[imax])-1.)/2.))
@@ -268,7 +278,8 @@ def minimize_disorientation(V, V0, **kwargs):
             ordc = np.argsort(B)
             axmin.scatter(x[ordc].ravel(), y[ordc].ravel(), c=np.repeat(
                 B[ordc], x.shape[1]), lw=0, s=30, marker='s')
-            axmin.plot(x[imax].ravel(), y[imax].ravel(), 'kx', ms=10, mew=2)
+            axmin.plot(x[imax].ravel(), y[imax].ravel(),
+                       'kx', ms=10, mew=2, c='r')
 
         V0 = np.dot(A[imax], V0)
         maxdev /= n
@@ -280,124 +291,11 @@ def minimize_disorientation(V, V0, **kwargs):
 """ Rotation representation conversion functions """
 
 
-def axis_angle_to_rotation_matrix(axis, theta):
-    theta_dim = np.ndim(theta)
-    axis_dim = np.ndim(axis)
-
-    if axis_dim != theta_dim + 1:
-        raise Exception('Invalid shapes of theta or axis')
-
-    if theta_dim == 0:
-        theta = np.asarray(theta).reshape(-1)
-        axis = np.asarray(axis).reshape(-1, 3)
-
-    axis = axis/np.linalg.norm(axis, axis=1).reshape(-1, 1)
-
-    N = len(theta)
-    R = np.ndarray((N, 3, 3))
-
-    ctheta = np.cos(theta)
-    ctheta1 = 1 - ctheta
-    stheta = np.sin(theta)
-
-    R[:, 0, 0] = ctheta1*axis[:, 0]**2. + ctheta
-    R[:, 0, 1] = ctheta1*axis[:, 0]*axis[:, 1] - axis[:, 2]*stheta
-    R[:, 0, 2] = ctheta1*axis[:, 0]*axis[:, 2] + axis[:, 1]*stheta
-    R[:, 1, 0] = ctheta1*axis[:, 1]*axis[:, 0] + axis[:, 2]*stheta
-    R[:, 1, 1] = ctheta1*axis[:, 1]**2. + ctheta
-    R[:, 1, 2] = ctheta1*axis[:, 1]*axis[:, 2] - axis[:, 0]*stheta
-    R[:, 2, 0] = ctheta1*axis[:, 2]*axis[:, 0] - axis[:, 1]*stheta
-    R[:, 2, 1] = ctheta1*axis[:, 2]*axis[:, 1] + axis[:, 0]*stheta
-    R[:, 2, 2] = ctheta1*axis[:, 2]**2. + ctheta
-
-    if theta_dim == 0:
-        R = R.reshape(3, 3)
-
-    return R
-
-
-def rotation_matrix_to_euler_angles(R, conv='zxz', **kwargs):
-    """
-    Calculates the Euler angles in a given rotation convention from
-    the transformation matrix R or a list of rotations matrices R.
-
-    Parameters:
-    -----------
-    R : numpy array shape(3, 3) or shape(N, 3, 3)
-        Rotation matrix or list or rotation matrices
-
-    conv : string (optional)
-        Rotation convention
-        Default: zxz (Bunge notation)
-
-    **kwargs :
-        verbose : boolean
-            If True (default), print calculation time
-        avg : boolean
-            If True, calculates the Euler angles corresponding to the
-            average orientation.
-            If False (default), simply calculates the Euler angles for
-            each rotation matrix provided.
-
-    """
-
-    Rdim = np.ndim(R)
-    if Rdim == 2:
-        R = R.reshape(1, 3, 3)
-
-    if not kwargs.pop('avg', False):
-        t0 = time.time()
-        verbose = kwargs.pop('verbose', True)
-        if verbose:
-            sys.stdout.write('Calculating Euler angles... ')
-            sys.stdout.flush()
-
-        Phi = np.arccos(R[:, 2, 2])
-        sPhi = np.sin(Phi)
-        cphi1, cphi2 = -R[:, 1, 2]/sPhi, R[:, 2, 1]/sPhi
-        sphi1, sphi2 = R[:, 0, 2]/sPhi, R[:, 2, 0]/sPhi
-
-        # arctan2 returns value in the range [-pi,pi].
-        phi1, phi2 = np.arctan2(sphi1, cphi1), np.arctan2(sphi2, cphi2)
-        neg1, neg2 = phi1 < 0, phi2 < 0
-        if np.ndim(neg1) > 0:
-            # phi1 and phi2 to range [0, 2pi]
-            phi1[neg1] = phi1[neg1] + 2.*np.pi
-            phi2[neg2] = phi2[neg2] + 2.*np.pi
-        else:
-            if neg1:
-                phi1 += 2.*np.pi
-            if neg2:
-                phi2 += 2.*np.pi
-
-        if Rdim == 2:
-            phi1, Phi, phi2 = phi1[0], Phi[0], phi2[0]
-
-        if verbose:
-            sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
-    else:
-        Phi = np.arccos(np.mean(R[:, 2, 2]))
-        sPhi = np.sin(Phi)
-        cphi1, cphi2 = -np.mean(R[:, 1, 2])/sPhi, np.mean(R[:, 2, 1])/sPhi
-        sphi1, sphi2 = np.mean(R[:, 0, 2])/sPhi, np.mean(R[:, 2, 0])/sPhi
-        phi1, phi2 = np.arctan2(sphi1, cphi1), np.arctan2(sphi2, cphi2)
-        R_avg = euler_angles_to_rotation_matrix(
-            phi1, Phi, phi2, verbose=False)
-        # n=kwargs.pop('n', 5), maxdev=kwargs.pop('maxdev', .25)
-        R_avg = minimize_disorientation(R, R_avg, **kwargs)
-        phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
-            R_avg)  # recursive
-
-    return phi1, Phi, phi2
-
-
 def euler_angles_to_rotation_matrix(phi1, Phi, phi2, conv='zxz', **kwargs):
     """
-    Given 3 Euler angles, calculates matrix R that describes the
-    transformation (rotation) from the crystal base to the mechanical
-    coordinates of the EBSD system. If the Euler angles are provided 
-    as a iterable of length N (numpy array, list, tuple), the output
-    will be in the form of a 3D array with shape (N,3,3)
+    Given 3 Euler angles, calculates rotation R (active description).
+    Please notice that the Euler angles in the ang files follow passive
+    description.
 
     Parameters:
     -----------
@@ -415,9 +313,9 @@ def euler_angles_to_rotation_matrix(phi1, Phi, phi2, conv='zxz', **kwargs):
             If True (default), print calculation time
 
     """
-    t0 = time.time()
     verbose = kwargs.pop('verbose', True)
     if verbose:
+        t0 = time.time()
         sys.stdout.write('Calculating rotation matrices... ')
         sys.stdout.flush()
 
@@ -466,6 +364,119 @@ def euler_angles_to_rotation_matrix(phi1, Phi, phi2, conv='zxz', **kwargs):
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+
+    return R
+
+
+def rotation_matrix_to_euler_angles(R, conv='zxz', **kwargs):
+    """
+    Calculates the Euler angles from a rotation matrix or a sequence
+    of rotation matrices (active description).
+    Please notice that the Euler angles in the ang files follow passive
+    description.
+
+    Parameters:
+    -----------
+    R : numpy array shape(3, 3) or shape(N, 3, 3)
+        Rotation matrix or list or rotation matrices
+
+    conv : string (optional)
+        Rotation convention
+        Default: zxz (Bunge notation)
+
+    **kwargs :
+        verbose : boolean
+            If True (default), print calculation time
+        avg : boolean
+            If True, calculates the Euler angles corresponding to the
+            average orientation.
+            If False (default), simply calculates the Euler angles for
+            each rotation matrix provided.
+
+    """
+
+    Rdim = np.ndim(R)
+    if Rdim == 2:
+        R = R.reshape(1, 3, 3)
+
+    if not kwargs.pop('avg', False):
+        verbose = kwargs.pop('verbose', True)
+        if verbose:
+            t0 = time.time()
+            sys.stdout.write('Calculating Euler angles... ')
+            sys.stdout.flush()
+
+        Phi = np.arccos(R[:, 2, 2])
+        sPhi = np.sin(Phi)
+        cphi1, cphi2 = -R[:, 1, 2]/sPhi, R[:, 2, 1]/sPhi
+        sphi1, sphi2 = R[:, 0, 2]/sPhi, R[:, 2, 0]/sPhi
+
+        # arctan2 returns value in the range [-pi,pi].
+        phi1, phi2 = np.arctan2(sphi1, cphi1), np.arctan2(sphi2, cphi2)
+        neg1, neg2 = phi1 < 0, phi2 < 0
+        if np.ndim(neg1) > 0:
+            # phi1 and phi2 to range [0, 2pi]
+            phi1[neg1] = phi1[neg1] + 2.*np.pi
+            phi2[neg2] = phi2[neg2] + 2.*np.pi
+        else:
+            if neg1:
+                phi1 += 2.*np.pi
+            if neg2:
+                phi2 += 2.*np.pi
+
+        if Rdim == 2:
+            phi1, Phi, phi2 = phi1[0], Phi[0], phi2[0]
+
+        if verbose:
+            sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+    else:
+        Phi = np.arccos(np.mean(R[:, 2, 2]))
+        sPhi = np.sin(Phi)
+        cphi1, cphi2 = -np.mean(R[:, 1, 2])/sPhi, np.mean(R[:, 2, 1])/sPhi
+        sphi1, sphi2 = np.mean(R[:, 0, 2])/sPhi, np.mean(R[:, 2, 0])/sPhi
+        phi1, phi2 = np.arctan2(sphi1, cphi1), np.arctan2(sphi2, cphi2)
+        R_avg = euler_angles_to_rotation_matrix(
+            phi1, Phi, phi2, verbose=False)
+        # n=kwargs.pop('n', 5), maxdev=kwargs.pop('maxdev', .25)
+        R_avg = minimize_disorientation(R, R_avg, **kwargs)
+        phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
+            R_avg)  # recursive
+
+    return phi1, Phi, phi2
+
+
+def axis_angle_to_rotation_matrix(axis, theta, **kwargs):
+    theta_dim = np.ndim(theta)
+    axis_dim = np.ndim(axis)
+
+    if axis_dim != theta_dim + 1:
+        raise Exception('Invalid shapes of theta or axis')
+
+    if theta_dim == 0:
+        theta = np.asarray(theta).reshape(-1)
+        axis = np.asarray(axis).reshape(-1, 3)
+
+    axis = axis/np.linalg.norm(axis, axis=1).reshape(-1, 1)
+
+    N = len(theta)
+    R = np.ndarray((N, 3, 3))
+
+    ctheta = np.cos(theta)
+    ctheta1 = 1 - ctheta
+    stheta = np.sin(theta)
+
+    R[:, 0, 0] = ctheta1*axis[:, 0]**2. + ctheta
+    R[:, 0, 1] = ctheta1*axis[:, 0]*axis[:, 1] - axis[:, 2]*stheta
+    R[:, 0, 2] = ctheta1*axis[:, 0]*axis[:, 2] + axis[:, 1]*stheta
+    R[:, 1, 0] = ctheta1*axis[:, 1]*axis[:, 0] + axis[:, 2]*stheta
+    R[:, 1, 1] = ctheta1*axis[:, 1]**2. + ctheta
+    R[:, 1, 2] = ctheta1*axis[:, 1]*axis[:, 2] - axis[:, 0]*stheta
+    R[:, 2, 0] = ctheta1*axis[:, 2]*axis[:, 0] - axis[:, 1]*stheta
+    R[:, 2, 1] = ctheta1*axis[:, 2]*axis[:, 1] + axis[:, 0]*stheta
+    R[:, 2, 2] = ctheta1*axis[:, 2]**2. + ctheta
+
+    if theta_dim == 0:
+        R = R.reshape(3, 3)
 
     return R
 
@@ -535,7 +546,9 @@ def list_cubic_symmetry_operators(**kwargs):
                       np.pi*2./3.,
                       np.pi*2./3.])
 
-    return axis_angle_to_rotation_matrix(axis, angle).round(0)
+    # Round and convert float to int. The elements of the operators are
+    # the integers 0, 1, and -1
+    return axis_angle_to_rotation_matrix(axis, angle).round(0).astype(int)
 
 
 def list_cubic_family_directions(d):
@@ -547,22 +560,22 @@ def list_cubic_family_directions(d):
     return np.asarray(list(var))
 
 
-def reduce_cubic_transformations(V, trunc=1e-3):
+def reduce_cubic_transformations(V, maxdev=1e-3):
     """
     Remove redudant transformations (rotations) and returns a reduced
     number of matrices.
 
     V : ndarray shape(N,3,3)
         List of N 3x3 arrays (matrices) representing crystal bases.
-    trunc : float
+    maxdev : float
         Maximum misorientation angle (deg) between two bases to consider
         them equivalent to each other.
         Default: 1e-3
     """
-    # Convert trunc from angle in degrees to the domain of the trace values
-    # [-3, 3]. Because trunc is very small, the new value of trunc is very
+    # Convert maxdev from angle in degrees to the domain of the trace values
+    # [-3, 3]. Because maxdev is very small, the new value of maxdev is very
     # close to 3.
-    trunc = 2.*np.cos(np.radians(trunc)) + 1.
+    maxdev = 2.*np.cos(np.radians(maxdev)) + 1.
     C = list_cubic_symmetry_operators()
 
     pairs = []
@@ -574,8 +587,8 @@ def reduce_cubic_transformations(V, trunc=1e-3):
             tr = np.abs(np.trace(np.dot(U, V[j].T), axis1=1, axis2=2))
             # From the trace tr you can get the misorientation angle
             # The following "if" is equivalent to check if the misorientation
-            # angle is less the angle "trunc"
-            if tr.max() >= trunc:
+            # angle is less the angle "maxdev"
+            if tr.max() >= maxdev:
                 p.append(j)
         pairs.append(p)
 
@@ -588,16 +601,16 @@ def reduce_cubic_transformations(V, trunc=1e-3):
 """ Orientation representation (IPF and PF) """
 
 
-def IPF(R, d='ND'):
+def IPF(M, d='ND'):
     """
-    Calculates crystallographic direction parallel to the mechanical 
-    direction d (mechanical coordinates of the EBSD system).
+    Calculates crystallographic direction parallel to the direction d 
+    relative to the sample coordinate frame.
 
     Parameters
     ----------
-    R : numpy ndarray shape(N,3,3)
-        Rotation matrices describing the transformation from the crystal 
-        coordinates to the mechanical coordinates
+    M : numpy ndarray shape(N,3,3)
+        Rotation matrices describing the transformation from the sample 
+        coordinate frame to the crystal coordinate frame
     d : list or array shape(3) or string
         Mechanical direction parallel to the desired crystallographic 
         direction.
@@ -607,54 +620,54 @@ def IPF(R, d='ND'):
 
     Returns
     -------
-    uvw : crystallographic direction parallel to mechanical direction 'd'
+    uvw : crystallographic direction parallel to the direction 'd'
         uvw = M.d = (R^T).d
     """
     if d == 'ND':
         d = [0, 0, 1]
 
-    if np.ndim(R) == 2:
-        R = R.reshape(1, 3, 3)
+    if np.ndim(M) == 2:
+        M = M.reshape(1, 3, 3)
 
-    M = R.transpose([0, 2, 1])  # M = R^T
     uvw = np.dot(M, d)  # dot product M.D
     uvw = uvw/np.linalg.norm(uvw, axis=1).reshape(-1, 1)  # normalize uvw
     return uvw
 
 
-def PF(R, proj=[1, 0, 0], parent_or=None):
+def PF(R, proj=[1, 0, 0], rotation=None):
     """
     Parameters
     ----------
     R : numpy ndarray shape(N,3,3) or numpy array(3,3)
         Rotation matrices describing the transformation from the crystal 
-        coordinates to the mechanical coordinates
+        coordinate frame to the sample coordinate frame
     proj : list or array shape(3)
         Family of directions projected in the pole figure. Default is '100'
-    parent_or : list or array shape(3,3)
-        Rotation matrix describing the orientation of the parent phase in the pole
-        figure. The columns of the matrix correspond to the directions parallel to 
+    rotation : list or array shape(3,3)
+        Rotation matrix that rotates the pole figure (R' = rotation-1.R).
+        The columns of the matrix correspond to the directions parallel to 
         the axes of the pole figure.
     """
     if np.ndim(R) == 2:
         R = R.reshape(1, 3, 3)
 
-    if isinstance(parent_or, (list, tuple, np.ndarray)):
-        R_prime = parent_or/np.linalg.norm(parent_or, axis=0)
+    if isinstance(rotation, (list, tuple, np.ndarray)):
+        R_prime = rotation/np.linalg.norm(rotation, axis=0)
         R_prime = np.linalg.inv(R_prime)
         R = np.tensordot(R_prime, R, axes=[[-1], [-2]]).transpose([1, 0, 2])
 
     N = R.shape[0]
-    var = list_cubic_family_directions(d=proj)
-    nvar = len(var)
-    norm = np.linalg.norm(proj)
+    proj_variants = list_cubic_family_directions(d=proj)
+    nvar = len(proj_variants)
+    # normalize proj_variants
+    proj_variants = proj_variants/np.linalg.norm(proj)
 
     xp = np.ndarray((N, nvar))
     yp = np.ndarray((N, nvar))
 
-    # dm : directions in the mechanical coordinates
+    # dm : directions in the sample coordinate frame
     # ndarray shape(N,3,nvar)
-    dm = np.tensordot(R, var.T, axes=[[-1], [-2]])/norm
+    dm = np.tensordot(R, proj_variants.T, axes=[[-1], [-2]])
     sgn = np.sign(dm[:, 2, :])  # ndarray shape(N, nvar)
     sgn[sgn == 0.] = 1.  # change behavior of np.sign to x = 0
 
