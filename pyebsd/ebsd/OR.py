@@ -74,7 +74,7 @@ def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     V = V_sel[jsel]
 
     phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
-        V_sel[jsel], avg=True, **kwargs)
+        V_sel[jsel], avg=True, verbose=False, **kwargs)
     # Average OR matrix
     Vavg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False)
 

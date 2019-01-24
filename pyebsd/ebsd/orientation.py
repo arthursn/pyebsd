@@ -440,7 +440,7 @@ def rotation_matrix_to_euler_angles(R, conv='zxz', **kwargs):
         # n=kwargs.pop('n', 5), maxdev=kwargs.pop('maxdev', .25)
         R_avg = minimize_disorientation(R, R_avg, **kwargs)
         phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
-            R_avg)  # recursive
+            R_avg, verbose=False)  # recursive
 
     return phi1, Phi, phi2
 
