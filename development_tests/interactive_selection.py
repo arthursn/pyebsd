@@ -48,7 +48,7 @@ proj = [1, 0, 0]
 key = ''
 while key is not 'q':
     if np.count_nonzero(ipf.sel) > 0:
-        R_fcc = pyebsd.avg_orientation(scan.R, sel=ipf.sel & (scan.ph == 2) & (
+        M_fcc = pyebsd.avg_orientation(scan.M, sel=ipf.sel & (scan.ph == 2) & (
             scan.CI > .2), vectorized=False, verbose=True)  # , plot=True, n=10, maxdev=10., it=5)
 
         # plot IPF of the selected data
@@ -62,9 +62,9 @@ while key is not 'q':
         pyebsd.draw_circle_frame(ax3, lw=.5)
         pyebsd.draw_std_traces(ax3, lw=.5)
         scan.plot_PF(sel=ipf.sel & (scan.ph == 1) & (scan.CI > .2), proj=proj,
-                     contour=True, cmap=plt.get_cmap('Reds_r'), ax=ax3, parent_or=R_fcc)
+                     contour=True, cmap=plt.get_cmap('Reds_r'), ax=ax3, rotation=M_fcc.T)
         scan.plot_PF(sel=ipf.sel & (scan.ph == 2) & (scan.CI > .2), proj=proj,
-                     contour=True, cmap=plt.get_cmap('Blues_r'), ax=ax3, parent_or=R_fcc)
+                     contour=True, cmap=plt.get_cmap('Blues_r'), ax=ax3, rotation=M_fcc.T)
 
         plt.draw_all()
 

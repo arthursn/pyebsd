@@ -15,8 +15,10 @@ def angle_2ds(V, ds='cpp'):
     else:
         d_prt, d_chd = ds[0], ds[1]
 
-    v = np.dot(V, list_cubic_family_directions(d_prt).T)/np.linalg.norm(d_prt)  # directions
-    v = np.dot(list_cubic_family_directions(d_chd), v)/np.linalg.norm(d_chd)  # cosine
+    v = np.dot(V, list_cubic_family_directions(d_prt).T) / \
+        np.linalg.norm(d_prt)  # directions
+    v = np.dot(list_cubic_family_directions(d_chd), v) / \
+        np.linalg.norm(d_chd)  # cosine
     v = np.abs(v)
     v[v > 1] = 1.  # if v[i] == 1.000...1 np.arccos crashes
     v = np.degrees(np.arccos(v))  # angle in degrees
@@ -31,11 +33,11 @@ def angle_2ds(V, ds='cpp'):
 
 # Calculate experimental (accurate?) OR
 filt = sel & (scan.CI > .2)
-V, V0, R_fcc, jvariants = OR_exp(R=scan.R, ph=scan.ph, sel=filt)
+V, V0, M_fcc, jvariants = OR_exp(M=scan.M, ph=scan.ph, sel=filt)
 
 C = list_cubic_symmetry_operators()
 KS = OR()
-Vr = KS[1]  # reference
+Vr = KS[2]  # reference
 
 # D = np.dot(np.dot(C, V0), np.dot(C, Vr).transpose([0,2,1])).transpose([0,2,1,3])
 A = np.dot(np.dot(C, V0), C).transpose([0, 2, 1, 3])
@@ -64,7 +66,7 @@ ax7, fig7 = mapks.ax, mapks.fig
 variants = np.zeros(scan.N)
 variants[filt & (scan.ph == 1)] = jvariants
 mapvars = scan.plot_property(variants, sel=filt & (scan.ph == 1),
-                             vmin=0, vmax=23, tiling='hex',
+                             vmin=0, vmax=23, gray=scan.IQ, tiling='hex',
                              cmap=plt.get_cmap('inferno'))
 
 ax9, fig9 = mapvars.ax, mapvars.fig
@@ -119,9 +121,8 @@ ax4.set_ylabel('Counts')
 
 proj0, proj = [1, 1, 0], [1, 1, 1]
 
-ax5 = pyebsd.plot_PF(R=scan.R[filt & (scan.ph == 2)], contour=True,
-                     cmap='Blues_r', bins=512, nlevels=20,
-                     fn=None, proj=proj0, parent_or=R_fcc)
+ax5 = scan.plot_PF(proj=proj0, sel=filt & (scan.ph == 2), rotation=M_fcc.T,
+             contour=True, cmap='Blues_r', bins=512, nlevels=20)
 fig5 = ax5.get_figure()
 pyebsd.plot_PF(M=V, contour=True, cmap='Reds_r',
                bins=512, nlevels=20, fn=None, proj=proj, ax=ax5)
@@ -147,13 +148,13 @@ ax6 = pyebsd.plot_PF(M=np.dot(V0, C).transpose([1, 0, 2]),
                      ms=5, proj=proj, label='exp.')
 fig6 = ax6.get_figure()
 pyebsd.plot_PF(M=T_KS, mfc=[1, 1, 1, 0], mec='r', mew=1,
-               marker='s', ms=5, proj=proj, parent_or=parent_or,
+               marker='s', ms=5, proj=proj, rotation=parent_or,
                verbose=False, ax=ax6, label='KS')
 pyebsd.plot_PF(M=T_NW, mfc=[1, 1, 1, 0], mec='g', mew=1,
-               marker='D', ms=5, proj=proj, parent_or=parent_or,
+               marker='D', ms=5, proj=proj, rotation=parent_or,
                verbose=False, ax=ax6, label='NW')
 pyebsd.plot_PF(M=T_GT, mfc=[1, 1, 1, 0], mec='b', mew=1,
-               marker='v', ms=5, proj=proj, parent_or=parent_or,
+               marker='v', ms=5, proj=proj, rotation=parent_or,
                verbose=False, ax=ax6, label='GT')
 pyebsd.draw_std_traces(ax6, lw=.2)
 pyebsd.draw_wulff_net(ax6, lw=.2)
