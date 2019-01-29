@@ -270,7 +270,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
         plt.contourf(..., **kwargs)
     """
     R = kwargs.pop('R', None)
-    
+
     if isinstance(R, np.ndarray):
         if R.ndim == 2:
             R = R.reshape(1, 3, 3)
@@ -484,7 +484,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
 
 def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
-             dx=None, d='ND', ax=None, sel=None, gray=None, tiling='rect',
+             dx=None, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling='rect',
              w=2048, scalebar=True, verbose=True, **kwargs):
     """
     Documentation

@@ -216,24 +216,21 @@ class Scandata(object):
         neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
         return neighbors_ind.astype(int)
 
-    def plot_IPF(self, d='ND', ax=None, sel=None, gray=None, tiling='rect',
+    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
         """
         Plot inverse pole figure map
 
         Parameters
         ----------
-        d : list or array shape(3) (optional)
-            Mechanical direction parallel to the desired crystallographic direction A 
-            string ['ND', ...] can provided instead. 'd' values will be assigned
-            according to:
-            'ND' : [0, 0, 1]
-            Default: 'ND'
+        d : list or array shape(3)
+            Reference direction in the sample coordinate frame.
+            Default: [0, 0, 1] (i.e., normal direction)
         ax : AxesSubplot instance (optional)
             The pole figure will be plotted in the provided instance 'ax'
         sel : boolean numpy 1D array
-            Array with boolean [True, False] values indicating which data points 
-            should be plotted
+            Array with boolean [True, False] values indicating which data 
+            points should be plotted
             Default: None
         gray : numpy ndarray (optional)
             Grayscale mask plotted over IPF. 
@@ -297,7 +294,7 @@ class Scandata(object):
                  colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
         """
-        Plot Kernell average misorientation map
+        Plot Kernel average misorientation map
         """
         neighbors = self.get_neighbors(distance, perimeteronly)
         nneighbors = neighbors.shape[1]
@@ -323,8 +320,8 @@ class Scandata(object):
         ax : AxesSubplot instance (optional)
             The pole figure will be plotted in the provided instance 'ax'
         sel : boolean numpy ndarray
-            Array with boolean [True, False] values indicating which data points 
-            should be plotted
+            Array with boolean [True, False] values indicating which data 
+            points should be plotted
             Default: None
         rotation : list or array shape(3,3)
             Rotation matrix that rotates the pole figure.
@@ -346,8 +343,8 @@ class Scandata(object):
                 'plt.contour'
                 Default: True
             bins : int or tuple or array (int,int)
-                Binning used in the calculation of the points density histogram (prior
-                to contour plot)
+                Binning used in the calculation of the points density histogram 
+                (prior to contour plot)
                 Default: (256, 256)
             fn : ['sqrt', 'log', 'None'] or function(x)
                 function that modifies the points density.
@@ -356,8 +353,8 @@ class Scandata(object):
                 number of levels in the contour plot
                 Default: 10
 
-        The kwargs properties not listed here are automatically passed to the plotting
-        functions:
+        The kwargs properties not listed here are automatically passed to the 
+        plotting functions:
         if not contour:
             plt.plot(..., **kwargs)
         if contour and fill:
@@ -465,7 +462,8 @@ def selection_to_scandata(scan, sel):
         newdata.loc[~sel, 'fit'] = 0
 
         # select rectangle surrounding the selected data
-        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection(scan, sel)
+        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection(
+            scan, sel)
 
         # data to be exported is a rectangle
         newdata = newdata[rect]

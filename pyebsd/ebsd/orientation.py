@@ -601,7 +601,7 @@ def reduce_cubic_transformations(V, maxdev=1e-3):
 """ Orientation representation (IPF and PF) """
 
 
-def IPF(M, d='ND'):
+def IPF(M, d=[0, 0, 1]):
     """
     Calculates crystallographic direction parallel to the direction d 
     relative to the sample coordinate frame.
@@ -611,21 +611,14 @@ def IPF(M, d='ND'):
     M : numpy ndarray shape(N,3,3)
         Rotation matrices describing the transformation from the sample 
         coordinate frame to the crystal coordinate frame
-    d : list or array shape(3) or string
-        Mechanical direction parallel to the desired crystallographic 
-        direction.
-        d can be provided as a string representing common reference 
-        directions as follows:
-          d = 'ND' (normal direction) -> d = [0, 0, 1]
+    d : list or array shape(3)
+        Reference direction in the sample coordinate frame.
 
     Returns
     -------
     uvw : crystallographic direction parallel to the direction 'd'
         uvw = M.d = (R^T).d
     """
-    if d == 'ND':
-        d = [0, 0, 1]
-
     if np.ndim(M) == 2:
         M = M.reshape(1, 3, 3)
 
