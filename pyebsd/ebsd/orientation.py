@@ -16,21 +16,21 @@ def trace_to_angle(tr):
 def stereographic_projection(d, norm=True, coord='cartesian'):
     """
     Returns the coordinates of the stereographic projection of a direction 'd'
+
+    Arguments
+    ---------
+    d : 1D or 2D list or array shape (3) or (,3)
+        Direction
     """
     d = np.asarray(d)
     ndim = d.ndim
     shp = d.shape
 
-    if 3 not in shp:
-        return
-
     if ndim == 1:
         d = d.reshape(3, 1)
     elif ndim == 2:
-        if shp[0] != 3:
-            d = d.transpose([1, 0])
-    else:
-        return
+        # transpose d
+        d = d.T
 
     if norm:
         d = d/np.linalg.norm(d, axis=0)
@@ -274,12 +274,11 @@ def minimize_disorientation(V, V0, **kwargs):
             sys.stdout.write('{:2d} : {:g}, {:g}, {:g}; mis = {:g} deg\n'.format(
                 i+1, np.degrees(theta[imax]), np.degrees(phi[imax]), np.degrees(psi[imax]), dth))
         if plot:
-            x, y = PF(R=np.dot(A, V0).transpose([0, 2, 1]))
-            ordc = np.argsort(B)
-            axmin.scatter(x[ordc].ravel(), y[ordc].ravel(), c=np.repeat(
-                B[ordc], x.shape[1]), lw=0, s=30, marker='s')
-            axmin.plot(x[imax].ravel(), y[imax].ravel(),
-                       'kx', ms=10, mew=2, c='r')
+            Rscan = np.dot(A, V0).transpose([0, 2, 1])
+            plot_PF(R=Rscan, ax=axmin, scatter=True,
+                    s=30, marker='s', c=np.repeat(B, 3), verbose=False)
+            plot_PF(R=Rscan[imax], ax=axmin, scatter=True,
+                    s=200, marker='x', c='r', verbose=False)
 
         V0 = np.dot(A[imax], V0)
         maxdev /= n
@@ -623,8 +622,8 @@ def IPF(M, d=[0, 0, 1]):
         M = M.reshape(1, 3, 3)
 
     uvw = np.dot(M, d)  # dot product M.D
-    uvw = uvw/np.linalg.norm(uvw, axis=1).reshape(-1, 1)  # normalize uvw
-    return uvw
+
+    return uvw/np.linalg.norm(uvw, axis=1).reshape(-1, 1)  # normalize uvw
 
 
 def PF(R, proj=[1, 0, 0], rotation=None):
@@ -655,20 +654,24 @@ def PF(R, proj=[1, 0, 0], rotation=None):
     # normalize proj_variants
     proj_variants = proj_variants/np.linalg.norm(proj)
 
-    xp = np.ndarray((N, nvar))
-    yp = np.ndarray((N, nvar))
+    # Return directions in the sample coordinate frame
+    # ndarray shape(N, nvar, 3)
+    return np.tensordot(R, proj_variants.T, axes=[[-1], [-2]]).transpose([0, 2, 1])
+
+    # xp = np.ndarray((N, nvar))
+    # yp = np.ndarray((N, nvar))
 
     # dm : directions in the sample coordinate frame
     # ndarray shape(N,3,nvar)
-    dm = np.tensordot(R, proj_variants.T, axes=[[-1], [-2]])
-    sgn = np.sign(dm[:, 2, :])  # ndarray shape(N, nvar)
-    sgn[sgn == 0.] = 1.  # change behavior of np.sign to x = 0
+    # dm = np.tensordot(R, proj_variants.T, axes=[[-1], [-2]])
+    # sgn = np.sign(dm[:, 2, :])  # ndarray shape(N, nvar)
+    # sgn[sgn == 0.] = 1.  # change behavior of np.sign for x = 0
 
-    # coordinates in the stereographic projection
-    xp = sgn*dm[:, 0, :]/(np.abs(dm[:, 2, :]) + 1.)
-    yp = sgn*dm[:, 1, :]/(np.abs(dm[:, 2, :]) + 1.)
+    # # coordinates in the stereographic projection
+    # xp = sgn*dm[:, 0, :]/(np.abs(dm[:, 2, :]) + 1.)
+    # yp = sgn*dm[:, 1, :]/(np.abs(dm[:, 2, :]) + 1.)
 
-    return (xp, yp)
+    # return (xp, yp)
 
 
 # The product of two 2D matrices (numpy ndarray shape(N,N)) can be calculated

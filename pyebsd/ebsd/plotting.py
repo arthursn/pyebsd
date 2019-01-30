@@ -188,10 +188,21 @@ def unit_triangle(ax=None, n=512, **kwargs):
     # [np.repeat(1.,n), t, np.repeat(1.,n)]
     # [t[::-1], t[::-1], np.repeat(1.,n)]
     # [t, np.repeat(0,n), np.repeat(1.,n)]
-    u = np.hstack([np.repeat(1., n), t[::-1], t])
-    v = np.hstack([t, t[::-1], np.repeat(0, n)])
-    w = np.hstack([np.repeat(1., n), np.repeat(1., n), np.repeat(1., n)])
-    x, y = stereographic_projection([u, v, w])
+
+    # u = np.hstack([np.repeat(1., n), t[::-1], t])
+    # v = np.hstack([t, t[::-1], np.repeat(0, n)])
+    # w = np.hstack([np.repeat(1., n), np.repeat(1., n), np.repeat(1., n)])
+    uvw = np.full((3*n, 3), 1.)
+    # u
+    uvw[n:2*n, 0] = t[::-1]
+    uvw[2*n:, 0] = t
+    # v
+    uvw[:n, 1] = t
+    uvw[n:2*n, 1] = t[::-1]
+    uvw[2*n:, 1] = 0.
+    # w: Nothing do to. All values are equal to 1.
+
+    x, y = stereographic_projection(uvw)
     ax.plot(x, y, 'k-', lw=2)
 
     ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(
@@ -286,11 +297,22 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
         sys.stdout.write('Plotting Pole Figure... ')
         sys.stdout.flush()
 
-    # gets Cartesian coordinates of PF projections
-    xp, yp = PF(R, proj=proj, rotation=rotation)
+    # PF returns directions (in the sample coordinate frame) of all variants
+    # of the crytal direction proj
+    # dsample has shape shape(N, nvar, 3), where nvar is the number of
+    # variants of proj
+    dsample = PF(R, proj=proj, rotation=rotation)
 
     if isinstance(sel, np.ndarray):  # selected values
-        xp, yp = xp[sel], yp[sel]
+        dsample = dsample[sel]
+
+    # flattens dsample along the axes 0 and 1 (N and nvar).
+    dsample = dsample.reshape(-1, 3)
+
+    # calculate the Cartensian coordinates of the stereographic projection
+    # for only the directions where the z coordinate is larger or equal
+    # than 0
+    xp, yp = stereographic_projection(dsample[dsample[:, 2] >= 0])
 
     if ax is None:  # if ax was not provided, creates new ax object
         fig, ax = plt.subplots(facecolor='white')
@@ -332,11 +354,17 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
         else:
             ax.contour(hist, extent=(-1, 1, -1, 1), **kwargs)
     else:
-        if not kwargs.get('marker', None):
-            kwargs['marker'] = '.'
-        if not kwargs.get('markersize', None) and not kwargs.get('ms', None):
-            kwargs['markersize'] = 1
-        ax.plot(xp.ravel(), yp.ravel(), linestyle='None', **kwargs)
+        if kwargs.pop('scatter', False):
+            ax.scatter(xp.ravel(), yp.ravel(), **kwargs)
+        else:
+            if not kwargs.get('linestyle', None):
+                kwargs['linestyle'] = 'None'
+            if not kwargs.get('marker', None):
+                kwargs['marker'] = '.'
+            if not kwargs.get('markersize', None) and not kwargs.get('ms', None):
+                kwargs['markersize'] = 1
+                
+            ax.plot(xp.ravel(), yp.ravel(), **kwargs)
 
     ax.set_xlim(-1.05, 1.05)
     ax.set_ylim(-1.05, 1.05)
