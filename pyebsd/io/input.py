@@ -102,8 +102,8 @@ def load_ang_file(fname):
     if nmatches != 6:
         raise Exception('Info about scandata is missing in the file header.')
 
-    # Uses pandas to read ang file. pd.read_table returns a pandas DataFrame
-    data = pd.read_table(fname, header=None, comment='#',
+    # Uses pandas to read ang file. pd.read_csv returns a pandas DataFrame
+    data = pd.read_csv(fname, header=None, comment='#',
                          delim_whitespace=True)
     # Rename the columns
     columns = list(data.columns)
