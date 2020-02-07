@@ -27,6 +27,9 @@ rcParams['savefig.pad_inches'] = 0.0
 
 
 class Scandata(object):
+    __cos60 = .5  # cos(60deg)
+    __sin60 = .5*3.**.5  # sin(60deg)
+
     __first_neighbors_hexgrid = np.array([
         [-2, 0],
         [-1, -1],
@@ -193,24 +196,49 @@ class Scandata(object):
         return (1 - self.N*(j//self.ncols)) * \
             ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
+    def get_neighbors_hexgrid(self, distance):
+        """
+        Return list of relative indices of the neighboring pixels in a
+        hexgrid for a given distance in pixels
+        """
+        R60 = np.array([[self.__cos60, -self.__sin60],
+                        [self.__sin60,  self.__cos60]])  # 60 degrees rotation matrix
+
+        j_list = np.arange(-distance, distance, 2)
+        i_list = np.full(j_list.shape, -distance)
+
+        xy = np.vstack([j_list*self.__cos60, i_list*self.__sin60])
+
+        j_list, i_list = list(j_list), list(i_list)
+
+        for r in range(1, 6):
+            xy = np.dot(R60, xy)  # 60 degrees rotation
+            j_list += list((xy[0]/self.__cos60).round(0).astype(int))
+            i_list += list((xy[1]/self.__sin60).round(0).astype(int))
+
+        return j_list, i_list
+
     def get_neighbors(self, distance=1, perimeteronly=True):
         """
-        Returns list of indices of the neighboring pixels for each pixel
+        Returns list of indices of the neighboring pixels for every pixel
+        for a given distance in pixels
         """
         if perimeteronly:
             # only pixels in the perimeter
-            j_shift, i_shift = self.neighbors_hexgrid[distance-1].T
+            j_shift, i_shift = self.get_neighbors_hexgrid(distance)
         else:
             # including inner pixels
-            j_shift, i_shift = np.vstack(self.neighbors_hexgrid[:distance]).T
+            j_shift, i_shift = [], []
+            for d in range(1, distance+1):
+                j_sh, i_sh = self.get_neighbors_hexgrid(d)
+                j_shift += j_sh
+                i_shift += i_sh
 
         j0, i0 = self.j, self.i
         # x
-        j_neighbors = np.vstack(
-            [j0 + shift for shift in j_shift]).T.astype(int)
+        j_neighbors = np.vstack([j0 + shift for shift in j_shift]).T.astype(int)
         # y
-        i_neighbors = np.vstack(
-            [i0 + shift for shift in i_shift]).T.astype(int)
+        i_neighbors = np.vstack([i0 + shift for shift in i_shift]).T.astype(int)
 
         neighbors_ind = self.ij2ind(i_neighbors, j_neighbors)
         neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
