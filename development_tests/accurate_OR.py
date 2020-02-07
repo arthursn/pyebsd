@@ -1,4 +1,4 @@
-from pyebsd import list_cubic_symmetry_operators, list_cubic_family_directions, OR, OR_exp, trace_to_angle
+from pyebsd import list_cubic_symmetry_operators_KS, list_cubic_family_directions, OR, OR_exp, trace_to_angle
 from itertools import combinations
 
 
@@ -35,7 +35,7 @@ def angle_2ds(V, ds='cpp'):
 filt = sel & (scan.CI > .2)
 V, V0, M_fcc, jvariants = OR_exp(M=scan.M, ph=scan.ph, sel=filt)
 
-C = list_cubic_symmetry_operators()
+C = list_cubic_symmetry_operators_KS()
 KS = OR()
 Vr = KS[2]  # reference
 
@@ -67,7 +67,7 @@ variants = np.zeros(scan.N)
 variants[filt & (scan.ph == 1)] = jvariants
 mapvars = scan.plot_property(variants, sel=filt & (scan.ph == 1),
                              vmin=0, vmax=23, gray=scan.IQ, tiling='hex',
-                             cmap=plt.get_cmap('inferno'))
+                             cmap=plt.get_cmap('jet'))
 
 ax9, fig9 = mapvars.ax, mapvars.fig
 # fig9.savefig(basename + '_variants.pdf', bbox_inches='tight', pad_inches=0)
@@ -122,7 +122,7 @@ ax4.set_ylabel('Counts')
 proj0, proj = [1, 1, 0], [1, 1, 1]
 
 ax5 = scan.plot_PF(proj=proj0, sel=filt & (scan.ph == 2), rotation=M_fcc.T,
-             contour=True, cmap='Blues_r', bins=512, nlevels=20)
+                   contour=True, cmap='Blues_r', bins=512, nlevels=20)
 fig5 = ax5.get_figure()
 pyebsd.plot_PF(M=V, contour=True, cmap='Reds_r',
                bins=512, nlevels=20, fn=None, proj=proj, ax=ax5)

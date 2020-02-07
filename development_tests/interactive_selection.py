@@ -10,7 +10,8 @@ import pyebsd
 if 'fname_local' not in locals() or 'fname_local' not in globals():
     fname_local = ''
 
-fname = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
+# fname = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
+fname = os.path.join('..', 'data', 'QP_bcc_fcc_single_austenite_grain.ang')
 
 basename = os.path.basename(fname)
 basename = os.path.splitext(basename)[0]
