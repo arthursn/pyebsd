@@ -9,30 +9,28 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from itertools import permutations
 
-from .orientation import (euler_angles_to_rotation_matrix,
-                          PF, IPF,
+from .orientation import (euler_angles_to_rotation_matrix, PF, IPF,
                           stereographic_projection)
 from ..draw import (modify_show, set_tight_plt, draw_circle_frame,
                     toimage, ScaleBar)
 from ..selection import LassoSelector2, RectangleSelector2
 
 
-class _Formatter(object):
-    def __init__(self, xrng, yrng, z):
-        self.xmin = min(xrng)
-        self.xrng = abs(xrng[1] - xrng[0])
-        self.ymin = min(yrng)
-        self.yrng = abs(yrng[1] - yrng[0])
-        self.z = z
-        self.h = self.z.shape[0]
-        self.w = self.z.shape[1]
+class _CoordsFormatter(object):
+    def __init__(self, extent, Z):
+        self.xmin = min(extent[:2])
+        self.ymin = min(extent[2:])
+        self.xrng = abs(extent[1] - extent[0])
+        self.yrng = abs(extent[3] - extent[2])
+        self.Z = Z
+        self.h, self.w = self.Z.shape
 
     def __call__(self, x, y):
         i = int(self.w*(x - self.xmin)/self.xrng)
         j = int(self.h*(y - self.ymin)/self.yrng)
         i = self.w - 1 if i == self.w else i
         j = self.h - 1 if j == self.h else j
-        return 'x={:g}, y={:g}, z={:g}'.format(x, y, self.z[j, i])
+        return 'x={:g}    y={:g}    z={:g}'.format(x, y, self.Z[j, i])
 
 
 class EBSDMap(object):
@@ -410,10 +408,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
     # getting kwargs properties...
     cmap = kwargs.pop('cmap', plt.get_cmap())
-    vmin, vmax = kwargs.pop('vmin', np.min(prop[sel])), kwargs.pop('vmax', np.max(prop[sel]))
+    if isinstance(cmap, str):
+        cmap = plt.get_cmap(cmap)
+    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
+    vmin = kwargs.pop('vmin', np.min(prop[sel]))
+    vmax = kwargs.pop('vmax', np.max(prop[sel]))
 
-    # calculates expect number of points from provided nrows,
-    # ncols_odd and ncols_even
+    # calculates expected number of points from provided nrows, ncols_odd and ncols_even
     N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
@@ -434,14 +435,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     if isinstance(sel, np.ndarray):
         if prop.shape != sel.shape:
             return
-        else:
-            not_sel = np.logical_not(sel)
-            col[not_sel] = colorfill
-            if prop_true.dtype == float:
-                prop_true[not_sel] = np.nan
     else:
-        sel = np.ndarray(N, dtype=bool)
-        sel.fill(True)
+        sel = np.full(N, True)
+
+    not_sel = np.logical_not(sel)
+    col[not_sel] = colorfill
+    if prop_true.dtype == float:
+        prop_true[not_sel] = np.nan
 
     if isinstance(gray, np.ndarray):
         if prop.shape != gray.shape:
@@ -457,8 +457,6 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         ax.cla()
         fig = ax.get_figure()
 
-    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
-
     if tiling == 'hex':
         if not dx:
             dx = (np.max(x) - np.min(x))/ncols_even
@@ -468,6 +466,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         y_hex = np.ndarray((len(y[sel]), 6))
         edge_length = dx/3.**.5
 
+        # calculates the coordinates of the vertices of the hexagonal pixel
         for i in range(6):
             x_hex[:, i] = x[sel] + np.sin(i*np.pi/3)*edge_length
             y_hex[:, i] = y[sel] + np.cos(i*np.pi/3)*edge_length
@@ -500,12 +499,12 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
         imin, imax = 0, nrows
         jmin, jmax = 0, ncols
-        if np.count_nonzero(np.logical_not(sel)) > 0:
+        if np.count_nonzero(not_sel) > 0:
             sel = np.repeat(sel, 2)
             sel = np.delete(sel, rm, axis=0)
             isel, jsel = np.where(sel.reshape(nrows, ncols))
             imin, imax = np.min(isel)+1, np.max(isel)+1
-            jmin, jmax = np.min(jsel)+1, np.max(jsel)
+            jmin, jmax = np.min(jsel)+1, np.max(jsel)+1
 
         scale = 1.*w/(jmax - jmin)
         h = np.int(scale*(imax - imin)*(3.**.5))
@@ -516,7 +515,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
         img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
-        ax.format_coord = _Formatter((xmin, xmax), (ymin, ymax), prop_true[imin:imax, jmin:jmax])
+        ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), prop_true[imin:imax, jmin:jmax])
 
     else:
         return
@@ -573,11 +572,12 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         if N != sel.shape[0]:
             print('M.shape and sel.shape differ')
             return
-        else:
-            col[np.logical_not(sel)] = [0, 0, 0]  # RGB
     else:
         sel = np.ndarray(N, dtype=bool)
         sel.fill(True)
+
+    not_sel = np.logical_not(sel)
+    col[not_sel] = [0, 0, 0]  # RGB
 
     if isinstance(gray, np.ndarray):
         if N != gray.shape[0]:
@@ -637,7 +637,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
         imin, imax = 0, nrows
         jmin, jmax = 0, ncols
-        if np.count_nonzero(np.logical_not(sel)) > 0:
+        if np.count_nonzero(not_sel) > 0:
             sel = np.repeat(sel, 2)
             sel = np.delete(sel, rm, axis=0)
             isel, jsel = np.where(sel.reshape(nrows, ncols))
