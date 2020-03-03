@@ -62,10 +62,6 @@ T_KS_T = T_KS.transpose([0, 2, 1])
 M_KS = np.dot(T_KS, M_fcc_avg)
 R_KS = M_KS.transpose(0, 2, 1)
 
-
-np.tensordot(C, M_bcc,
-             axes=[[-1], [-2]]).transpose([2, 0, 1, 3])
-
 # T_KS^T . M_bcc
 M_KS_all = np.tensordot(C, M_KS,
                         axes=[[-1], [-2]]).transpose([2, 0, 1, 3])
