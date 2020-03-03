@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
@@ -198,7 +200,7 @@ class Scandata(object):
 
     def get_neighbors_hexgrid(self, distance):
         """
-        Return list of relative indices of the neighboring pixels in a
+        Returns list of relative indices of the neighboring pixels in a
         hexgrid for a given distance in pixels
         """
         R60 = np.array([[self.__cos60, -self.__sin60],
@@ -244,21 +246,48 @@ class Scandata(object):
         neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
         return neighbors_ind.astype(int)
 
+    def get_KAM(self, distance=1, perimeteronly=True, sel=None):
+        """
+        Returns Kernel average misorientation map
+
+        Parameters
+        ----------
+        distance : int (optional)
+            Distance (in neighbor indexes) to the kernel
+            Default: 1
+        perimeteronly : bool (optional)
+            If True, KAM is calculated using only pixels in the perimeter,
+            else uses inner pixels as well
+            Default: True
+        sel : bool numpy 1D array (optional)
+            Boolean array indicating which data points should be plotted
+            Default: None
+
+        Returns
+        -------
+        KAM : np.ndarray(N) with KAM values in degrees
+
+        """
+        neighbors = self.get_neighbors(distance, perimeteronly)
+        nneighbors = neighbors.shape[1]
+        misang = misorientation(self.M, neighbors, sel)
+        return np.sum(misang, axis=1)/nneighbors
+
     def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
         """
-        Plot inverse pole figure map
+        Plots inverse pole figure map
 
         Parameters
         ----------
         d : list or array shape(3)
             Reference direction in the sample coordinate frame.
             Default: [0, 0, 1] (i.e., normal direction)
-        ax : AxesSubplot instance (optional)
-            The pole figure will be plotted in the provided instance 'ax'
-        sel : boolean numpy 1D array
-            Array with boolean [True, False] values indicating which data 
-            points should be plotted
+        ax : AxesSubplot object (optional)
+            The pole figure will be plotted in the provided object 'ax'
+            Default: None
+        sel : bool numpy 1D array (optional)
+            Boolean array indicating which data points should be plotted
             Default: None
         gray : numpy ndarray (optional)
             Grayscale mask plotted over IPF. 
@@ -270,10 +299,10 @@ class Scandata(object):
         w : int (optional)
             Width in pixel
             Default: 2048
-        scalebar : booelan (optional)
+        scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
-        verbose : boolean (optional)
+        verbose : bool (optional)
             If True, prints computation time
             Default: True
 
@@ -295,13 +324,57 @@ class Scandata(object):
 
     def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
                       sel=None, gray=None, tiling='rect', w=2048,
-                      scalebar=True, verbose=True, **kwargs):
+                      scalebar=True, colorbar=True, verbose=True, **kwargs):
         """
-        Plot any kind of property
+        Plots any EBSD property
+
+        Parameters
+        ----------
+        prop : array shape(N)
+            Property to be plotted provided as np.ndarray(N), where N is the 
+            size of the data file
+        ax : AxesSubplot object (optional)
+            The pole figure will be plotted in the provided object 'ax'
+            Default: None
+        colordict : dict(str: list shape(4)) (optional)
+            Dictionary that maps indexed phase to respective color provided
+            as list shape(4) (RGBA from 0 to 1)
+            Default: None
+        colorfill : list shape(4) (optional)
+            Color used to fill unindexed pixels
+            Default: [0, 0, 0, 1] (black)
+        sel : bool numpy 1D array (optional)
+            Boolean array indicating which data points should be plotted
+            Default: None
+        gray : numpy ndarray (optional)
+            Grayscale mask plotted over IPF. 
+            For example, one may want to overlay the IPF map with the image 
+            quality data.
+            Default: None
+        tiling : str (optional)
+            Valid options are 'rect' or 'hex'
+        w : int (optional)
+            Width in pixel
+            Default: 2048
+        scalebar : bool (optional)
+            If True, displays scalebar over IPF map
+            Default: True
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+
+        **kwargs:
+            Variables are passed to function ax.imshow:
+            ax.imshow(img, ..., **kwargs)
+
+        Returns
+        -------
+        ebsdmap : EBSDMap object
+
         """
         ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd,
                                 self.x, self.y, self.dx, ax, colordict, colorfill,
-                                sel, gray, tiling, w, scalebar, verbose, **kwargs)
+                                sel, gray, tiling, w, scalebar, colorbar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
@@ -310,27 +383,105 @@ class Scandata(object):
                    colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
                    w=2048, scalebar=True, verbose=True, **kwargs):
         """
-        Plot phases map 
+        Plots phases map 
+
+        Parameters
+        ----------
+        ax : AxesSubplot object (optional)
+            The pole figure will be plotted in the provided object 'ax'
+            Default: None
+        sel : bool numpy 1D array (optional)
+            Boolean array indicating which data points should be plotted
+            Default: None
+        colordict : dict(str: list shape(4)) (optional)
+            Dictionary that maps indexed phase to respective color provided
+            as list shape(4) (RGBA from 0 to 1)
+            Default: {'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]}
+        colorfill : list shape(4) (optional)
+            Color used to fill unindexed pixels
+        gray : numpy ndarray (optional)
+            Grayscale mask plotted over IPF. 
+            For example, one may want to overlay the IPF map with the image 
+            quality data.
+            Default: None
+        tiling : str (optional)
+            Valid options are 'rect' or 'hex'
+        w : int (optional)
+            Width in pixel
+            Default: 2048
+        scalebar : bool (optional)
+            If True, displays scalebar over IPF map
+            Default: True
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+
+        **kwargs:
+            Variables are passed to function ax.imshow:
+            ax.imshow(img, ..., **kwargs)
+
+        Returns
+        -------
+        ebsdmap : EBSDMap object
+
         """
         ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray,
-                                     tiling, w, scalebar, verbose, **kwargs)
+                                     tiling, w, scalebar, False, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, colordict=None,
                  colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
-                 w=2048, scalebar=True, verbose=True, **kwargs):
+                 w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
         """
-        Plot Kernel average misorientation map
-        """
-        neighbors = self.get_neighbors(distance, perimeteronly)
-        nneighbors = neighbors.shape[1]
-        misang = misorientation(self.M, neighbors, sel)
-        KAM = np.sum(misang, axis=1)/nneighbors
+        Plots kernel average misorientation map
 
+        Parameters
+        ----------
+        distance : int (optional)
+            Distance (in neighbor indexes) to the kernel
+            Default: 1
+        perimeteronly : bool (optional)
+            If True, KAM is calculated using only pixels in the perimeter,
+            else uses inner pixels as well
+            Default: True
+        ax : AxesSubplot object (optional)
+            The pole figure will be plotted in the provided object 'ax'
+            Default: None
+        sel : bool numpy 1D array (optional)
+            Boolean array indicating which data points should be plotted
+            Default: None
+        gray : numpy ndarray (optional)
+            Grayscale mask plotted over IPF. 
+            For example, one may want to overlay the IPF map with the image 
+            quality data.
+            Default: None
+        tiling : str (optional)
+            Valid options are 'rect' or 'hex'
+        w : int (optional)
+            Width in pixel
+            Default: 2048
+        scalebar : bool (optional)
+            If True, displays scalebar over IPF map
+            Default: True
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+
+        **kwargs:
+            Variables are passed to function ax.imshow:
+            ax.imshow(img, ..., **kwargs)
+
+        Returns
+        -------
+        ebsdmap : EBSDMap object
+
+        """
+        KAM = self.get_KAM(distance, perimeteronly, sel)
         ebsdmap = self.plot_property(KAM, ax, colordict, colorfill, sel, gray,
-                                     tiling, w, scalebar, verbose, **kwargs)
+                                     tiling, w, scalebar, colorbar, verbose, **kwargs)
+        ebsdmap.cax.set_label(u'KAM (°)')
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
@@ -338,27 +489,27 @@ class Scandata(object):
     def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None,
                 contour=False, verbose=True, **kwargs):
         """
-        Plot pole figure
+        Plots pole figure
 
         Parameters
         ----------
         proj : list or numpy array(3) (optional)
             Family of direction projected in the pole figure.
             Default: [1,0,0]
-        ax : AxesSubplot instance (optional)
-            The pole figure will be plotted in the provided instance 'ax'
-        sel : boolean numpy ndarray
-            Array with boolean [True, False] values indicating which data 
+        ax : AxesSubplot object (optional)
+            The pole figure will be plotted in the provided object 'ax'
+        sel : bool numpy ndarray
+            Array with bool [True, False] values indicating which data 
             points should be plotted
             Default: None
         rotation : list or array shape(3,3)
             Rotation matrix that rotates the pole figure.
             The columns of the matrix correspond to the directions parallel to 
             the axes of the pole figure.
-        contour : boolean
+        contour : bool (optional)
             contour=True plots the pole figure using contour plot
             Default: False
-        verbose : boolean
+        verbose : bool (optional)
             If True, prints computation time
             Default: True
 
@@ -398,6 +549,9 @@ class Scandata(object):
         return plot_PF(None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs)
 
     def savefig(self, fname, **kwargs):
+        """
+        Saves ebsd map plotted last
+        """
         kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
         plt.savefig(fname, **kwargs)
 

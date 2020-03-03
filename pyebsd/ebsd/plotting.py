@@ -3,6 +3,7 @@ import os
 import time
 
 import numpy as np
+import matplotlib.colors
 import matplotlib.pyplot as plt
 
 from PIL import Image, ImageDraw
@@ -16,17 +17,36 @@ from ..draw import (modify_show, set_tight_plt, draw_circle_frame,
 from ..selection import LassoSelector2, RectangleSelector2
 
 
+class _Formatter(object):
+    def __init__(self, xrng, yrng, z):
+        self.xmin = min(xrng)
+        self.xrng = abs(xrng[1] - xrng[0])
+        self.ymin = min(yrng)
+        self.yrng = abs(yrng[1] - yrng[0])
+        self.z = z
+        self.h = self.z.shape[0]
+        self.w = self.z.shape[1]
+
+    def __call__(self, x, y):
+        i = int(self.w*(x - self.xmin)/self.xrng)
+        j = int(self.h*(y - self.ymin)/self.yrng)
+        i = self.w - 1 if i == self.w else i
+        j = self.h - 1 if j == self.h else j
+        return 'x={:g}, y={:g}, z={:g}'.format(x, y, self.z[j, i])
+
+
 class EBSDMap(object):
     """
     Documentation
     """
 
-    def __init__(self, x, y, img, ax, fig):
+    def __init__(self, x, y, img, ax, fig, cax=None):
         self.x = x
         self.y = y
         self.img = img
         self.ax = ax
         self.fig = fig
+        self.cax = cax
 
         self._selector = None
 
@@ -172,15 +192,14 @@ def unit_triangle(ax=None, n=512, **kwargs):
     # fill points outside the unit triangle in white
     col[~sel] = [255, 255, 255]
 
-    img = toimage(col.reshape(n, n, 3))
+    img_pil = toimage(col.reshape(n, n, 3))
 
     if ax is None:
         fig, ax = plt.subplots(facecolor='white')
 
     ax.set_aspect('equal')
     ax.axis('off')
-    ax.imshow(img, interpolation='None', origin='lower',
-              extent=(0, xmax, 0, ymax))
+    img = ax.imshow(img_pil, interpolation='None', origin='lower', extent=(0, xmax, 0, ymax))
 
     # Draw borders of unit triangle
     t = np.linspace(0, 1., n)
@@ -363,7 +382,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
                 kwargs['marker'] = '.'
             if not kwargs.get('markersize', None) and not kwargs.get('ms', None):
                 kwargs['markersize'] = 1
-                
+
             ax.plot(xp.ravel(), yp.ravel(), **kwargs)
 
     ax.set_xlim(-1.05, 1.05)
@@ -378,7 +397,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
 def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
                   dx=None, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
                   sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
-                  verbose=True, **kwargs):
+                  colorbar=True, verbose=True, **kwargs):
     """
     Documentation
     """
@@ -387,10 +406,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting property map... ')
         sys.stdout.flush()
 
+    prop_true = prop.copy()
+
     # getting kwargs properties...
     cmap = kwargs.pop('cmap', plt.get_cmap())
-    vmin, vmax = kwargs.pop('vmin', np.min(prop[sel])), kwargs.pop(
-        'vmax', np.max(prop[sel]))
+    vmin, vmax = kwargs.pop('vmin', np.min(prop[sel])), kwargs.pop('vmax', np.max(prop[sel]))
 
     # calculates expect number of points from provided nrows,
     # ncols_odd and ncols_even
@@ -415,7 +435,10 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         if prop.shape != sel.shape:
             return
         else:
-            col[np.logical_not(sel)] = colorfill
+            not_sel = np.logical_not(sel)
+            col[not_sel] = colorfill
+            if prop_true.dtype == float:
+                prop_true[not_sel] = np.nan
     else:
         sel = np.ndarray(N, dtype=bool)
         sel.fill(True)
@@ -455,15 +478,15 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         x_hex = (x_hex - xmin)*scale
         y_hex = (y_hex - ymin)*scale
 
-        img = Image.new('RGB', (w, h), 'black')
-        draw = ImageDraw.Draw(img)
+        img_pil = Image.new('RGB', (w, h), 'black')
+        draw = ImageDraw.Draw(img_pil)
         for i in range(len(x_hex)):
             color = col[i, 0], col[i, 1], col[i, 2]
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img, interpolation='None', extent=(
-            xmin, xmax, ymax, ymin), **kwargs)
+        img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
+
     elif tiling == 'rect':
         N, ncols = 2*N, 2*ncols_even
         # remove extra pixels
@@ -472,6 +495,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
         col = np.repeat(col, 2, axis=0)
         col = np.delete(col, rm, axis=0)
+        prop_true = np.repeat(prop_true, 2, axis=0)
+        prop_true = np.delete(prop_true, rm, axis=0)
 
         imin, imax = 0, nrows
         jmin, jmax = 0, ncols
@@ -486,11 +511,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         h = np.int(scale*(imax - imin)*(3.**.5))
 
         col = col.reshape(nrows, ncols, -1)
+        prop_true = prop_true.reshape(nrows, ncols)
 
-        img = toimage(col[imin:imax, jmin:jmax, :])
-        img = img.resize(size=(w, h))
-        ax.imshow(img, interpolation='None', extent=(
-            xmin, xmax, ymax, ymin), **kwargs)
+        img_pil = toimage(col[imin:imax, jmin:jmax, :])
+        img_pil = img_pil.resize(size=(w, h))
+        img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
+        ax.format_coord = _Formatter((xmin, xmax), (ymin, ymax), prop_true[imin:imax, jmin:jmax])
+
     else:
         return
 
@@ -500,6 +527,14 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         scalebar.location = scalebar_location
         ax.add_artist(scalebar)
 
+    # add colorbar
+    cax = None
+    if colorbar and colordict is None:
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cax = fig.colorbar(sm, ax=ax, shrink=.92)
+
     # removing the borders/margins
     ax.axis('off')
     set_tight_plt()
@@ -507,8 +542,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
-    # return ax, img
-    return EBSDMap(x, y, img, ax, fig)
+    return EBSDMap(x, y, img, ax, fig, cax)
 
 
 def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
@@ -583,14 +617,14 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         x_hex = (x_hex - xmin)*scale
         y_hex = (y_hex - ymin)*scale
 
-        img = Image.new('RGB', (w, h), 'black')
-        draw = ImageDraw.Draw(img)
+        img_pil = Image.new('RGB', (w, h), 'black')
+        draw = ImageDraw.Draw(img_pil)
         for i in range(len(x_hex)):
             color = col[i, 0], col[i, 1], col[i, 2]
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img, interpolation='None', extent=(
+        ax.imshow(img_pil, interpolation='None', extent=(
             xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
         N, ncols = 2*N, 2*ncols_even
@@ -615,10 +649,9 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
         col = col.reshape(nrows, ncols, -1)
 
-        img = toimage(col[imin:imax, jmin:jmax, :])
-        img = img.resize(size=(w, h))
-        ax.imshow(img, interpolation='None', extent=(
-            xmin, xmax, ymax, ymin), **kwargs)
+        img_pil = toimage(col[imin:imax, jmin:jmax, :])
+        img_pil = img_pil.resize(size=(w, h))
+        img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
     else:
         return
 
@@ -635,5 +668,4 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
 
-    # return ax, img
     return EBSDMap(x, y, img, ax, fig)
