@@ -246,7 +246,7 @@ class ScanData(object):
         neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
         return neighbors_ind.astype(int)
 
-    def get_KAM(self, distance=1, perimeteronly=True, sel=None):
+    def get_KAM(self, distance=1, perimeteronly=True, maxmis=None, sel=None):
         """
         Returns Kernel average misorientation map
 
@@ -259,6 +259,10 @@ class ScanData(object):
             If True, KAM is calculated using only pixels in the perimeter,
             else uses inner pixels as well
             Default: True
+        maxmis : float (optional)
+            Maximum misorientation angle (in degrees) accounted in the 
+            calculation of KAM
+            Default: None
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
             Default: None
@@ -269,9 +273,21 @@ class ScanData(object):
 
         """
         neighbors = self.get_neighbors(distance, perimeteronly)
-        nneighbors = neighbors.shape[1]
         misang = misorientation(self.M, neighbors, sel)
-        return np.sum(misang, axis=1)/nneighbors
+
+        if maxmis is not None:
+            misang[misang > maxmis] = 0
+            nneighbors = np.count_nonzero(misang <= maxmis, axis=1)
+            nneighbors[nneighbors == 0] = 1  # to prevent division by 0
+        else:
+            nneighbors = neighbors.shape[1]
+
+        kam = np.sum(misang, axis=1)/nneighbors
+
+        if maxmis is not None:
+            kam[nneighbors == 0] = np.nan
+
+        return kam
 
     def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling='rect',
                  w=2048, scalebar=True, verbose=True, **kwargs):
@@ -431,9 +447,9 @@ class ScanData(object):
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_KAM(self, distance=1, perimeteronly=True, ax=None, colordict=None,
-                 colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
-                 w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
+    def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
+                 sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
+                 colorbar=True, verbose=True, **kwargs):
         """
         Plots kernel average misorientation map
 
@@ -448,6 +464,10 @@ class ScanData(object):
             Default: True
         ax : AxesSubplot object (optional)
             The pole figure will be plotted in the provided object 'ax'
+            Default: None
+        maxmis : float (optional)
+            Maximum misorientation angle (in degrees) accounted in the 
+            calculation of KAM
             Default: None
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
@@ -478,8 +498,8 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
-        KAM = self.get_KAM(distance, perimeteronly, sel)
-        ebsdmap = self.plot_property(KAM, ax, colordict, colorfill, sel, gray,
+        KAM = self.get_KAM(distance, perimeteronly, maxmis, sel)
+        ebsdmap = self.plot_property(KAM, ax, None, [0, 0, 0, 1], sel, gray,
                                      tiling, w, scalebar, colorbar, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
         self.figs_maps.append(ebsdmap.ax.get_figure())
