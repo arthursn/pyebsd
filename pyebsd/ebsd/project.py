@@ -28,7 +28,7 @@ rcParams['savefig.bbox'] = 'tight'
 rcParams['savefig.pad_inches'] = 0.0
 
 
-class Scandata(object):
+class ScanData(object):
     __cos60 = .5  # cos(60deg)
     __sin60 = .5*3.**.5  # sin(60deg)
 
@@ -614,18 +614,18 @@ def _get_rectangle_surrounding_selection(scan, sel):
 
 def selection_to_scandata(scan, sel):
     """
-    Convert selection to new Scandata object
+    Convert selection to new ScanData object
 
     Arguments
     ---------
-    scan : Scandata object
-        Original Scandata object
+    scan : ScanData object
+        Original ScanData object
     sel : numpy array
         array of booleans corresponding to the selection
 
     Returns
     -------
-    newscan : Scandata object
+    newscan : ScanData object
 
     """
 
@@ -654,7 +654,7 @@ def selection_to_scandata(scan, sel):
         newdata.x -= newdata.x.min()
         newdata.y -= newdata.y.min()
 
-    newscan = Scandata(newdata, scan.grid, scan.dx, scan.dy,
+    newscan = ScanData(newdata, scan.grid, scan.dx, scan.dy,
                        ncols_odd, ncols_even, nrows, scan.header)
 
     return newscan

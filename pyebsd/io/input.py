@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from ..ebsd import Scandata
+from ..ebsd import ScanData
 
 
 def _parse_info_header(line, pattern, dtype=str):
@@ -51,7 +51,7 @@ def load_ang_file(fname):
 
     Returns
     -------
-    scan : Scandata object
+    scan : ScanData object
 
     """
     t0 = time.time()
@@ -113,7 +113,7 @@ def load_ang_file(fname):
 
     print('\n{} points read in {:.2f} s'.format(len(data), time.time() - t0))
 
-    return Scandata(data, grid, dx, dy, ncols_odd, ncols_even, nrows, header)
+    return ScanData(data, grid, dx, dy, ncols_odd, ncols_even, nrows, header)
 
 
 def load_scandata(fname):
@@ -127,7 +127,7 @@ def load_scandata(fname):
 
     Returns
     -------
-    scan : Scandata object
+    scan : ScanData object
 
     """
     ext = os.path.splitext(fname)[-1]

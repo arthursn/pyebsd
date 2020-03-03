@@ -3,14 +3,14 @@ from ..ebsd import selection_to_scandata
 
 def save_ang_file(fname, scan, sel=None, **kwargs):
     """
-    Export Scandata object scan as ang file
+    Export ScanData object scan as ang file
 
     Arguments
     ---------
     fname : string
         File name
-    scan : Scandata object
-        Scandata object
+    scan : ScanData object
+        ScanData object
     sel : list of array of booleans
         selection
     """
