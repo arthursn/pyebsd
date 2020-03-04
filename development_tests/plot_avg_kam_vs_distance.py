@@ -9,8 +9,8 @@ scan = pyebsd.load_ang_file(fname)
 distance = []
 kam = []
 for d in range(1, 6):
-	distance.append(scan.get_distance_neighbors(d, distance_convention='OIM'))
-	kam.append(scan.get_KAM(distance=d, maxmis=5, distance_convention='OIM', sel=(scan.ph == 1)).mean())
+    distance.append(scan.get_distance_neighbors(d, distance_convention='OIM'))
+    kam.append(scan.get_KAM(distance=d, maxmis=5, distance_convention='OIM', sel=(scan.ph == 1)).mean())
 
 plt.plot(distance, kam, 'kx')
 plt.xlim(0)
