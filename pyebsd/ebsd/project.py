@@ -32,47 +32,35 @@ class ScanData(object):
     __cos60 = .5  # cos(60deg)
     __sin60 = .5*3.**.5  # sin(60deg)
 
-    __first_neighbors_hexgrid = np.array([
-        [-2, 0],
-        [-1, -1],
-        [1, -1],
-        [2, 0],
-        [1, 1],
-        [-1, 1]
-    ], dtype=int)
-
-    neighbors_hexgrid = [
+    neighbors_hexgrid_fixed = [
         # 1st neighbors
-        __first_neighbors_hexgrid,
+        [[2, 0], [1, 1], [-1, 1], [-2, 0], [-1, -1], [1, -1]],
         # 2nd neighbors
-        np.array([
-            [-3, -1],
-            [0, -2],
-            [3, -1],
-            [3, 1],
-            [0, 2],
-            [-3, 1]
-        ], dtype=int),
-        # 3rd neighbors
-        2*__first_neighbors_hexgrid,
-        # 4th neighbors
-        np.array([
-            [-5, -1],
-            [-4, -2],
-            [-1, -3],
-            [1, -3],
-            [4, -2],
-            [5, -1],
-            [5, 1],
-            [4, 2],
-            [1, 3],
-            [-1, 3],
-            [-4, 2],
-            [-5, 1],
-        ], dtype=int),
-        # 5th neighbors
-        3*__first_neighbors_hexgrid
+        [[3, 1], [0, 2], [-3, 1], [-3, -1], [0, -2], [3, -1]],
+        # 3rd neighbors and so on...
+        [[4, 0], [2, 2], [-2, 2], [-4, 0], [-2, -2], [2, -2]],
+        [[5, -1], [4, 2], [1, 3], [-1, 3], [-4, 2], [-5, 1],
+         [-5, -1], [-4, -2], [-1, -3], [1, -3], [4, -2], [5, -1]],
+        [[6, 0], [3, 3], [-3, 3], [-6, 0], [-3, -3], [3, -3]],
+        [[6, 2], [0, 4], [-6, 2], [-6, -2], [0, -4], [6, -2]],
+        [[7, 1], [5, 3], [2, 4], [-2, 4], [-5, 3], [-7, 1],
+         [-7, -1], [-5, -3], [-2, -4], [2, -4], [5, -3], [7, -1]],
+        [[8, 0], [4, 4], [-4, 4], [-8, 0], [-4, -4], [4, -4]],
+        [[8, 2], [7, 3], [1, 5], [-1, 5], [-7, 3], [-8, 2],
+         [-8, -2], [-7, -3], [-1, -5], [1, -5], [7, -3], [8, -2]],
+        [[9, 1], [6, 4], [3, 5], [-3, 5], [-6, 4], [-9, 1],
+         [-9, -1], [-6, -4], [-3, -5], [3, -5], [6, -4], [9, -1]],
+        [[10, 0], [5, 5], [-5, 5], [-10, 0], [-5, -5], [5, -5]],
+        [[9, 3], [0, 6], [-9, 3], [-9, -3], [0, -6], [9, -3]],
+        [[10, 2], [8, 4], [2, 6], [-2, 6], [-8, 4], [-10, 2],
+         [-10, -2], [-8, -4], [-2, -6], [2, -6], [8, -4], [10, -2]],
+        [[11, 1], [7, 5], [4, 6], [-4, 6], [-7, 5], [-11, 1],
+         [-11, -1], [-7, -5], [-4, -6], [4, -6], [7, -5], [11, -1]],
+        # 15th neighbors
+        [[12, 0], [6, 6], [-6, 6], [-12, 0], [-6, -6], [6, -6]]
     ]
+
+    __n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
 
     def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even,
                  nrows, header=''):
@@ -137,8 +125,7 @@ class ScanData(object):
         """
         if self._i is None:
             self._i = 2*(self.ind//self.ncols)
-            shift = np.tile([0]*self.ncols_odd + [1] *
-                            self.ncols_even, self.nrows)
+            shift = np.tile([0]*self.ncols_odd + [1]*self.ncols_even, self.nrows)
             self._i += shift[:self.N]
         return self._i
 
@@ -198,7 +185,7 @@ class ScanData(object):
         return (1 - self.N*(j//self.ncols)) * \
             ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
 
-    def get_neighbors_hexgrid(self, distance):
+    def get_neighbors_hexgrid_oim(self, distance):
         """
         Returns list of relative indices of the neighboring pixels in a
         hexgrid for a given distance in pixels
@@ -220,22 +207,41 @@ class ScanData(object):
 
         return j_list, i_list
 
-    def get_neighbors(self, distance=1, perimeteronly=True):
+    def get_neighbors_hexgrid_fixed(self, distance):
+        """
+        Returns list of relative indices of the neighboring pixels in a
+        hexgrid for a given distance in pixels
+        """
+        if distance > self.__n_neighbors_hexgrid_fixed:
+            raise Exception('Not supported for distance > {}'.format(self.__n_neighbors_hexgrid_fixed))
+
+        j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance-1]))
+        return list(j_list), list(i_list)
+
+    def get_neighbors(self, distance, perimeteronly=True, distance_convention='OIM'):
         """
         Returns list of indices of the neighboring pixels for every pixel
         for a given distance in pixels
         """
+        if distance_convention.lower() == 'oim':
+            get_neighbors_hexgrid = self.get_neighbors_hexgrid_oim
+        elif distance_convention.lower() == 'fixed':
+            get_neighbors_hexgrid = self.get_neighbors_hexgrid_fixed
+        else:
+            raise Exception('Invalid distance convention "{}"'.format(distance_convention))
+
         if perimeteronly:
             # only pixels in the perimeter
-            j_shift, i_shift = self.get_neighbors_hexgrid(distance)
+            j_shift, i_shift = get_neighbors_hexgrid(distance)
         else:
             # including inner pixels
             j_shift, i_shift = [], []
             for d in range(1, distance+1):
-                j_sh, i_sh = self.get_neighbors_hexgrid(d)
+                j_sh, i_sh = get_neighbors_hexgrid(d)
                 j_shift += j_sh
                 i_shift += i_sh
 
+        # j, i indices as np arrays
         j0, i0 = self.j, self.i
         # x
         j_neighbors = np.vstack([j0 + shift for shift in j_shift]).T.astype(int)
@@ -246,7 +252,19 @@ class ScanData(object):
         neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
         return neighbors_ind.astype(int)
 
-    def get_KAM(self, distance=1, perimeteronly=True, maxmis=None, sel=None):
+    def get_distance_neighbors(self, distance, distance_convention='OIM'):
+        if distance_convention.lower() == 'oim':
+            j, i = self.get_neighbors_hexgrid_oim(distance)
+        elif distance_convention.lower() == 'fixed':
+            j, i = self.get_neighbors_hexgrid_fixed(distance)
+        else:
+            raise Exception('Invalid distance convention "{}"'.format(distance_convention))
+
+        d = .5*(np.array(j)**2. + 3.*np.array(i)**2.)**.5
+        return d.mean()
+
+    def get_KAM(self, distance=1, perimeteronly=True, maxmis=None,
+                distance_convention='OIM', sel=None):
         """
         Returns Kernel average misorientation map
 
@@ -272,7 +290,7 @@ class ScanData(object):
         KAM : np.ndarray(N) with KAM values in degrees
 
         """
-        neighbors = self.get_neighbors(distance, perimeteronly)
+        neighbors = self.get_neighbors(distance, perimeteronly, distance_convention)
         misang = misorientation(self.M, neighbors, sel)
 
         if maxmis is not None:
@@ -448,8 +466,8 @@ class ScanData(object):
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
-                 sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
-                 colorbar=True, verbose=True, **kwargs):
+                 distance_convention='OIM', sel=None, gray=None, tiling='rect',
+                 w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
         """
         Plots kernel average misorientation map
 
@@ -498,7 +516,7 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
-        KAM = self.get_KAM(distance, perimeteronly, maxmis, sel)
+        KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
         ebsdmap = self.plot_property(KAM, ax, None, [0, 0, 0, 1], sel, gray,
                                      tiling, w, scalebar, colorbar, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
