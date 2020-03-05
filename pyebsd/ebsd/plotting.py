@@ -536,7 +536,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
     # removing the borders/margins
     ax.axis('off')
-    set_tight_plt()
+    set_tight_plt(fig, ax)
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
@@ -663,7 +663,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
     # removing the borders/margins
     ax.axis('off')
-    set_tight_plt()
+    set_tight_plt(fig, ax)
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))

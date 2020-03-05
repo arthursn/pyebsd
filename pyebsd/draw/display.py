@@ -28,9 +28,13 @@ def modify_show(fig):
             fig.show = types.MethodType(show, fig)
     return fig
 
-def set_tight_plt():
-    plt.gcf().subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-    plt.gca().margins(0,0)
-    plt.gca().xaxis.set_major_locator(plt.NullLocator())
-    plt.gca().yaxis.set_major_locator(plt.NullLocator())
+def set_tight_plt(fig=None, ax=None):
+    if fig is None:
+        fig = plt.gcf()
+    if ax is None:
+        ax = plt.gca()
+    fig.subplots_adjust(top=1, bottom=0, right=1, left=0)
+    ax.margins(0,0)
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
 
