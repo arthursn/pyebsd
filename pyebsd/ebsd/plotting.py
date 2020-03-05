@@ -504,7 +504,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
             sel = np.delete(sel, rm, axis=0)
             isel, jsel = np.where(sel.reshape(nrows, ncols))
             imin, imax = np.min(isel)+1, np.max(isel)+1
-            jmin, jmax = np.min(jsel)+1, np.max(jsel)+1
+            jmin, jmax = np.min(jsel)+1, np.max(jsel)
 
         scale = 1.*w/(jmax - jmin)
         h = np.int(scale*(imax - imin)*(3.**.5))
