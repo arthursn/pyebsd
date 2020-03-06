@@ -780,10 +780,10 @@ def selection_to_scandata(scan, sel):
         newdata.loc[~sel, 'fit'] = 0
 
         # select rectangle surrounding the selected data
-        if scan.grid == 'hexgrid':
+        if scan.grid.lower() == 'hexgrid':
             ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_hexgrid(scan, sel)
         else:
-            raise Exception('selection_to_scandata not yet supported for grid type {}'.format(self.grid))
+            raise Exception('selection_to_scandata not yet supported for grid type {}'.format(scan.grid))
 
         # data to be exported is a rectangle
         newdata = newdata[rect]
