@@ -425,6 +425,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
     if grid.lower() == 'hexgrid':
         N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+        ymin += dx/2.
+        ymax += dx/2.
     elif grid.lower() == 'sqrgrid':
         N = nrows*ncols_odd
         xmin -= dx/2.
@@ -577,10 +579,19 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
 
+    if dx is None:
+        dx = (np.max(x) - np.min(x))/ncols_odd
+
     if grid.lower() == 'hexgrid':
         N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+        ymin += dx/2.
+        ymax += dx/2.
     elif grid.lower() == 'sqrgrid':
         N = nrows*ncols_odd
+        xmin -= dx/2.
+        xmax += dx/2.
+        ymin -= dx/2.
+        ymax += dx/2.
     else:
         raise Exception('Unknown grid type "{}"'.format(grid))
     # call IPF to get crystal directions parallel to d and
