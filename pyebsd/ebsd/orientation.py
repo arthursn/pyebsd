@@ -15,7 +15,8 @@ def trace_to_angle(tr):
 
 def stereographic_projection(d, norm=True, coord='cartesian'):
     """
-    Returns the coordinates of the stereographic projection of a direction 'd'
+    Returns the coordinates of the stereographic projection of a direction 
+    'd'
 
     Arguments
     ---------
@@ -203,14 +204,21 @@ def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
 
 
 def misorientation(M, neighbors, sel=None, **kwargs):
+    """
+    Calculates the misorientation angle of every data point with respective
+    orientation matrix provided in 'M' with respect to an arbitrary number 
+    of neighbors, whose indices are provided in the 'neighbors' argument.
+    """
     N = M.shape[0]
     nneighbors = neighbors.shape[1]
 
     C = list_cubic_symmetry_operators()
 
-    # 2D array to store trace values; all values initialized as -1
-    tr = np.full((N, nneighbors), -2, dtype=float)
-    misang = np.full((N, nneighbors), -1, dtype=float)
+    # 2D array to store trace values initialized as -2 (trace values are
+    # always in the [-1, 3] interval)
+    tr = np.full((N, nneighbors), -2., dtype=float)
+    # 2D array to store the misorientation angles in degrees
+    misang = np.full((N, nneighbors), -1., dtype=float)
 
     if not isinstance(sel, np.ndarray):
         sel = np.full(N, True, dtype=bool)
@@ -218,18 +226,21 @@ def misorientation(M, neighbors, sel=None, **kwargs):
     verbose = kwargs.pop('verbose', True)
     if verbose:
         t0 = time.time()
-        sys.stdout.write('Calculating misorientations for {} points for '.format(np.count_nonzero(sel)))
+        sys.stdout.write('Calculating misorientations for {} points for {} neighbors'.format(
+            np.count_nonzero(sel), nneighbors))
+        sys.stdout.write(' [')
         sys.stdout.flush()
 
     for k in range(nneighbors):
-        ok = (neighbors[:, k] > 0) & sel & sel[neighbors[:, k]]
+        # valid points, i.e., those part of the selection and with valid neighrbor index (> 0)
+        ok = (neighbors[:, k] > 0) & sel
         # The einsum below is equivalent to:
         # np.matmul(M[neighbors[ok,k]], M[ok].transpose([0,2,1]))
         S = np.einsum('ijk,imk->ijm', M[neighbors[ok, k]], M[ok])
 
         for m in range(len(C)):
             a, b = C[m].nonzero()
-            # Trace using Einsum. Equivalent to (S[:,a,b]*C[m,a,b]).sum(axis=1)
+            # Trace using einsum. Equivalent to (S[:,a,b]*C[m,a,b]).sum(axis=1)
             T = np.abs(np.einsum('ij,j->i', S[:, a, b], C[m, a, b]))
             tr[ok, k] = np.max(np.vstack([tr[ok, k], T]), axis=0)
 
@@ -242,11 +253,13 @@ def misorientation(M, neighbors, sel=None, **kwargs):
     del S, T
 
     if verbose:
-        sys.stdout.write(' neighbors... {:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.write('] in {:.2f} s\n'.format(time.time() - t0))
         sys.stdout.flush()
 
+    # Take care of tr > 3. that might happend due to rounding erros
     tr[tr > 3.] = 3.
 
+    # Filter out invalid trace values
     ok = tr >= -1.
     misang[ok] = trace_to_angle(tr[ok])
     return misang
@@ -286,10 +299,8 @@ def minimize_disorientation(V, V0, **kwargs):
                 i+1, np.degrees(theta[imax]), np.degrees(phi[imax]), np.degrees(psi[imax]), dth))
         if plot:
             Rscan = np.dot(A, V0).transpose([0, 2, 1])
-            plot_PF(R=Rscan, ax=axmin, scatter=True,
-                    s=30, marker='s', c=np.repeat(B, 3), verbose=False)
-            plot_PF(R=Rscan[imax], ax=axmin, scatter=True,
-                    s=200, marker='x', c='r', verbose=False)
+            plot_PF(R=Rscan, ax=axmin, scatter=True, s=30, marker='s', c=np.repeat(B, 3), verbose=False)
+            plot_PF(R=Rscan[imax], ax=axmin, scatter=True, s=200, marker='x', c='r', verbose=False)
 
         V0 = np.dot(A[imax], V0)
         maxdev /= n
@@ -496,8 +507,8 @@ def axis_angle_to_rotation_matrix(axis, theta, **kwargs):
 
 def list_cubic_symmetry_operators_KS(**kwargs):
     """
-    List symmetry matrices for cubic symmetry group following
-    KS variants convention
+    Lists symmetry matrices for cubic symmetry group following KS variants
+    convention.
     """
     return np.array([[[1.,  0.,  0.],
                       [0.,  1.,  0.],
@@ -598,7 +609,7 @@ def list_cubic_symmetry_operators_KS(**kwargs):
 
 def list_cubic_symmetry_operators(**kwargs):
     """
-    List symmetry matrices for cubic symmetry group
+    Lists symmetry matrices for cubic symmetry group
     """
     axis = np.array([[1., 0., 0.],
                      # 2-fold on <100>
@@ -665,7 +676,7 @@ def list_cubic_symmetry_operators(**kwargs):
 
 def list_cubic_family_directions(d):
     """
-    List all the variants of a family of directions 'd'
+    Lists all the variants of a family of directions 'd'.
     """
     C = list_cubic_symmetry_operators()
     var = set([tuple(v) for v in np.dot(C, d)])
@@ -684,9 +695,8 @@ def reduce_cubic_transformations(V, maxdev=1e-3):
         them equivalent to each other.
         Default: 1e-3
     """
-    # Convert maxdev from angle in degrees to the domain of the trace values
-    # [-3, 3]. Because maxdev is very small, the new value of maxdev is very
-    # close to 3.
+    # Convert maxdev from angle in degrees to trace values [-1, 3]. Because
+    # maxdev is very small, the new value of maxdev is very close to 3.
     maxdev = 2.*np.cos(np.radians(maxdev)) + 1.
     C = list_cubic_symmetry_operators()
 
@@ -767,8 +777,7 @@ def PF(R, proj=[1, 0, 0], rotation=None):
     # normalize proj_variants
     proj_variants = proj_variants/np.linalg.norm(proj)
 
-    # Return directions in the sample coordinate frame
-    # ndarray shape(N, nvar, 3)
+    # Return directions in the sample coordinate frame ndarray shape(N, nvar, 3)
     return np.tensordot(R, proj_variants.T, axes=[[-1], [-2]]).transpose([0, 2, 1])
 
     # xp = np.ndarray((N, nvar))
