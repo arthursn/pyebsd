@@ -385,7 +385,7 @@ class ScanData(object):
 
         return kam
 
-    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling='rect',
+    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling=None,
                  w=2048, scalebar=True, verbose=True, **kwargs):
         """
         Plots inverse pole figure map
@@ -408,6 +408,11 @@ class ScanData(object):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
+            If no option is provided, uses as default 'rect' if 
+            N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
+            __THRESHOLD_TILING__ is 10000, but it can be set to any value
+            by calling pyebsd.set_threshold_tiling(..)
+            Default: None
         w : int (optional)
             Width in pixel
             Default: 2048
@@ -435,7 +440,7 @@ class ScanData(object):
         return ebsdmap
 
     def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
-                      sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
+                      sel=None, gray=None, tiling=None, w=2048, scalebar=True,
                       colorbar=True, verbose=True, **kwargs):
         """
         Plots any EBSD property
@@ -465,6 +470,11 @@ class ScanData(object):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
+            If no option is provided, uses as default 'rect' if 
+            N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
+            __THRESHOLD_TILING__ is 10000, but it can be set to any value
+            by calling pyebsd.set_threshold_tiling(..)
+            Default: None
         w : int (optional)
             Width in pixel
             Default: 2048
@@ -492,7 +502,7 @@ class ScanData(object):
         return ebsdmap
 
     def plot_phase(self, ax=None, colordict={'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]},
-                   colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
+                   colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling=None,
                    w=2048, scalebar=True, verbose=True, **kwargs):
         """
         Plots phases map
@@ -518,6 +528,11 @@ class ScanData(object):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
+            If no option is provided, uses as default 'rect' if 
+            N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
+            __THRESHOLD_TILING__ is 10000, but it can be set to any value
+            by calling pyebsd.set_threshold_tiling(..)
+            Default: None
         w : int (optional)
             Width in pixel
             Default: 2048
@@ -544,7 +559,7 @@ class ScanData(object):
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
-                 distance_convention='OIM', sel=None, gray=None, tiling='rect',
+                 distance_convention='OIM', sel=None, gray=None, tiling=None,
                  w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
         """
         Plots kernel average misorientation map
@@ -575,6 +590,11 @@ class ScanData(object):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
+            If no option is provided, uses as default 'rect' if 
+            N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
+            __THRESHOLD_TILING__ is 10000, but it can be set to any value
+            by calling pyebsd.set_threshold_tiling(..)
+            Default: None
         w : int (optional)
             Width in pixel
             Default: 2048

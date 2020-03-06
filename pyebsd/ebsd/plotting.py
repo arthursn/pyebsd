@@ -9,11 +9,24 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from itertools import permutations
 
-from .orientation import (euler_angles_to_rotation_matrix, PF, IPF,
-                          stereographic_projection)
-from ..draw import (modify_show, set_tight_plt, draw_circle_frame,
-                    toimage, ScaleBar)
+from .orientation import euler_angles_to_rotation_matrix, PF, IPF, stereographic_projection
+from ..draw import modify_show, set_tight_plt, draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
+
+__THRESHOLD_TILING__ = 10000
+
+
+def set_threshold_tiling(threshold):
+    """
+    Sets __THRESHOLD_TILING__
+
+    Parameters
+    ----------
+    threshold : int
+        New value of __THRESHOLD_TILING__
+    """
+    global __THRESHOLD_TILING__
+    __THRESHOLD_TILING__ = int(threshold)
 
 
 class _CoordsFormatter(object):
@@ -391,7 +404,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
 
 def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
                   dx=None, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
-                  sel=None, gray=None, grid='HexGrid', tiling='rect',
+                  sel=None, gray=None, grid='HexGrid', tiling=None,
                   w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
     Documentation
@@ -402,10 +415,17 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting property map... ')
         sys.stdout.flush()
 
+    # get N based on nrows, ncols_odd and ncols_even and set default tiling
     if grid.lower() == 'hexgrid':
         N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+        if tiling is None:
+            tiling = 'rect' if np.count_nonzero(sel) > __THRESHOLD_TILING__ else 'hex'
     elif grid.lower() == 'sqrgrid':
         N = nrows*ncols_odd
+        if tiling is None or tiling == 'hex':
+            if tiling == 'hex':
+                print('hex tiling not supported for squared grid. Using rect tiling instead.')
+            tiling = 'rect'
     else:
         raise Exception('Unknown grid type "{}"'.format(grid))
 
@@ -420,8 +440,6 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         sel = ~np.isnan(prop)
     not_sel = ~sel
 
-    prop_true = prop.copy()
-
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
@@ -435,7 +453,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         xmin -= dx/2.
         xmax += dx/2.
 
-    # getting kwargs arguments
+    # getting kwargs parameters
     cmap = kwargs.pop('cmap', plt.get_cmap())
     if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
@@ -450,13 +468,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         for p, rgba in colordict.items():
             col[prop == float(p)] = rgba
     else:
-        prop = (prop - vmin)/(vmax - vmin)  # normalizes prop to range [0,1]
-        col[sel] = cmap(prop[sel])
+        # normalizes prop to range [0,1] and makes colormap
+        col[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])
 
     # filling invalid/non-selected data points
     col[not_sel] = colorfill
-    if prop_true.dtype == float:
-        prop_true[not_sel] = np.nan
+    if prop.dtype == float:
+        prop[not_sel] = np.nan
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
@@ -474,10 +492,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         ax.cla()
         fig = ax.get_figure()
 
-    if tiling == 'hex' and grid.lower() == 'sqrgrid':
-        print('hex tiling not supported for squared grid. Using rect tiling instead.')
-        tiling = 'rect'
-
+    # plotting maps
     if tiling == 'hex':
         col = (255*col[sel]).astype(int)
         x_hex = np.ndarray((len(x[sel]), 6))
@@ -508,13 +523,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
             # double pixels
             sel = np.repeat(sel, 2)
             col = np.repeat(col, 2, axis=0)
-            prop_true = np.repeat(prop_true, 2, axis=0)
+            prop = np.repeat(prop, 2, axis=0)
             # remove extra pixels
             rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                             np.arange(ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             col = np.delete(col, rm, axis=0)
-            prop_true = np.delete(prop_true, rm, axis=0)
+            prop = np.delete(prop, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
@@ -529,18 +544,18 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
             if jmax != 0 and jmax != ncols:
                 jmax -= 1
 
-        scale = 1.*w/(jmax - jmin)
+        scale = 1.*w/(xmax - xmin)
         if grid.lower() == 'hexgrid':
-            h = np.int(scale*(imax - imin)*(3.**.5))
+            h = np.int(scale*(ymax - ymin)*(3.**.5))
         else:
-            h = np.int(scale*(imax - imin))
+            h = np.int(scale*(ymax - ymin))
 
         col = col.reshape(nrows, ncols, -1)
-        prop_true = prop_true.reshape(nrows, ncols)
+        prop = prop.reshape(nrows, ncols)
 
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
-        ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), prop_true[imin:imax, jmin:jmax])
+        ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), prop[imin:imax, jmin:jmax])
 
     else:
         raise Exception('Unknown "{}" tiling'.format(tiling))
@@ -573,7 +588,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
 def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
              dx=None, d=[0, 0, 1], ax=None, sel=None, gray=None, grid='HexGrid',
-             tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
+             tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
     """
     Documentation
     """
@@ -582,11 +597,17 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
-    # get N based on nrows, ncols_odd and ncols_even
+    # get N based on nrows, ncols_odd and ncols_even and set default tiling
     if grid.lower() == 'hexgrid':
         N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+        if tiling is None:
+            tiling = 'rect' if np.count_nonzero(sel) > __THRESHOLD_TILING__ else 'hex'
     elif grid.lower() == 'sqrgrid':
         N = nrows*ncols_odd
+        if tiling is None or tiling == 'hex':
+            if tiling == 'hex':
+                print('hex tiling not supported for squared grid. Using rect tiling instead.')
+            tiling = 'rect'
     else:
         raise Exception('Unknown grid type "{}"'.format(grid))
 
@@ -613,7 +634,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         xmin -= dx/2.
         xmax += dx/2.
 
-    # getting kwargs arguments
+    # getting kwargs parameters
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
     # call IPF to get crystal directions parallel to d and
@@ -637,10 +658,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         ax.cla()
         fig = ax.get_figure()
 
-    if tiling == 'hex' and grid.lower() == 'sqrgrid':
-        print('hex tiling not supported for squared grid. Using rect tiling instead.')
-        tiling = 'rect'
-
+    # plotting maps
     if tiling == 'hex':
         col = col[sel]
         x_hex = np.ndarray((len(x[sel]), 6))
@@ -692,11 +710,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
             if jmax != 0 and jmax != ncols:
                 jmax -= 1
 
-        scale = 1.*w/(jmax - jmin)
+        scale = 1.*w/(xmax - xmin)
         if grid.lower() == 'hexgrid':
-            h = np.int(scale*(imax - imin)*(3.**.5))
+            h = np.int(scale*(ymax - ymin)*(3.**.5))
         else:
-            h = np.int(scale*(imax - imin))
+            h = np.int(scale*(ymax - ymin))
 
         col = col.reshape(nrows, ncols, -1)
 
