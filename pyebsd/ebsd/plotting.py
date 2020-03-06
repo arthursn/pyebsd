@@ -396,20 +396,46 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     """
     Documentation
     """
+    # get N based on nrows, ncols_odd and ncols_even
     if verbose:
         t0 = time.time()
         sys.stdout.write('Plotting property map... ')
         sys.stdout.flush()
 
-    prop_true = prop.copy()
-
-    if sel is None:
-        sel = ~np.isnan(prop)
+    if grid.lower() == 'hexgrid':
+        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+    elif grid.lower() == 'sqrgrid':
+        N = nrows*ncols_odd
     else:
+        raise Exception('Unknown grid type "{}"'.format(grid))
+
+    if N != len(prop):
+        raise Exception('N and len(prop) differ')
+
+    if isinstance(sel, np.ndarray):
+        if N != len(sel):
+            raise Exception('N and len(sel) differ')
         sel &= ~np.isnan(prop)
+    else:
+        sel = ~np.isnan(prop)
     not_sel = ~sel
 
-    # getting kwargs properties...
+    prop_true = prop.copy()
+
+    # x and y plot limits
+    xmin, xmax = np.min(x[sel]), np.max(x[sel])
+    ymin, ymax = np.min(y[sel]), np.max(y[sel])
+
+    if dx is None:
+        dx = (np.max(x) - np.min(x))/ncols_odd
+
+    ymin -= dx/2.
+    ymax += dx/2.
+    if grid.lower() == 'sqrgrid':
+        xmin -= dx/2.
+        xmax += dx/2.
+
+    # getting kwargs arguments
     cmap = kwargs.pop('cmap', plt.get_cmap())
     if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
@@ -417,26 +443,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     vmin = kwargs.pop('vmin', np.min(prop[sel]))
     vmax = kwargs.pop('vmax', np.max(prop[sel]))
 
-    xmin, xmax = np.min(x[sel]), np.max(x[sel])
-    ymin, ymax = np.min(y[sel]), np.max(y[sel])
-
-    if dx is None:
-        dx = (np.max(x) - np.min(x))/ncols_odd
-
-    if grid.lower() == 'hexgrid':
-        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
-        ymin += dx/2.
-        ymax += dx/2.
-    elif grid.lower() == 'sqrgrid':
-        N = nrows*ncols_odd
-        xmin -= dx/2.
-        xmax += dx/2.
-        ymin -= dx/2.
-        ymax += dx/2.
-    else:
-        raise Exception('Unknown grid type "{}"'.format(grid))
-
-    col = np.ndarray((prop.shape[0], 4))
+    # coloring
+    col = np.ndarray((N, 4))
     col[:] = colorfill
     if isinstance(colordict, dict):
         for p, rgba in colordict.items():
@@ -445,21 +453,21 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         prop = (prop - vmin)/(vmax - vmin)  # normalizes prop to range [0,1]
         col[sel] = cmap(prop[sel])
 
-    if N != prop.shape[0]:
-        return
-
+    # filling invalid/non-selected data points
     col[not_sel] = colorfill
     if prop_true.dtype == float:
         prop_true[not_sel] = np.nan
 
+    # applying gray mask
     if isinstance(gray, np.ndarray):
-        if prop.shape != gray.shape:
-            return
+        if N != gray.shape[0]:
+            raise Exception('M.shape and gray.shape differ')
         else:
             gray = gray.reshape(-1, 1)/np.max(gray)
             col[sel] = col[sel]*gray[sel]
             col[:, 3] = 1.  # set alpha = 1. for all points
 
+    # getting AxesSubplot object
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -494,35 +502,32 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
-
     elif tiling == 'rect':
         if grid.lower() == 'hexgrid':
             N, ncols = 2*N, 2*ncols_even
+            # double pixels
+            sel = np.repeat(sel, 2)
+            col = np.repeat(col, 2, axis=0)
+            prop_true = np.repeat(prop_true, 2, axis=0)
             # remove extra pixels
             rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                             np.arange(ncols+1, N, 2*(ncols+1))])
-
-            col = np.repeat(col, 2, axis=0)
+            sel = np.delete(sel, rm, axis=0)
             col = np.delete(col, rm, axis=0)
-            prop_true = np.repeat(prop_true, 2, axis=0)
             prop_true = np.delete(prop_true, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
-        imin, imax = 0, nrows
-        jmin, jmax = 0, ncols
-        if np.count_nonzero(not_sel) > 0:
-            if grid.lower() == 'hexgrid':
-                sel = np.repeat(sel, 2)
-                sel = np.delete(sel, rm, axis=0)
-                isel, jsel = np.where(sel.reshape(nrows, ncols))
-                imin, imax = np.min(isel)+1, np.max(isel)+1
-                jmin, jmax = np.min(jsel)+1, np.max(jsel)
-            else:
-                isel, jsel = np.where(sel.reshape(nrows, ncols))
-                imin, imax = np.min(isel), np.max(isel)+1
-                jmin, jmax = np.min(jsel), np.max(jsel)+1
+        isel, jsel = np.where(sel.reshape(nrows, ncols))
+        jmin, jmax = np.min(jsel), np.max(jsel) + 1  # x
+        imin, imax = np.min(isel), np.max(isel) + 1  # y
+
+        # crop first or last column
+        if grid.lower() == 'hexgrid':
+            if jmin != 0 and jmin != ncols:
+                jmin += 1
+            if jmax != 0 and jmax != ncols:
+                jmax -= 1
 
         scale = 1.*w/(jmax - jmin)
         if grid.lower() == 'hexgrid':
@@ -535,11 +540,12 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
-        img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
         ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), prop_true[imin:imax, jmin:jmax])
 
     else:
-        return
+        raise Exception('Unknown "{}" tiling'.format(tiling))
+
+    img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
     if scalebar:
@@ -576,56 +582,60 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
+    # get N based on nrows, ncols_odd and ncols_even
+    if grid.lower() == 'hexgrid':
+        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+    elif grid.lower() == 'sqrgrid':
+        N = nrows*ncols_odd
+    else:
+        raise Exception('Unknown grid type "{}"'.format(grid))
+
+    if N != len(M):
+        raise Exception('N and len(M) differ')
+
+    if isinstance(sel, np.ndarray):
+        if N != sel.shape[0]:
+            raise Exception('N and len(sel) differ')
+    else:
+        sel = np.full(N, True)
+    not_sel = ~sel
+
+    # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
 
     if dx is None:
         dx = (np.max(x) - np.min(x))/ncols_odd
 
-    if grid.lower() == 'hexgrid':
-        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
-        ymin += dx/2.
-        ymax += dx/2.
-    elif grid.lower() == 'sqrgrid':
-        N = nrows*ncols_odd
+    ymin -= dx/2.
+    ymax += dx/2.
+    if grid.lower() == 'sqrgrid':
         xmin -= dx/2.
         xmax += dx/2.
-        ymin -= dx/2.
-        ymax += dx/2.
-    else:
-        raise Exception('Unknown grid type "{}"'.format(grid))
+
+    # getting kwargs arguments
+    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
+
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
     col = get_color_IPF(IPF(M, d))
-
-    if N != M.shape[0]:
-        print('N and M.shape differ')
-        return
-
-    if isinstance(sel, np.ndarray):
-        if N != sel.shape[0]:
-            raise Exception('M.shape and sel.shape differ')
-    else:
-        sel = np.full(N, True)
-
-    not_sel = ~sel
+    # filling invalid/non-selected data points
     col[not_sel] = [0, 0, 0]  # RGB
 
+    # applying gray mask
     if isinstance(gray, np.ndarray):
         if N != gray.shape[0]:
-            print('M.shape and gray.shape differ')
-            return
+            raise Exception('N and len(gray) differ')
         else:
             gray = gray.reshape(-1, 1)/np.max(gray)
             col[sel] = col[sel]*gray[sel]
 
+    # getting AxesSubplot object
     if ax is None:
         fig, ax = plt.subplots()
     else:
         ax.cla()
         fig = ax.get_figure()
-
-    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
     if tiling == 'hex' and grid.lower() == 'sqrgrid':
         print('hex tiling not supported for squared grid. Using rect tiling instead.')
@@ -657,32 +667,30 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
         if grid.lower() == 'hexgrid':
             N, ncols = 2*N, 2*ncols_even
-
+            # double pixels
+            sel = np.repeat(sel, 2)
+            col = np.repeat(col, 2, axis=0)
             # remove extra pixels
             rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                             np.arange(ncols+1, N, 2*(ncols+1))])
-            col = np.repeat(col, 2, axis=0)
+            sel = np.delete(sel, rm, axis=0)
             col = np.delete(col, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
-        imin, imax = 0, nrows
-        jmin, jmax = 0, ncols
-        if np.count_nonzero(not_sel) > 0:
-            if grid.lower() == 'hexgrid':
-                sel = np.repeat(sel, 2)
-                sel = np.delete(sel, rm, axis=0)
-                isel, jsel = np.where(sel.reshape(nrows, ncols))
-                imin, imax = np.min(isel)+1, np.max(isel)+1
-                jmin, jmax = np.min(jsel)+1, np.max(jsel)
-            else:
-                isel, jsel = np.where(sel.reshape(nrows, ncols))
-                imin, imax = np.min(isel), np.max(isel)+1
-                jmin, jmax = np.min(jsel), np.max(jsel)+1
+        isel, jsel = np.where(sel.reshape(nrows, ncols))
+        jmin, jmax = np.min(jsel), np.max(jsel) + 1  # x
+        imin, imax = np.min(isel), np.max(isel) + 1  # y
+
+        # crop first or last column
+        if grid.lower() == 'hexgrid':
+            if jmin != 0 and jmin != ncols:
+                jmin += 1
+            if jmax != 0 and jmax != ncols:
+                jmax -= 1
 
         scale = 1.*w/(jmax - jmin)
         if grid.lower() == 'hexgrid':
@@ -694,9 +702,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
-        img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
+
     else:
-        return
+        raise Exception('Unknown "{}" tiling'.format(tiling))
+
+    img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
     if scalebar:
