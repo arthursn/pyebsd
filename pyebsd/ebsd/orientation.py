@@ -133,6 +133,7 @@ def avg_orientation(M, sel=None, **kwargs):
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.flush()
 
     del D, Mprime, M_sel, R_sel
     return M_avg
@@ -202,20 +203,23 @@ def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
 
 
 def misorientation(M, neighbors, sel=None, **kwargs):
-    verbose = kwargs.pop('verbose', True)
-    if verbose:
-        t0 = time.time()
-
     N = M.shape[0]
     nneighbors = neighbors.shape[1]
 
     C = list_cubic_symmetry_operators()
 
     # 2D array to store trace values; all values initialized as -1
-    tr = np.full((N, nneighbors), -1., dtype=float)
+    tr = np.full((N, nneighbors), -2, dtype=float)
+    misang = np.full((N, nneighbors), -1, dtype=float)
 
     if not isinstance(sel, np.ndarray):
         sel = np.full(N, True, dtype=bool)
+
+    verbose = kwargs.pop('verbose', True)
+    if verbose:
+        t0 = time.time()
+        sys.stdout.write('Calculating misorientations for {} points for '.format(np.count_nonzero(sel)))
+        sys.stdout.flush()
 
     for k in range(nneighbors):
         ok = (neighbors[:, k] > 0) & sel & sel[neighbors[:, k]]
@@ -230,16 +234,22 @@ def misorientation(M, neighbors, sel=None, **kwargs):
             tr[ok, k] = np.max(np.vstack([tr[ok, k], T]), axis=0)
 
         if verbose:
-            print(k)
+            if k > 0 and k < nneighbors:
+                sys.stdout.write(', ')
+            sys.stdout.write('{}'.format(k + 1))
+            sys.stdout.flush()
 
     del S, T
 
     if verbose:
-        print(time.time()-t0)
+        sys.stdout.write(' neighbors... {:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.flush()
 
     tr[tr > 3.] = 3.
 
-    return trace_to_angle(tr)
+    ok = tr >= -1.
+    misang[ok] = trace_to_angle(tr[ok])
+    return misang
 
 
 def minimize_disorientation(V, V0, **kwargs):
@@ -254,6 +264,7 @@ def minimize_disorientation(V, V0, **kwargs):
     plot = kwargs.pop('plot', False)
     if verbose:
         sys.stdout.write('\nMinimizing disorientation...\n')
+        sys.stdout.flush()
     if plot:
         from .plotting import plot_PF
         axmin = plot_PF(M=V, ms=.5, c='k', verbose=False)
@@ -363,6 +374,7 @@ def euler_angles_to_rotation_matrix(phi1, Phi, phi2, conv='zxz', **kwargs):
 
     if verbose:
         sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.flush()
 
     return R
 
@@ -428,18 +440,17 @@ def rotation_matrix_to_euler_angles(R, conv='zxz', **kwargs):
 
         if verbose:
             sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+            sys.stdout.flush()
     else:
         Phi = np.arccos(np.mean(R[:, 2, 2]))
         sPhi = np.sin(Phi)
         cphi1, cphi2 = -np.mean(R[:, 1, 2])/sPhi, np.mean(R[:, 2, 1])/sPhi
         sphi1, sphi2 = np.mean(R[:, 0, 2])/sPhi, np.mean(R[:, 2, 0])/sPhi
         phi1, phi2 = np.arctan2(sphi1, cphi1), np.arctan2(sphi2, cphi2)
-        R_avg = euler_angles_to_rotation_matrix(
-            phi1, Phi, phi2, verbose=False)
+        R_avg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False)
         # n=kwargs.pop('n', 5), maxdev=kwargs.pop('maxdev', .25)
         R_avg = minimize_disorientation(R, R_avg, **kwargs)
-        phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
-            R_avg, verbose=False)  # recursive
+        phi1, Phi, phi2 = rotation_matrix_to_euler_angles(R_avg, verbose=False)  # recursive
 
     return phi1, Phi, phi2
 

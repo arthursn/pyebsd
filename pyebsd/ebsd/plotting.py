@@ -68,14 +68,11 @@ class EBSDMap(object):
         self._selector = selector_widget
 
     def lasso_selector(self, lineprops=dict(color='white')):
-        self.selector = LassoSelector2(
-            self.ax, self.x, self.y, lineprops=lineprops)
+        self.selector = LassoSelector2(self.ax, self.x, self.y, lineprops=lineprops)
         return self.selector
 
-    def rect_selector(self, rectprops=dict(edgecolor='white', fill=False),
-                      aspect=None):
-        self.selector = RectangleSelector2(
-            self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
+    def rect_selector(self, rectprops=dict(edgecolor='white', fill=False), aspect=None):
+        self.selector = RectangleSelector2(self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
         return self.selector
 
 
@@ -234,8 +231,8 @@ def unit_triangle(ax=None, n=512, **kwargs):
     return ax
 
 
-def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
-            rotation=None, contour=False, verbose=True, **kwargs):
+def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
+            verbose=True, **kwargs):
     """
     The user should provide either R or M. It's more convenient to use
     R values when plotting raw experimental data. M should be used 
@@ -394,8 +391,8 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None,
 
 def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
                   dx=None, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
-                  sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
-                  colorbar=True, verbose=True, **kwargs):
+                  sel=None, gray=None, grid='HexGrid', tiling='rect',
+                  w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
     Documentation
     """
@@ -406,6 +403,12 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
     prop_true = prop.copy()
 
+    if sel is None:
+        sel = ~np.isnan(prop)
+    else:
+        sel &= ~np.isnan(prop)
+    not_sel = ~sel
+
     # getting kwargs properties...
     cmap = kwargs.pop('cmap', plt.get_cmap())
     if isinstance(cmap, str):
@@ -414,31 +417,35 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     vmin = kwargs.pop('vmin', np.min(prop[sel]))
     vmax = kwargs.pop('vmax', np.max(prop[sel]))
 
-    # calculates expected number of points from provided nrows, ncols_odd and ncols_even
-    N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
 
+    if dx is None:
+        dx = (np.max(x) - np.min(x))/ncols_odd
+
+    if grid.lower() == 'hexgrid':
+        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+    elif grid.lower() == 'sqrgrid':
+        N = nrows*ncols_odd
+        xmin -= dx/2.
+        xmax += dx/2.
+        ymin -= dx/2.
+        ymax += dx/2.
+    else:
+        raise Exception('Unknown grid type "{}"'.format(grid))
+
+    col = np.ndarray((prop.shape[0], 4))
+    col[:] = colorfill
     if isinstance(colordict, dict):
-        col = np.ndarray((prop.shape[0], 4))
-        col[:] = colorfill
         for p, rgba in colordict.items():
             col[prop == float(p)] = rgba
     else:
         prop = (prop - vmin)/(vmax - vmin)  # normalizes prop to range [0,1]
-        prop[prop < 0], prop[prop > 1] = 0, 1
-        col = cmap(prop)
+        col[sel] = cmap(prop[sel])
 
     if N != prop.shape[0]:
         return
 
-    if isinstance(sel, np.ndarray):
-        if prop.shape != sel.shape:
-            return
-    else:
-        sel = np.full(N, True)
-
-    not_sel = np.logical_not(sel)
     col[not_sel] = colorfill
     if prop_true.dtype == float:
         prop_true[not_sel] = np.nan
@@ -457,10 +464,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         ax.cla()
         fig = ax.get_figure()
 
-    if tiling == 'hex':
-        if not dx:
-            dx = (np.max(x) - np.min(x))/ncols_even
+    if tiling == 'hex' and grid.lower() == 'sqrgrid':
+        print('hex tiling not supported for squared grid. Using rect tiling instead.')
+        tiling = 'rect'
 
+    if tiling == 'hex':
         col = (255*col[sel]).astype(int)
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
@@ -487,27 +495,38 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     elif tiling == 'rect':
-        N, ncols = 2*N, 2*ncols_even
-        # remove extra pixels
-        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                        np.arange(ncols+1, N, 2*(ncols+1))])
+        if grid.lower() == 'hexgrid':
+            N, ncols = 2*N, 2*ncols_even
+            # remove extra pixels
+            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                            np.arange(ncols+1, N, 2*(ncols+1))])
 
-        col = np.repeat(col, 2, axis=0)
-        col = np.delete(col, rm, axis=0)
-        prop_true = np.repeat(prop_true, 2, axis=0)
-        prop_true = np.delete(prop_true, rm, axis=0)
+            col = np.repeat(col, 2, axis=0)
+            col = np.delete(col, rm, axis=0)
+            prop_true = np.repeat(prop_true, 2, axis=0)
+            prop_true = np.delete(prop_true, rm, axis=0)
+        else:  # sqrgrid
+            ncols = ncols_odd
 
         imin, imax = 0, nrows
         jmin, jmax = 0, ncols
         if np.count_nonzero(not_sel) > 0:
-            sel = np.repeat(sel, 2)
-            sel = np.delete(sel, rm, axis=0)
-            isel, jsel = np.where(sel.reshape(nrows, ncols))
-            imin, imax = np.min(isel)+1, np.max(isel)+1
-            jmin, jmax = np.min(jsel)+1, np.max(jsel)
+            if grid.lower() == 'hexgrid':
+                sel = np.repeat(sel, 2)
+                sel = np.delete(sel, rm, axis=0)
+                isel, jsel = np.where(sel.reshape(nrows, ncols))
+                imin, imax = np.min(isel)+1, np.max(isel)+1
+                jmin, jmax = np.min(jsel)+1, np.max(jsel)
+            else:
+                isel, jsel = np.where(sel.reshape(nrows, ncols))
+                imin, imax = np.min(isel), np.max(isel)+1
+                jmin, jmax = np.min(jsel), np.max(jsel)+1
 
         scale = 1.*w/(jmax - jmin)
-        h = np.int(scale*(imax - imin)*(3.**.5))
+        if grid.lower() == 'hexgrid':
+            h = np.int(scale*(imax - imin)*(3.**.5))
+        else:
+            h = np.int(scale*(imax - imin))
 
         col = col.reshape(nrows, ncols, -1)
         prop_true = prop_true.reshape(nrows, ncols)
@@ -545,8 +564,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
 
 def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
-             dx=None, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling='rect',
-             w=2048, scalebar=True, verbose=True, **kwargs):
+             dx=None, d=[0, 0, 1], ax=None, sel=None, gray=None, grid='HexGrid',
+             tiling='rect', w=2048, scalebar=True, verbose=True, **kwargs):
     """
     Documentation
     """
@@ -555,11 +574,15 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
-    # calculates expect number of points from provided nrows,
-    # ncols_odd and ncols_even
-    N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
+
+    if grid.lower() == 'hexgrid':
+        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
+    elif grid.lower() == 'sqrgrid':
+        N = nrows*ncols_odd
+    else:
+        raise Exception('Unknown grid type "{}"'.format(grid))
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
     col = get_color_IPF(IPF(M, d))
@@ -570,13 +593,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
     if isinstance(sel, np.ndarray):
         if N != sel.shape[0]:
-            print('M.shape and sel.shape differ')
-            return
+            raise Exception('M.shape and sel.shape differ')
     else:
-        sel = np.ndarray(N, dtype=bool)
-        sel.fill(True)
+        sel = np.full(N, True)
 
-    not_sel = np.logical_not(sel)
+    not_sel = ~sel
     col[not_sel] = [0, 0, 0]  # RGB
 
     if isinstance(gray, np.ndarray):
@@ -595,10 +616,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
-    if tiling == 'hex':
-        if not dx:
-            dx = (np.max(x) - np.min(x))/ncols_even
+    if tiling == 'hex' and grid.lower() == 'sqrgrid':
+        print('hex tiling not supported for squared grid. Using rect tiling instead.')
+        tiling = 'rect'
 
+    if tiling == 'hex':
         col = col[sel]
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
@@ -624,28 +646,38 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=color)
 
-        ax.imshow(img_pil, interpolation='None', extent=(
-            xmin, xmax, ymax, ymin), **kwargs)
+        ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
     elif tiling == 'rect':
-        N, ncols = 2*N, 2*ncols_even
-        # remove extra pixels
-        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                        np.arange(ncols+1, N, 2*(ncols+1))])
+        if grid.lower() == 'hexgrid':
+            N, ncols = 2*N, 2*ncols_even
 
-        col = np.repeat(col, 2, axis=0)
-        col = np.delete(col, rm, axis=0)
+            # remove extra pixels
+            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                            np.arange(ncols+1, N, 2*(ncols+1))])
+            col = np.repeat(col, 2, axis=0)
+            col = np.delete(col, rm, axis=0)
+        else:  # sqrgrid
+            ncols = ncols_odd
 
         imin, imax = 0, nrows
         jmin, jmax = 0, ncols
         if np.count_nonzero(not_sel) > 0:
-            sel = np.repeat(sel, 2)
-            sel = np.delete(sel, rm, axis=0)
-            isel, jsel = np.where(sel.reshape(nrows, ncols))
-            imin, imax = np.min(isel)+1, np.max(isel)+1
-            jmin, jmax = np.min(jsel)+1, np.max(jsel)
+            if grid.lower() == 'hexgrid':
+                sel = np.repeat(sel, 2)
+                sel = np.delete(sel, rm, axis=0)
+                isel, jsel = np.where(sel.reshape(nrows, ncols))
+                imin, imax = np.min(isel)+1, np.max(isel)+1
+                jmin, jmax = np.min(jsel)+1, np.max(jsel)
+            else:
+                isel, jsel = np.where(sel.reshape(nrows, ncols))
+                imin, imax = np.min(isel), np.max(isel)+1
+                jmin, jmax = np.min(jsel), np.max(jsel)+1
 
         scale = 1.*w/(jmax - jmin)
-        h = np.int(scale*(imax - imin)*(3.**.5))
+        if grid.lower() == 'hexgrid':
+            h = np.int(scale*(imax - imin)*(3.**.5))
+        else:
+            h = np.int(scale*(imax - imin))
 
         col = col.reshape(nrows, ncols, -1)
 

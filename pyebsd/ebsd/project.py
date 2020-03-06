@@ -29,6 +29,8 @@ rcParams['savefig.pad_inches'] = 0.0
 
 
 class ScanData(object):
+    __supported_grids = ['hexgrid', 'sqrgrid']
+
     __cos60 = .5  # cos(60deg)
     __sin60 = .5*3.**.5  # sin(60deg)
 
@@ -62,10 +64,11 @@ class ScanData(object):
 
     __n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
 
-    def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even,
-                 nrows, header=''):
+    def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=''):
         self.data = data  # pandas DataFrame
         self.grid = grid  # string (e.g., hexgrid)
+        if self.grid.lower() not in self.__supported_grids:
+            raise Exception('Unknown grid type "{}"'.format(self.grid))
         self.dx = dx  # float
         self.dy = dy  # float
         self.ncols_odd = ncols_odd  # int
@@ -74,11 +77,17 @@ class ScanData(object):
         self.header = header  # string
 
         # total number of columns
-        self.ncols = self.ncols_odd + self.ncols_even
+        if self.grid.lower() == 'hexgrid':
+            self.ncols = self.ncols_odd + self.ncols_even
+        else:
+            if self.ncols_odd != self.ncols_even:
+                raise Exception('NCOLS_ODD ({}) and NCOLS_EVEN ({}) should be equal for {}'.format(
+                    self.ncols_odd, self.ncols_even, self.grid))
+            self.ncols = self.ncols_odd
         self.N = len(self.data)
 
         # .values: pandas Series to numpy array
-        self.ind = self.data.index.values
+        self.index = self.data.index.values
         self.phi1 = self.data.phi1.values
         self.Phi = self.data.Phi.values
         self.phi2 = self.data.phi2.values
@@ -124,9 +133,12 @@ class ScanData(object):
         row number (0 -> nrows - 1)
         """
         if self._i is None:
-            self._i = 2*(self.ind//self.ncols)
-            shift = np.tile([0]*self.ncols_odd + [1]*self.ncols_even, self.nrows)
-            self._i += shift[:self.N]
+            if self.grid.lower() == 'hexgrid':
+                self._i = 2*(self.index//self.ncols)
+                shift = np.tile([0]*self.ncols_odd + [1]*self.ncols_even, self.nrows)
+                self._i += shift[:self.N]
+            else:
+                self._i = self.index // self.ncols
         return self._i
 
     @property
@@ -135,87 +147,146 @@ class ScanData(object):
         col number (0 -> ncols - 1)
         """
         if self._j is None:
-            rem = self.ind % self.ncols  # remainder
-            self._j = rem//self.ncols_odd + 2*(rem % self.ncols_odd)
+            rem = self.index % self.ncols  # remainder
+            if self.grid.lower() == 'hexgrid':
+                self._j = rem//self.ncols_odd + 2*(rem % self.ncols_odd)
+            else:
+                self._j = rem
         return self._j
 
-    def ij2ind(self, i, j):
+    def ij_to_index(self, i, j):
         """
-        i, j grid positions to pixel index (self.ind)
+        i, j grid positions to pixel index (self.index)
 
-        n : ncols_odd
-        m : ncols_even
-        N : ncols_odd + ncols_even
+        Arguments
+        ---------
+        i : int
+            Column number (y coordinate) according to grid description below
+        j : int
+            Row number (x coordinate) according to grid description below
 
-        ----------------------------------------
-                  indices ind
-         0     1     2       n-2   n-1
+        Returns
+        -------
+        index : int
+            Pixel index
+
+        Grid description for HexGrid:
+        -----------------------------
+        o : ncols_odd
+        c : ncols_odd + ncols_even
+        r : nrows
+        n : total number of pixels
+
+        ===================================
+                     index
+         0     1     2       o-2   o-1
          *     *     *  ...   *     *
-            n    n+1            N-1
-            *     *              *     
-         N    N+1   N+2
+            o    o+1            c-1
+            *     *     ...      *
+         c    c+1   c+2     c+o-2 c+o-1
          *     *     *  ...   *     *
                          .
                          .
-                         .
-
+                         .      n-1
             *     *     ...      *
 
+        ===================================
+                      j, i
+         0  1  2  3  4   j         m-1
+         *     *     *  ...   *     *   0
+
+            *     *     ...      *      1
+
+         *     *     *  ...   *     *   2
+                         .
+                         .              i
+                         .
+            *     *     ...      *     r-1
+
+        Grid description for SqrGrid
+        ----------------------------
+        c : ncols_odd = ncols_even
+        r : nrows
+        n : total number of pixels
+
+        ===================================
+                     index
+         0     1     2       c-2   c-1
+         *     *     *  ...   *     *
+         c    c+1   c+2     2c-2  2c-1
+         *     *     *  ...   *     *
+                         .
+                         .
+                         .   n-2   n-1
          *     *     *  ...   *     *
 
-        ----------------------------------------
-                   columns j
-         0  1  2  3  4             N-1
-         *     *     *  ...   *     *   (row 0)
+        ===================================
+                      j, i
+         0     1     2   j   n-2   n-1
+         *     *     *  ...   *     *   0
 
-            *     *              *      (row 1)
-
-         *     *     *  ...   *     *   (row 2)
+         *     *     *        *     *   1
                          .
+                         .              i
                          .
-                         .
-
-            *     *     ...      *      (row i)
-
-         *     *     *  ...   *     *   (row i+1)
+         *     *     *  ...   *     *  r-1
 
         """
-        # 1 - self.N*(j/self.ncols) turns negative every i, j
-        # pair where j > ncols
-        return (1 - self.N*(j//self.ncols)) * \
-            ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
+        if self.grid.lower() == 'hexgrid':
+            # 1 - self.N*(j/self.ncols) turns negative every i, j
+            # pair where j > ncols
+            index = (1 - self.N*(j//self.ncols)) * ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
+        else:
+            index = i*self.ncols + j
+        return index
 
-    def get_neighbors_hexgrid_oim(self, distance):
+    def get_neighbors_oim(self, distance):
         """
-        Returns list of relative indices of the neighboring pixels in a
-        hexgrid for a given distance in pixels
+        Returns list of relative indices of the neighboring pixels for
+        a given distance in pixels
         """
-        R60 = np.array([[self.__cos60, -self.__sin60],
-                        [self.__sin60,  self.__cos60]])  # 60 degrees rotation matrix
+        if self.grid.lower() == 'hexgrid':
+            R60 = np.array([[self.__cos60, -self.__sin60],
+                            [self.__sin60,  self.__cos60]])  # 60 degrees rotation matrix
 
-        j_list = np.arange(-distance, distance, 2)
-        i_list = np.full(j_list.shape, -distance)
+            j_list = np.arange(-distance, distance, 2)
+            i_list = np.full(j_list.shape, -distance)
 
-        xy = np.vstack([j_list*self.__cos60, i_list*self.__sin60])
+            xy = np.vstack([j_list*self.__cos60, i_list*self.__sin60])
 
-        j_list, i_list = list(j_list), list(i_list)
+            j_list, i_list = list(j_list), list(i_list)
 
-        for r in range(1, 6):
-            xy = np.dot(R60, xy)  # 60 degrees rotation
-            j_list += list((xy[0]/self.__cos60).round(0).astype(int))
-            i_list += list((xy[1]/self.__sin60).round(0).astype(int))
+            for r in range(1, 6):
+                xy = np.dot(R60, xy)  # 60 degrees rotation
+                j_list += list((xy[0]/self.__cos60).round(0).astype(int))
+                i_list += list((xy[1]/self.__sin60).round(0).astype(int))
+        else:  # sqrgrid
+            R90 = np.array([[0, -1],
+                            [1,  0]], dtype=int)  # 90 degrees rotation matrix
+            xy = np.vstack([np.arange(-distance, distance, dtype=int),
+                            np.full(2*distance, -distance, dtype=int)])
+
+            j_list, i_list = list(xy[0]), list(xy[1])
+
+            for r in range(1, 4):
+                xy = np.dot(R90, xy)
+                j_list += list(xy[0])
+                i_list += list(xy[1])
 
         return j_list, i_list
 
-    def get_neighbors_hexgrid_fixed(self, distance):
+    def get_neighbors_fixed(self, distance):
         """
-        Returns list of relative indices of the neighboring pixels in a
-        hexgrid for a given distance in pixels
+        Returns list of relative indices of the neighboring pixels for
+        a given distance in pixels
         """
-        if distance > self.__n_neighbors_hexgrid_fixed:
-            raise Exception('Not supported for distance > {}'.format(self.__n_neighbors_hexgrid_fixed))
-
-        j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance-1]))
+        if self.grid.lower() == 'hexgrid':
+            if distance > self.__n_neighbors_hexgrid_fixed:
+                raise Exception('get_neighbors_fixed not supported for distance > {}'.format(
+                    self.__n_neighbors_hexgrid_fixed))
+            j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance-1]))
+        else:
+            raise Exception('get_neighbors_fixed not yet supported for grid type {}'.format(self.grid))
         return list(j_list), list(i_list)
 
     def get_neighbors(self, distance, perimeteronly=True, distance_convention='OIM'):
@@ -224,20 +295,20 @@ class ScanData(object):
         for a given distance in pixels
         """
         if distance_convention.lower() == 'oim':
-            get_neighbors_hexgrid = self.get_neighbors_hexgrid_oim
+            _get_neighbors = self.get_neighbors_oim
         elif distance_convention.lower() == 'fixed':
-            get_neighbors_hexgrid = self.get_neighbors_hexgrid_fixed
+            _get_neighbors = self.get_neighbors_fixed
         else:
-            raise Exception('Invalid distance convention "{}"'.format(distance_convention))
+            raise Exception('get_neighbors: unknown distance convention "{}"'.format(distance_convention))
 
         if perimeteronly:
             # only pixels in the perimeter
-            j_shift, i_shift = get_neighbors_hexgrid(distance)
+            j_shift, i_shift = _get_neighbors(distance)
         else:
             # including inner pixels
             j_shift, i_shift = [], []
             for d in range(1, distance+1):
-                j_sh, i_sh = get_neighbors_hexgrid(d)
+                j_sh, i_sh = _get_neighbors(d)
                 j_shift += j_sh
                 i_shift += i_sh
 
@@ -247,20 +318,26 @@ class ScanData(object):
         j_neighbors = np.vstack([j0 + shift for shift in j_shift]).T.astype(int)
         # y
         i_neighbors = np.vstack([i0 + shift for shift in i_shift]).T.astype(int)
+        outliers = (j_neighbors < 0) | (j_neighbors >= self.ncols) | (i_neighbors < 0) | (i_neighbors >= self.nrows)
 
-        neighbors_ind = self.ij2ind(i_neighbors, j_neighbors)
-        neighbors_ind[(neighbors_ind < 0) | (neighbors_ind >= self.N)] = -1
+        neighbors_ind = self.ij_to_index(i_neighbors, j_neighbors)
+        neighbors_ind[outliers] = -1
+
         return neighbors_ind.astype(int)
 
     def get_distance_neighbors(self, distance, distance_convention='OIM'):
         if distance_convention.lower() == 'oim':
-            j, i = self.get_neighbors_hexgrid_oim(distance)
+            j, i = self.get_neighbors_oim(distance)
         elif distance_convention.lower() == 'fixed':
-            j, i = self.get_neighbors_hexgrid_fixed(distance)
+            j, i = self.get_neighbors_fixed(distance)
         else:
-            raise Exception('Invalid distance convention "{}"'.format(distance_convention))
+            raise Exception('get_distance_neighbors: unknown distance convention "{}"'.format(distance_convention))
 
-        d = .5*(np.array(j)**2. + 3.*np.array(i)**2.)**.5
+        if self.grid.lower() == 'hexgrid':
+            d = .5*(np.array(j)**2 + 3.*np.array(i)**2)**.5
+        else:  # sqrgrid
+            d = (np.array(j)**2 + np.array(i)**2)**.5
+
         return d.mean()
 
     def get_KAM(self, distance=1, perimeteronly=True, maxmis=None,
@@ -278,7 +355,7 @@ class ScanData(object):
             else uses inner pixels as well
             Default: True
         maxmis : float (optional)
-            Maximum misorientation angle (in degrees) accounted in the 
+            Maximum misorientation angle (in degrees) accounted in the
             calculation of KAM
             Default: None
         sel : bool numpy 1D array (optional)
@@ -293,12 +370,13 @@ class ScanData(object):
         neighbors = self.get_neighbors(distance, perimeteronly, distance_convention)
         misang = misorientation(self.M, neighbors, sel)
 
+        outliers = misang < 0  # filter out negative values
         if maxmis is not None:
-            misang[misang > maxmis] = 0
-            nneighbors = np.count_nonzero(misang <= maxmis, axis=1)
-            nneighbors[nneighbors == 0] = 1  # to prevent division by 0
-        else:
-            nneighbors = neighbors.shape[1]
+            outliers |= misang > maxmis  # and values > maxmis
+
+        misang[outliers] = 0.
+        nneighbors = np.count_nonzero(~outliers, axis=1)
+        nneighbors[nneighbors == 0] = 1  # to prevent division by 0
 
         kam = np.sum(misang, axis=1)/nneighbors
 
@@ -324,8 +402,8 @@ class ScanData(object):
             Boolean array indicating which data points should be plotted
             Default: None
         gray : numpy ndarray (optional)
-            Grayscale mask plotted over IPF. 
-            For example, one may want to overlay the IPF map with the image 
+            Grayscale mask plotted over IPF.
+            For example, one may want to overlay the IPF map with the image
             quality data.
             Default: None
         tiling : str (optional)
@@ -349,23 +427,23 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
-        ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd,
-                           self.x, self.y, self.dx, d, ax, sel, gray, tiling, w,
-                           scalebar, verbose, **kwargs)
+        ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
+                           self.dx, d, ax, sel, gray, self.grid, tiling, w, scalebar, verbose,
+                           **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
-                      sel=None, gray=None, tiling='rect', w=2048,
-                      scalebar=True, colorbar=True, verbose=True, **kwargs):
+                      sel=None, gray=None, tiling='rect', w=2048, scalebar=True,
+                      colorbar=True, verbose=True, **kwargs):
         """
         Plots any EBSD property
 
         Parameters
         ----------
         prop : array shape(N)
-            Property to be plotted provided as np.ndarray(N), where N is the 
+            Property to be plotted provided as np.ndarray(N), where N is the
             size of the data file
         ax : AxesSubplot object (optional)
             The pole figure will be plotted in the provided object 'ax'
@@ -381,8 +459,8 @@ class ScanData(object):
             Boolean array indicating which data points should be plotted
             Default: None
         gray : numpy ndarray (optional)
-            Grayscale mask plotted over IPF. 
-            For example, one may want to overlay the IPF map with the image 
+            Grayscale mask plotted over IPF.
+            For example, one may want to overlay the IPF map with the image
             quality data.
             Default: None
         tiling : str (optional)
@@ -406,9 +484,9 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
-        ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd,
-                                self.x, self.y, self.dx, ax, colordict, colorfill,
-                                sel, gray, tiling, w, scalebar, colorbar, verbose, **kwargs)
+        ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
+                                self.dx, ax, colordict, colorfill, sel, gray, self.grid, tiling, w,
+                                scalebar, colorbar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
@@ -417,7 +495,7 @@ class ScanData(object):
                    colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling='rect',
                    w=2048, scalebar=True, verbose=True, **kwargs):
         """
-        Plots phases map 
+        Plots phases map
 
         Parameters
         ----------
@@ -434,8 +512,8 @@ class ScanData(object):
         colorfill : list shape(4) (optional)
             Color used to fill unindexed pixels
         gray : numpy ndarray (optional)
-            Grayscale mask plotted over IPF. 
-            For example, one may want to overlay the IPF map with the image 
+            Grayscale mask plotted over IPF.
+            For example, one may want to overlay the IPF map with the image
             quality data.
             Default: None
         tiling : str (optional)
@@ -459,8 +537,8 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
-        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray,
-                                     tiling, w, scalebar, False, verbose, **kwargs)
+        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray, tiling, w,
+                                     scalebar, False, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
@@ -484,15 +562,15 @@ class ScanData(object):
             The pole figure will be plotted in the provided object 'ax'
             Default: None
         maxmis : float (optional)
-            Maximum misorientation angle (in degrees) accounted in the 
+            Maximum misorientation angle (in degrees) accounted in the
             calculation of KAM
             Default: None
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
             Default: None
         gray : numpy ndarray (optional)
-            Grayscale mask plotted over IPF. 
-            For example, one may want to overlay the IPF map with the image 
+            Grayscale mask plotted over IPF.
+            For example, one may want to overlay the IPF map with the image
             quality data.
             Default: None
         tiling : str (optional)
@@ -517,15 +595,15 @@ class ScanData(object):
 
         """
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
-        ebsdmap = self.plot_property(KAM, ax, None, [0, 0, 0, 1], sel, gray,
-                                     tiling, w, scalebar, colorbar, verbose, **kwargs)
+        ebsdmap = self.plot_property(KAM, ax, None, [0, 0, 0, 1], sel, gray, tiling, w,
+                                     scalebar, colorbar, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None,
-                contour=False, verbose=True, **kwargs):
+    def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
+                verbose=True, **kwargs):
         """
         Plots pole figure
 
@@ -537,12 +615,12 @@ class ScanData(object):
         ax : AxesSubplot object (optional)
             The pole figure will be plotted in the provided object 'ax'
         sel : bool numpy ndarray
-            Array with bool [True, False] values indicating which data 
+            Array with bool [True, False] values indicating which data
             points should be plotted
             Default: None
         rotation : list or array shape(3,3)
             Rotation matrix that rotates the pole figure.
-            The columns of the matrix correspond to the directions parallel to 
+            The columns of the matrix correspond to the directions parallel to
             the axes of the pole figure.
         contour : bool (optional)
             contour=True plots the pole figure using contour plot
@@ -556,11 +634,11 @@ class ScanData(object):
                 line width of PF frame
                 Default: 0.5
             fill : [True, False]
-                True: filled contour plot 'plt.contourf'; False: contour plot 
+                True: filled contour plot 'plt.contourf'; False: contour plot
                 'plt.contour'
                 Default: True
             bins : int or tuple or array (int,int)
-                Binning used in the calculation of the points density histogram 
+                Binning used in the calculation of the points density histogram
                 (prior to contour plot)
                 Default: (256, 256)
             fn : ['sqrt', 'log', 'None'] or function(x)
@@ -570,7 +648,7 @@ class ScanData(object):
                 number of levels in the contour plot
                 Default: 10
 
-        The kwargs properties not listed here are automatically passed to the 
+        The kwargs properties not listed here are automatically passed to the
         plotting functions:
         if not contour:
             plt.plot(..., **kwargs)
@@ -594,10 +672,10 @@ class ScanData(object):
         plt.savefig(fname, **kwargs)
 
 
-def _get_rectangle_surrounding_selection(scan, sel):
+def _get_rectangle_surrounding_selection_hexgrid(scan, sel):
     """
     Select rectangle surrounding the selected data.
-    Some manipulations are necessary to ensure that 
+    Some manipulations are necessary to ensure that
     ncols_odd = ncols_even + 1
     """
     # x
@@ -682,8 +760,10 @@ def selection_to_scandata(scan, sel):
         newdata.loc[~sel, 'fit'] = 0
 
         # select rectangle surrounding the selected data
-        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection(
-            scan, sel)
+        if scan.grid == 'hexgrid':
+            ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_hexgrid(scan, sel)
+        else:
+            raise Exception('selection_to_scandata not yet supported for grid type {}'.format(self.grid))
 
         # data to be exported is a rectangle
         newdata = newdata[rect]
@@ -692,7 +772,6 @@ def selection_to_scandata(scan, sel):
         newdata.x -= newdata.x.min()
         newdata.y -= newdata.y.min()
 
-    newscan = ScanData(newdata, scan.grid, scan.dx, scan.dy,
-                       ncols_odd, ncols_even, nrows, scan.header)
+    newscan = ScanData(newdata, scan.grid, scan.dx, scan.dy, ncols_odd, ncols_even, nrows, scan.header)
 
     return newscan
