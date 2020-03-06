@@ -69,8 +69,7 @@ while key is not 'q':
 
         plt.draw_all()
 
-    key = input(
-        'Press ENTER to process selected data or type q to quit selection mode ')
+    key = input('Press ENTER to process selected data or type q to quit selection mode ')
 
 # fig.savefig(basename + '_IPF_fcc_sel.pdf', bbox_inches='tight', pad_inches=0)
 # fig2.savefig(basename + '_IPF_sel.pdf')

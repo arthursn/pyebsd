@@ -3,6 +3,7 @@ from matplotlib.lines import Line2D
 from matplotlib.path import Path
 import numpy as np
 
+
 class LassoSelector2(_SelectorWidget):
     def __init__(self, ax, x, y, lineprops=None):
         _SelectorWidget.__init__(self, ax, self.onselect, button=None, useblit=False)
@@ -50,7 +51,7 @@ class LassoSelector2(_SelectorWidget):
             self.line.set_data(list(zip(*xy)))
             self.update()
 
-    def on_key_press(self, event): # replace default action on_key_press
+    def on_key_press(self, event):  # replace default action on_key_press
         if self.active:
             key = event.key or ''
             if key == self.state_modifier_keys['clear']:
@@ -90,11 +91,13 @@ class LassoSelector2(_SelectorWidget):
     def disconnect(self):
         self.disconnect_events()
 
+
 class RectangleSelector2(RectangleSelector):
     def __init__(self, ax, x, y, rectprops=None, aspect=None):
         RectangleSelector.__init__(self, ax, self.onselect, rectprops=rectprops, useblit=False, interactive=True)
 
-        self.state_modifier_keys = dict(move=' ', accept='enter', clear='c', disconnect='escape', square='shift', center='control')
+        self.state_modifier_keys = dict(move=' ', accept='enter', clear='c',
+                                        disconnect='escape', square='shift', center='control')
 
         self.data = list(zip(x, y))
         self.sel = []
@@ -114,7 +117,7 @@ class RectangleSelector2(RectangleSelector):
             key = event.key or ''
             if key == self.state_modifier_keys['disconnect']:
                 for artist in self.artists:
-                    artist.set_visible(False) 
+                    artist.set_visible(False)
                 self.disconnect()
                 return
 
@@ -123,7 +126,7 @@ class RectangleSelector2(RectangleSelector):
         # resize an existing shape
         if self.active_handle and not self.active_handle == 'C':
             x1, x2, y1, y2 = self._extents_on_press
-            
+
             if hasattr(self, 'ratio'):
                 center = [(x1 + x2)/2., (y1 + y2)/2.]  # center
                 dx = (event.xdata - center[0])
