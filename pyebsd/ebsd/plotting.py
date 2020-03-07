@@ -415,17 +415,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting property map... ')
         sys.stdout.flush()
 
-    # get N based on nrows, ncols_odd and ncols_even and set default tiling
+    # get N based on nrows, ncols_odd and ncols_even
     if grid.lower() == 'hexgrid':
         N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
-        if tiling is None:
-            tiling = 'rect' if np.count_nonzero(sel) > __THRESHOLD_TILING__ else 'hex'
     elif grid.lower() == 'sqrgrid':
         N = nrows*ncols_odd
-        if tiling is None or tiling == 'hex':
-            if tiling == 'hex':
-                print('hex tiling not supported for squared grid. Using rect tiling instead.')
-            tiling = 'rect'
     else:
         raise Exception('Unknown grid type "{}"'.format(grid))
 
@@ -439,6 +433,17 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     else:
         sel = ~np.isnan(prop)
     not_sel = ~sel
+
+    # set default tiling
+    if grid.lower() == 'sqrgrid' and tiling == 'hex':
+        print('hex tiling not supported for squared grid. Using rect tiling instead.')
+        tiling = 'rect'
+
+    if tiling is None:
+        tiling = 'rect'
+        if grid.lower() == 'hexgrid':
+            if np.count_nonzero(sel) <= __THRESHOLD_TILING__:
+                tiling = 'hex'
 
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
@@ -558,6 +563,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), prop[imin:imax, jmin:jmax])
 
     else:
+        plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
@@ -597,17 +603,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
-    # get N based on nrows, ncols_odd and ncols_even and set default tiling
+    # get N based on nrows, ncols_odd and ncols_even
     if grid.lower() == 'hexgrid':
         N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
-        if tiling is None:
-            tiling = 'rect' if np.count_nonzero(sel) > __THRESHOLD_TILING__ else 'hex'
     elif grid.lower() == 'sqrgrid':
         N = nrows*ncols_odd
-        if tiling is None or tiling == 'hex':
-            if tiling == 'hex':
-                print('hex tiling not supported for squared grid. Using rect tiling instead.')
-            tiling = 'rect'
     else:
         raise Exception('Unknown grid type "{}"'.format(grid))
 
@@ -620,6 +620,17 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
     else:
         sel = np.full(N, True)
     not_sel = ~sel
+
+    # set default tiling
+    if grid.lower() == 'sqrgrid' and tiling == 'hex':
+        print('hex tiling not supported for squared grid. Using rect tiling instead.')
+        tiling = 'rect'
+
+    if tiling is None:
+        tiling = 'rect'
+        if grid.lower() == 'hexgrid':
+            if np.count_nonzero(sel) <= __THRESHOLD_TILING__:
+                tiling = 'hex'
 
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
@@ -722,6 +733,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         img_pil = img_pil.resize(size=(w, h))
 
     else:
+        plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
