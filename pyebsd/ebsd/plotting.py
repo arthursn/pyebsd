@@ -43,7 +43,12 @@ class _CoordsFormatter(object):
         j = int(self.h*(y - self.ymin)/self.yrng)
         i = self.w - 1 if i == self.w else i
         j = self.h - 1 if j == self.h else j
-        return 'x={:g}    y={:g}    z={:g}'.format(x, y, self.Z[j, i])
+        string = 'x={:g}    y={:g}'.format(x, y)
+        try:
+            string += '    z={:g}'.format(self.Z[j, i])
+        except:
+            pass
+        return string
 
 
 class EBSDMap(object):
@@ -402,8 +407,8 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     return ax
 
 
-def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
-                  dx=None, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
+def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
+                  ax=None, colordict=None, colorfill=[0, 0, 0, 1],
                   sel=None, gray=None, grid='HexGrid', tiling=None,
                   w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
@@ -451,9 +456,17 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
 
     if dx is None:
         dx = (np.max(x) - np.min(x))/ncols_odd
+    if dy is None:
+        dy = (np.max(y) - np.min(y))/(nrows - 1)
 
-    ymin -= dx/2.
-    ymax += dx/2.
+    if tiling == 'hex':
+        edge_length = dx/3.**.5
+        ymin -= edge_length/2.
+        ymax += edge_length/2.
+    else:
+        ymin -= dy/2.
+        ymax += dy/2.
+
     if grid.lower() == 'sqrgrid':
         xmin -= dx/2.
         xmax += dx/2.
@@ -502,7 +515,6 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
         col = (255*col[sel]).astype(int)
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
-        edge_length = dx/3.**.5
 
         # calculates the coordinates of the vertices of the hexagonal pixel
         for i in range(6):
@@ -592,8 +604,8 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y,
     return EBSDMap(x, y, img, ax, fig, cax)
 
 
-def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
-             dx=None, d=[0, 0, 1], ax=None, sel=None, gray=None, grid='HexGrid',
+def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
+             d=[0, 0, 1], ax=None, sel=None, gray=None, grid='HexGrid',
              tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
     """
     Documentation
@@ -638,9 +650,17 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
 
     if dx is None:
         dx = (np.max(x) - np.min(x))/ncols_odd
+    if dy is None:
+        dy = (np.max(y) - np.min(y))/(nrows - 1)
 
-    ymin -= dx/2.
-    ymax += dx/2.
+    if tiling == 'hex':
+        edge_length = dx/3.**.5
+        ymin -= edge_length/2.
+        ymax += edge_length/2.
+    else:
+        ymin -= dy/2.
+        ymax += dy/2.
+
     if grid.lower() == 'sqrgrid':
         xmin -= dx/2.
         xmax += dx/2.
@@ -674,7 +694,6 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y,
         col = col[sel]
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
-        edge_length = dx/3.**.5
 
         for i in range(6):
             # coordinates of the vertices of each hexagonal tile

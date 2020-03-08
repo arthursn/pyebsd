@@ -433,8 +433,8 @@ class ScanData(object):
 
         """
         ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
-                           self.dx, d, ax, sel, gray, self.grid, tiling, w, scalebar, verbose,
-                           **kwargs)
+                           self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar, 
+                           verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
@@ -495,8 +495,8 @@ class ScanData(object):
 
         """
         ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
-                                self.dx, ax, colordict, colorfill, sel, gray, self.grid, tiling, w,
-                                scalebar, colorbar, verbose, **kwargs)
+                                self.dx, self.dy, ax, colordict, colorfill, sel, gray, self.grid, tiling, 
+                                w, scalebar, colorbar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
