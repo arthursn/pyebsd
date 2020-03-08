@@ -5,6 +5,8 @@ import pandas as pd
 
 from ..ebsd import ScanData
 
+__all__ = ['load_ang_file', 'load_scandata']
+
 
 def _parse_info_header(line, pattern, dtype=str):
     info = dtype(line.split(pattern)[-1].strip())
@@ -104,7 +106,7 @@ def load_ang_file(fname):
 
     # Uses pandas to read ang file. pd.read_csv returns a pandas DataFrame
     data = pd.read_csv(fname, header=None, comment='#',
-                         delim_whitespace=True)
+                       delim_whitespace=True)
     # Rename the columns
     columns = list(data.columns)
     columns[:10] = ['phi1', 'Phi', 'phi2', 'x',

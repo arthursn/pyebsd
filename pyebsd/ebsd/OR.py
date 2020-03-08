@@ -9,6 +9,9 @@ from .orientation import (list_cubic_family_directions,
                           euler_angles_to_rotation_matrix)
 
 
+__all__ = ['OR_exp', 'OR']
+
+
 def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     """
     Calculates the accurate orientation relationship between parent

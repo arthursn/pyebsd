@@ -1,5 +1,7 @@
 import sys
 
+__all__ = ['ProgressBar']
+
 
 class ProgressBar(object):
     def __init__(self, niterations, barsize=50, progresschar='#',

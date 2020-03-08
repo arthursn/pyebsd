@@ -26,7 +26,9 @@ plt.ioff()
 ipfsel = scan.plot_IPF(sel=ipf.sel, gray=scan.IQ)
 
 # save selection as selection.ang
-pyebsd.save_ang_file('selection.ang', scan, ipf.sel)
+scan.save_ang_file('selection.ang', ipf.sel)
+# This also works:
+# pyebsd.save_ang_file('selection.ang', scan, ipf.sel)
 
 # load selection.ang
 scansel = pyebsd.load_scandata('selection.ang')

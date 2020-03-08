@@ -3,6 +3,8 @@ from matplotlib.lines import Line2D
 from matplotlib.path import Path
 import numpy as np
 
+__all__ = ['LassoSelector2', 'RectangleSelector2']
+
 
 class LassoSelector2(_SelectorWidget):
     def __init__(self, ax, x, y, lineprops=None):

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from .orientation import euler_angles_to_rotation_matrix, misorientation
 from .plotting import plot_property, plot_IPF, plot_PF
 
-ssfonts = rcParams['font.sans-serif']
+__all__ = ['ScanData']
 
 
 def _item2top(l, item):
@@ -19,6 +19,7 @@ def _item2top(l, item):
     return l
 
 
+ssfonts = rcParams['font.sans-serif']
 ssfonts = _item2top(ssfonts, 'Helvetica')
 ssfonts = _item2top(ssfonts, 'Arial')
 
@@ -433,7 +434,7 @@ class ScanData(object):
 
         """
         ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
-                           self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar, 
+                           self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar,
                            verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
@@ -495,7 +496,7 @@ class ScanData(object):
 
         """
         ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
-                                self.dx, self.dy, ax, colordict, colorfill, sel, gray, self.grid, tiling, 
+                                self.dx, self.dy, ax, colordict, colorfill, sel, gray, self.grid, tiling,
                                 w, scalebar, colorbar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
@@ -691,6 +692,47 @@ class ScanData(object):
         kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
         plt.savefig(fname, **kwargs)
 
+    def save_ang_file(self, fname, sel=None, **kwargs):
+        """
+        Export ScanData as ang file
+
+        Arguments
+        ---------
+        fname : string
+            File name
+        sel : list of array of booleans
+            selection
+        """
+
+        if sel is None:
+            newscan = self
+        else:
+            newscan = selection_to_scandata(self, sel)
+
+        header = newscan.header
+        for i, line in enumerate(header):
+            if '# NCOLS_ODD:' in line:
+                header[i] = '# NCOLS_ODD: {:d}\n'.format(newscan.ncols_odd)
+                continue
+            if '# NCOLS_EVEN:' in line:
+                header[i] = '# NCOLS_EVEN: {:d}\n'.format(newscan.ncols_even)
+                continue
+            if '# NROWS:' in line:
+                header[i] = '# NROWS: {:d}\n'.format(newscan.nrows)
+                continue
+
+        try:
+            file = open(fname, 'w')
+            file.write(''.join(header))
+            file.close()
+            newscan.data.to_csv(fname, mode='a',
+                                header=False, index=False, sep=' ',
+                                float_format=kwargs.pop('float_format', '%.5f'))
+        except:
+            raise
+        else:
+            print('scandata successfully saved as "{}"'.format(fname))
+
 
 def _get_rectangle_surrounding_selection_hexgrid(scan, sel):
     """
@@ -768,30 +810,27 @@ def selection_to_scandata(scan, sel):
     # copy of scan.data numpy array to be exported
     newdata = scan.data.copy()  # raw data
 
-    if sel is not None:
-        # Regions not belonging to selection have values set to default
-        newdata.loc[~sel, 'phi1'] = 4.
-        newdata.loc[~sel, 'Phi'] = 4.
-        newdata.loc[~sel, 'phi2'] = 4.
-        newdata.loc[~sel, 'IQ'] = -1
-        newdata.loc[~sel, 'CI'] = -2
-        newdata.loc[~sel, 'ph'] = -1
-        newdata.loc[~sel, 'intensity'] = -1
-        newdata.loc[~sel, 'fit'] = 0
+    # Regions not belonging to selection have values set to default
+    newdata.loc[~sel, 'phi1'] = 4.
+    newdata.loc[~sel, 'Phi'] = 4.
+    newdata.loc[~sel, 'phi2'] = 4.
+    newdata.loc[~sel, 'IQ'] = -1
+    newdata.loc[~sel, 'CI'] = -2
+    newdata.loc[~sel, 'ph'] = -1
+    newdata.loc[~sel, 'intensity'] = -1
+    newdata.loc[~sel, 'fit'] = 0
 
-        # select rectangle surrounding the selected data
-        if scan.grid.lower() == 'hexgrid':
-            ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_hexgrid(scan, sel)
-        else:
-            raise Exception('selection_to_scandata not yet supported for grid type {}'.format(scan.grid))
+    # select rectangle surrounding the selected data
+    if scan.grid.lower() == 'hexgrid':
+        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_hexgrid(scan, sel)
+    else:
+        raise Exception('selection_to_scandata not yet supported for grid type {}'.format(scan.grid))
 
-        # data to be exported is a rectangle
-        newdata = newdata[rect]
+    # data to be exported is a rectangle
+    newdata = newdata[rect]
 
-        # offset x and y so (xmin, ymin) becomes the origin (0, 0)
-        newdata.x -= newdata.x.min()
-        newdata.y -= newdata.y.min()
+    # offset x and y so (xmin, ymin) becomes the origin (0, 0)
+    newdata.x -= newdata.x.min()
+    newdata.y -= newdata.y.min()
 
-    newscan = ScanData(newdata, scan.grid, scan.dx, scan.dy, ncols_odd, ncols_even, nrows, scan.header)
-
-    return newscan
+    return ScanData(newdata, scan.grid, scan.dx, scan.dy, ncols_odd, ncols_even, nrows, scan.header)

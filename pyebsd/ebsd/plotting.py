@@ -13,6 +13,9 @@ from .orientation import euler_angles_to_rotation_matrix, PF, IPF, stereographic
 from ..draw import modify_show, set_tight_plt, draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
 
+__all__ = ['set_threshold_tiling', 'EBSDMap', 'get_color_IPF',
+           'unit_triangle', 'plot_PF', 'plot_property', 'plot_IPF']
+
 __THRESHOLD_TILING__ = 10000
 
 

@@ -38,11 +38,9 @@ import imp
 from matplotlib.artist import Artist
 # from matplotlib.cbook import is_string_like
 from matplotlib.font_manager import FontProperties
-from matplotlib.rcsetup import \
-    (defaultParams, validate_float, validate_legend_loc, validate_bool,
-     validate_color, ValidateInStrings)
-from matplotlib.offsetbox import \
-    AuxTransformBox, TextArea, VPacker, HPacker, AnchoredOffsetbox
+from matplotlib.rcsetup import (defaultParams, validate_float, validate_legend_loc,
+                                validate_bool, validate_color, ValidateInStrings)
+from matplotlib.offsetbox import AuxTransformBox, TextArea, VPacker, HPacker, AnchoredOffsetbox
 from matplotlib.patches import Rectangle
 
 # Local modules.
@@ -77,6 +75,9 @@ defaultParams.update(
 # Reload matplotlib to reset the default parameters
 imp.reload(sys.modules['matplotlib'])
 
+__all__ = ['ScaleBar']
+
+
 class ScaleBar(Artist):
 
     zorder = 6
@@ -93,7 +94,7 @@ class ScaleBar(Artist):
                   'lower center': 8,
                   'upper center': 9,
                   'center':       10,
-              }
+                  }
 
     def __init__(self, dx_m, label=None,
                  length_fraction=None, height_fraction=None,
@@ -102,7 +103,7 @@ class ScaleBar(Artist):
                  scale_loc=None, label_loc=None, font_properties=None):
         """
         Creates a new scale bar.
-        
+
         :arg dx_m: dimension of one pixel in meters (m)
             Set ``dx_m`` to 1.0 if the axes image has already been calibrated by
             setting its ``extent``.
@@ -181,7 +182,7 @@ class ScaleBar(Artist):
             return
 
         # Get parameters
-        from matplotlib import rcParams # late import
+        from matplotlib import rcParams  # late import
 
         def _get_value(attr, default):
             value = getattr(self, attr)
