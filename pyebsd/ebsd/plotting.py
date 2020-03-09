@@ -411,7 +411,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
 
 def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
                   ax=None, colordict=None, colorfill=[0, 0, 0, 1], fillvalue=np.nan,
-                  sel=None, gray=None, grid='HexGrid', tiling=None, w=2048, 
+                  sel=None, gray=None, grid='HexGrid', tiling=None, w=2048,
                   scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
     Documentation
@@ -682,8 +682,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     d_IPF = IPF(M, d)
     col = get_color_IPF(d_IPF)
     # filling invalid/non-selected data points
-    d_IPF[not_sel] = [np.nan, np.nan, np.nan]
     col[not_sel] = [0, 0, 0]  # RGB
+    d_IPF = np.abs(d_IPF)
+    d_IPF = np.sort(d_IPF, axis=1)
+    d_IPF = d_IPF[:, [1, 0, 2]]
+    d_IPF[not_sel] = [np.nan, np.nan, np.nan]
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
@@ -702,9 +705,6 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
 
     if grid.lower() == 'hexgrid':
         N, ncols = 2*N, 2*ncols_even  # N pixels and ncols for rect grid plotting
-        d_IPF = np.abs(d_IPF)
-        d_IPF = np.sort(d_IPF, axis=1)
-        d_IPF = d_IPF[:, [1, 0, 2]]
         rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                         np.arange(ncols+1, N, 2*(ncols+1))])
         d_IPF = np.repeat(d_IPF, 2, axis=0)
