@@ -33,13 +33,14 @@ def set_threshold_tiling(threshold):
 
 
 class _CoordsFormatter(object):
-    def __init__(self, extent, Z):
+    def __init__(self, extent, Z, name='z'):
         self.xmin = min(extent[:2])
         self.ymin = min(extent[2:])
         self.xrng = abs(extent[1] - extent[0])
         self.yrng = abs(extent[3] - extent[2])
         self.Z = Z
-        self.h, self.w = self.Z.shape
+        self.name = name
+        self.h, self.w = self.Z.shape[:2]
 
     def __call__(self, x, y):
         i = int(self.w*(x - self.xmin)/self.xrng)
@@ -48,7 +49,7 @@ class _CoordsFormatter(object):
         j = self.h - 1 if j == self.h else j
         string = 'x={:g}    y={:g}'.format(x, y)
         try:
-            string += '    z={:g}'.format(self.Z[j, i])
+            string += '    {}={}'.format(self.name, self.Z[j, i])
         except:
             pass
         return string
@@ -673,7 +674,8 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
 
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
-    col = get_color_IPF(IPF(M, d))
+    d_IPF = IPF(M, d)
+    col = get_color_IPF(d_IPF)
     # filling invalid/non-selected data points
     col[not_sel] = [0, 0, 0]  # RGB
 
@@ -719,16 +721,22 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             draw.polygon(hexagon, fill=color)
 
     elif tiling == 'rect':
+        d_IPF = np.abs(d_IPF)
+        d_IPF = np.sort(d_IPF, axis=1)
+        d_IPF = d_IPF[:, [1, 0, 2]]
+
         if grid.lower() == 'hexgrid':
             N, ncols = 2*N, 2*ncols_even
             # double pixels
             sel = np.repeat(sel, 2)
             col = np.repeat(col, 2, axis=0)
+            d_IPF = np.repeat(d_IPF, 2, axis=0)
             # remove extra pixels
             rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                             np.arange(ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             col = np.delete(col, rm, axis=0)
+            d_IPF = np.delete(d_IPF, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
@@ -750,9 +758,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             h = np.int(scale*(ymax - ymin))
 
         col = col.reshape(nrows, ncols, -1)
+        d_IPF = d_IPF.reshape(nrows, ncols, -1)
 
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
+        ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), d_IPF[imin:imax, jmin:jmax, :], 'd')
 
     else:
         plt.close(fig)
