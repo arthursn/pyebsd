@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from .orientation import euler_angles_to_rotation_matrix, misorientation
 from .plotting import plot_property, plot_IPF, plot_PF
 
-__all__ = ['ScanData']
+__all__ = ['ScanData', 'selection_to_scandata']
 
 
 def _item2top(l, item):
