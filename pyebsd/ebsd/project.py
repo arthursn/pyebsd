@@ -441,8 +441,8 @@ class ScanData(object):
         return ebsdmap
 
     def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
-                      sel=None, gray=None, tiling=None, w=2048, scalebar=True,
-                      colorbar=True, verbose=True, **kwargs):
+                      fillvalue=np.nan, sel=None, gray=None, tiling=None, w=2048,
+                      scalebar=True, colorbar=True, verbose=True, **kwargs):
         """
         Plots any EBSD property
 
@@ -461,6 +461,9 @@ class ScanData(object):
         colorfill : list shape(4) (optional)
             Color used to fill unindexed pixels
             Default: [0, 0, 0, 1] (black)
+        fillvalue : float, int
+            Value used to fill non valid/non selected points 
+            Default: np.nan
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
             Default: None
@@ -496,15 +499,15 @@ class ScanData(object):
 
         """
         ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
-                                self.dx, self.dy, ax, colordict, colorfill, sel, gray, self.grid, tiling,
-                                w, scalebar, colorbar, verbose, **kwargs)
+                                self.dx, self.dy, ax, colordict, colorfill, fillvalue, sel, gray,
+                                self.grid, tiling, w, scalebar, colorbar, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_phase(self, ax=None, colordict={'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]},
-                   colorfill=[0, 0, 0, 1], sel=None, gray=None, tiling=None,
-                   w=2048, scalebar=True, verbose=True, **kwargs):
+                   colorfill=[0, 0, 0, 1], fillvalue=-1, sel=None, gray=None,
+                   tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
         """
         Plots phases map
 
@@ -522,6 +525,10 @@ class ScanData(object):
             Default: {'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]}
         colorfill : list shape(4) (optional)
             Color used to fill unindexed pixels
+            Default: [0, 0, 0, 1] (black)
+        fillvalue : float, int
+            Value used to fill non valid/non selected points 
+            Default: -1
         gray : numpy ndarray (optional)
             Grayscale mask plotted over IPF.
             For example, one may want to overlay the IPF map with the image
@@ -553,15 +560,16 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
-        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, sel, gray, tiling, w,
-                                     scalebar, False, verbose, **kwargs)
+        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, fillvalue, sel, gray,
+                                     tiling, w, scalebar, False, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
-                 distance_convention='OIM', sel=None, gray=None, tiling=None,
-                 w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
+                 distance_convention='OIM', colorfill=[0, 0, 0, 1], fillvalue=np.nan,
+                 sel=None, gray=None, tiling=None, w=2048, scalebar=True, colorbar=True,
+                 verbose=True, **kwargs):
         """
         Plots kernel average misorientation map
 
@@ -581,6 +589,16 @@ class ScanData(object):
             Maximum misorientation angle (in degrees) accounted in the
             calculation of KAM
             Default: None
+        distance_convention : str (optional)
+            Valid options are 'OIM' and 'fixed'
+            Convention used for calculating distance to kernel
+            Default: OIM
+        colorfill : list shape(4) (optional)
+            Color used to fill unindexed pixels
+            Default: [0, 0, 0, 1] (black)
+        fillvalue : float, int
+            Value used to fill non valid/non selected points 
+            Default: np.nan
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
             Default: None
@@ -616,8 +634,8 @@ class ScanData(object):
 
         """
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
-        ebsdmap = self.plot_property(KAM, ax, None, [0, 0, 0, 1], sel, gray, tiling, w,
-                                     scalebar, colorbar, verbose, **kwargs)
+        ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray,
+                                     tiling, w, scalebar, colorbar, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
         self.figs_maps.append(ebsdmap.ax.get_figure())
         self.axes_maps.append(ebsdmap.ax)

@@ -45,8 +45,6 @@ class _CoordsFormatter(object):
     def __call__(self, x, y):
         i = int(self.w*(x - self.xmin)/self.xrng)
         j = int(self.h*(y - self.ymin)/self.yrng)
-        i = self.w - 1 if i == self.w else i
-        j = self.h - 1 if j == self.h else j
         string = 'x={:g}    y={:g}'.format(x, y)
         try:
             string += '    {}={}'.format(self.name, self.Z[j, i])
@@ -241,12 +239,12 @@ def unit_triangle(ax=None, n=512, **kwargs):
     x, y = stereographic_projection(uvw)
     ax.plot(x, y, 'k-', lw=2)
 
-    ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(
-        0, -10), textcoords='offset points', ha='center', va='top', size=30)
-    ax.annotate('101', xy=stereographic_projection([1, 0, 1]), xytext=(
-        0, -10), textcoords='offset points', ha='center', va='top', size=30)
-    ax.annotate('111', xy=stereographic_projection([1, 1, 1]), xytext=(
-        0, 10), textcoords='offset points', ha='center', va='bottom', size=30)
+    ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(0, -10),
+                textcoords='offset points', ha='center', va='top', size=30)
+    ax.annotate('101', xy=stereographic_projection([1, 0, 1]), xytext=(0, -10),
+                textcoords='offset points', ha='center', va='top', size=30)
+    ax.annotate('111', xy=stereographic_projection([1, 1, 1]), xytext=(0, 10),
+                textcoords='offset points', ha='center', va='bottom', size=30)
     ax.set_xlim(-.01, xmax+.01)
     ax.set_ylim(-.01, ymax+.01)
 
@@ -412,9 +410,9 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
 
 
 def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
-                  ax=None, colordict=None, colorfill=[0, 0, 0, 1],
-                  sel=None, gray=None, grid='HexGrid', tiling=None,
-                  w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
+                  ax=None, colordict=None, colorfill=[0, 0, 0, 1], fillvalue=np.nan,
+                  sel=None, gray=None, grid='HexGrid', tiling=None, w=2048, 
+                  scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
     Documentation
     """
@@ -495,8 +493,9 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
 
     # filling invalid/non-selected data points
     col[not_sel] = colorfill
-    if prop.dtype == float:
-        prop[not_sel] = np.nan
+    if fillvalue is np.nan:
+        prop = prop.astype(float)
+    prop[not_sel] = fillvalue
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
@@ -513,6 +512,16 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     else:
         ax.cla()
         fig = ax.get_figure()
+
+    if grid.lower() == 'hexgrid':
+        N, ncols = 2*N, 2*ncols_even  # N pixels and ncols for rect grid plotting
+        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                        np.arange(ncols+1, N, 2*(ncols+1))])
+        prop = np.repeat(prop, 2, axis=0)
+        prop = np.delete(prop, rm, axis=0)
+    else:
+        ncols = ncols_odd
+    prop = prop.reshape(nrows, ncols)
 
     # plotting maps
     if tiling == 'hex':
@@ -540,17 +549,14 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
 
     elif tiling == 'rect':
         if grid.lower() == 'hexgrid':
-            N, ncols = 2*N, 2*ncols_even
             # double pixels
             sel = np.repeat(sel, 2)
             col = np.repeat(col, 2, axis=0)
-            prop = np.repeat(prop, 2, axis=0)
             # remove extra pixels
             rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                             np.arange(ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             col = np.delete(col, rm, axis=0)
-            prop = np.delete(prop, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
@@ -572,16 +578,15 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             h = np.int(scale*(ymax - ymin))
 
         col = col.reshape(nrows, ncols, -1)
-        prop = prop.reshape(nrows, ncols)
 
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
-        ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), prop[imin:imax, jmin:jmax])
 
     else:
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
+    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), prop)
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
@@ -677,6 +682,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     d_IPF = IPF(M, d)
     col = get_color_IPF(d_IPF)
     # filling invalid/non-selected data points
+    d_IPF[not_sel] = [np.nan, np.nan, np.nan]
     col[not_sel] = [0, 0, 0]  # RGB
 
     # applying gray mask
@@ -693,6 +699,19 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     else:
         ax.cla()
         fig = ax.get_figure()
+
+    if grid.lower() == 'hexgrid':
+        N, ncols = 2*N, 2*ncols_even  # N pixels and ncols for rect grid plotting
+        d_IPF = np.abs(d_IPF)
+        d_IPF = np.sort(d_IPF, axis=1)
+        d_IPF = d_IPF[:, [1, 0, 2]]
+        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                        np.arange(ncols+1, N, 2*(ncols+1))])
+        d_IPF = np.repeat(d_IPF, 2, axis=0)
+        d_IPF = np.delete(d_IPF, rm, axis=0)
+    else:
+        ncols = ncols_odd
+    d_IPF = d_IPF.reshape(nrows, ncols, -1)
 
     # plotting maps
     if tiling == 'hex':
@@ -721,22 +740,13 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             draw.polygon(hexagon, fill=color)
 
     elif tiling == 'rect':
-        d_IPF = np.abs(d_IPF)
-        d_IPF = np.sort(d_IPF, axis=1)
-        d_IPF = d_IPF[:, [1, 0, 2]]
-
         if grid.lower() == 'hexgrid':
-            N, ncols = 2*N, 2*ncols_even
             # double pixels
             sel = np.repeat(sel, 2)
             col = np.repeat(col, 2, axis=0)
-            d_IPF = np.repeat(d_IPF, 2, axis=0)
             # remove extra pixels
-            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                            np.arange(ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             col = np.delete(col, rm, axis=0)
-            d_IPF = np.delete(d_IPF, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
@@ -758,16 +768,15 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             h = np.int(scale*(ymax - ymin))
 
         col = col.reshape(nrows, ncols, -1)
-        d_IPF = d_IPF.reshape(nrows, ncols, -1)
 
         img_pil = toimage(col[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
-        ax.format_coord = _CoordsFormatter((xmin, xmax, ymax, ymin), d_IPF[imin:imax, jmin:jmax, :], 'd')
 
     else:
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
+    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), d_IPF, 'd')
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
