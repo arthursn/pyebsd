@@ -40,16 +40,18 @@ class _CoordsFormatter(object):
         self.yrng = abs(extent[3] - extent[2])
         self.Z = Z
         self.name = name
-        self.h, self.w = self.Z.shape[:2]
+        self.jmax = self.Z.shape[1] - 1
+        self.imax = self.Z.shape[0] - 1
 
     def __call__(self, x, y):
-        i = int(self.w*(x - self.xmin)/self.xrng)
-        j = int(self.h*(y - self.ymin)/self.yrng)
+        j = int(round(self.jmax*(x - self.xmin)/self.xrng))
+        i = int(round(self.imax*(y - self.ymin)/self.yrng))
         string = 'x={:g}    y={:g}'.format(x, y)
-        try:
-            string += '    {}={}'.format(self.name, self.Z[j, i])
-        except:
-            pass
+        if i > 0 and j > 0:
+            try:
+                string += '    {}={}'.format(self.name, self.Z[i, j])
+            except:
+                pass
         return string
 
 
@@ -142,11 +144,12 @@ def get_color_IPF(uvw, **kwargs):
     if ndim == 1:
         uvw = uvw.reshape(1, -1)
 
-    uvw = np.abs(uvw)
-    # Sort u, v, w
-    uvw = np.sort(uvw, axis=1)
-    # Select variants where w >= u >= v
-    uvw = uvw[:, [1, 0, 2]]
+    if not kwargs.pop('issorted', False):
+        uvw = np.abs(uvw)
+        # Sort u, v, w
+        uvw = np.sort(uvw, axis=1)
+        # Select variants where w >= u >= v
+        uvw = uvw[:, [1, 0, 2]]
 
     R = uvw[:, 2] - uvw[:, 0]
     G = uvw[:, 0] - uvw[:, 1]
@@ -680,13 +683,13 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
     d_IPF = IPF(M, d)
-    col = get_color_IPF(d_IPF)
-    # filling invalid/non-selected data points
-    col[not_sel] = [0, 0, 0]  # RGB
     d_IPF = np.abs(d_IPF)
     d_IPF = np.sort(d_IPF, axis=1)
     d_IPF = d_IPF[:, [1, 0, 2]]
+    col = get_color_IPF(d_IPF, issorted=True)
+    # filling invalid/non-selected data points
     d_IPF[not_sel] = [np.nan, np.nan, np.nan]
+    col[not_sel] = [0, 0, 0]  # RGB
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
