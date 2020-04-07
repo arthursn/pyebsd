@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from itertools import cycle
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
-from .orientation import euler_angles_to_rotation_matrix, misorientation
+from .orientation import euler_angles_to_rotation_matrix, misorientation, kernel_average_misorientation
 from .plotting import plot_property, plot_IPF, plot_PF
 
 __all__ = ['ScanData', 'selection_to_scandata']
@@ -34,6 +35,8 @@ class ScanData(object):
 
     __cos60 = .5  # cos(60deg)
     __sin60 = .5*3.**.5  # sin(60deg)
+
+    colors = ['red', 'green', 'blue', 'cyan', 'magenta', 'yellow']
 
     neighbors_hexgrid_fixed = [
         # 1st neighbors
@@ -342,7 +345,7 @@ class ScanData(object):
         return d.mean()
 
     def get_KAM(self, distance=1, perimeteronly=True, maxmis=None,
-                distance_convention='OIM', sel=None):
+                distance_convention='OIM', sel=None, **kwargs):
         """
         Returns Kernel average misorientation map
 
@@ -369,22 +372,7 @@ class ScanData(object):
 
         """
         neighbors = self.get_neighbors(distance, perimeteronly, distance_convention)
-        misang = misorientation(self.M, neighbors, sel)
-
-        outliers = misang < 0  # filter out negative values
-        if maxmis is not None:
-            outliers |= misang > maxmis  # and values > maxmis
-
-        misang[outliers] = 0.
-        nneighbors = np.count_nonzero(~outliers, axis=1)
-        nneighbors[nneighbors == 0] = 1  # to prevent division by 0
-
-        kam = np.sum(misang, axis=1)/nneighbors
-
-        if maxmis is not None:
-            kam[nneighbors == 0] = np.nan
-
-        return kam
+        return kernel_average_misorientation(self.M, neighbors, sel, maxmis, **kwargs)
 
     def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling=None,
                  w=2048, scalebar=True, verbose=True, **kwargs):
@@ -440,7 +428,7 @@ class ScanData(object):
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_property(self, prop, ax=None, colordict=None, colorfill=[0, 0, 0, 1],
+    def plot_property(self, prop, ax=None, colordict=None, colorfill='black',
                       fillvalue=np.nan, sel=None, gray=None, tiling=None, w=2048,
                       scalebar=True, colorbar=True, verbose=True, **kwargs):
         """
@@ -454,13 +442,21 @@ class ScanData(object):
         ax : AxesSubplot object (optional)
             The pole figure will be plotted in the provided object 'ax'
             Default: None
-        colordict : dict(str: list shape(4)) (optional)
+        colordict : dict(str: str or list) (optional)
             Dictionary that maps indexed phase to respective color provided
-            as list shape(4) (RGBA from 0 to 1)
+            as string, list shape(3) (RGB), or list shape(4) (RGBA)
+            E.g: {'1': 'red', '2': 'green'}
+            If None is provided, the the colors are assigned automatically
+            by cycling through the classic matplotlib colors defined in 
+            the class data member colors (self.colors, which can be changed 
+            at will). Colors are assigned to the phases in alphabetical 
+            (numerical) order
             Default: None
-        colorfill : list shape(4) (optional)
-            Color used to fill unindexed pixels
-            Default: [0, 0, 0, 1] (black)
+        colorfill : str or list shape(3) or shape(4) (optional)
+            Color used to fill unindexed pixels. It can be provided as RGB 
+            or RGBA values as an iterable. If RGBA is provided, alpha channel
+            is droppped
+            Default: 'black'
         fillvalue : float, int
             Value used to fill non valid/non selected points 
             Default: np.nan
@@ -505,8 +501,8 @@ class ScanData(object):
         self.axes_maps.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_phase(self, ax=None, colordict={'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]},
-                   colorfill=[0, 0, 0, 1], fillvalue=-1, sel=None, gray=None,
+    def plot_phase(self, ax=None, colordict=None,
+                   colorfill='black', fillvalue=-1, sel=None, gray=None,
                    tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
         """
         Plots phases map
@@ -519,13 +515,21 @@ class ScanData(object):
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
             Default: None
-        colordict : dict(str: list shape(4)) (optional)
+        colordict : dict(str: str or list) (optional)
             Dictionary that maps indexed phase to respective color provided
-            as list shape(4) (RGBA from 0 to 1)
-            Default: {'1': [1, 0, 0, 1], '2': [0, 1, 0, 1]}
-        colorfill : list shape(4) (optional)
-            Color used to fill unindexed pixels
-            Default: [0, 0, 0, 1] (black)
+            as string, list shape(3) (RGB), or list shape(4) (RGBA)
+            E.g: {'1': 'red', '2': 'green'}
+            If None is provided, the the colors are assigned automatically
+            by cycling through the classic matplotlib colors defined in 
+            the class data member colors (self.colors, which can be changed 
+            at will). Colors are assigned to the phases in alphabetical 
+            (numerical) order
+            Default: None
+        colorfill : str or list shape(3) or shape(4) (optional)
+            Color used to fill unindexed pixels. It can be provided as RGB 
+            or RGBA values as an iterable. If RGBA is provided, alpha channel
+            is droppped
+            Default: 'black'
         fillvalue : float, int
             Value used to fill non valid/non selected points 
             Default: -1
@@ -560,6 +564,10 @@ class ScanData(object):
         ebsdmap : EBSDMap object
 
         """
+        if colordict is None:
+            ph_code = set(self.ph)
+            ccycler = cycle(self.colors)
+            colordict = {ph: next(ccycler) for ph in ph_code}
         ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, fillvalue, sel, gray,
                                      tiling, w, scalebar, False, verbose, **kwargs)
         self.figs_maps.append(ebsdmap.ax.get_figure())
@@ -567,7 +575,7 @@ class ScanData(object):
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
-                 distance_convention='OIM', colorfill=[0, 0, 0, 1], fillvalue=np.nan,
+                 distance_convention='OIM', colorfill='black', fillvalue=np.nan,
                  sel=None, gray=None, tiling=None, w=2048, scalebar=True, colorbar=True,
                  verbose=True, **kwargs):
         """
@@ -593,9 +601,11 @@ class ScanData(object):
             Valid options are 'OIM' and 'fixed'
             Convention used for calculating distance to kernel
             Default: OIM
-        colorfill : list shape(4) (optional)
-            Color used to fill unindexed pixels
-            Default: [0, 0, 0, 1] (black)
+        colorfill : str or list shape(3) or shape(4) (optional)
+            Color used to fill unindexed pixels. It can be provided as RGB 
+            or RGBA values as an iterable. If RGBA is provided, alpha channel
+            is droppped
+            Default: 'black'
         fillvalue : float, int
             Value used to fill non valid/non selected points 
             Default: np.nan

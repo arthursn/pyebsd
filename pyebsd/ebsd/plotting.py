@@ -201,16 +201,16 @@ def unit_triangle(ax=None, n=512, **kwargs):
     u, v, w = 2*xp, 2*yp, 1-xp**2-yp**2
     uvw = np.vstack([u, v, w]).T
 
-    col = np.ndarray(uvw.shape)
+    color = np.ndarray(uvw.shape)
     # select directions that will fit inside the unit triangle, i.e.,
     # only those where w >= u >= v
     sel = (w >= u) & (u >= v)
     # uvw directions to corresponding color
-    col[sel] = get_color_IPF(uvw[sel], **kwargs)
+    color[sel] = get_color_IPF(uvw[sel], **kwargs)
     # fill points outside the unit triangle in white
-    col[~sel] = [255, 255, 255]
+    color[~sel] = [255, 255, 255]
 
-    img_pil = toimage(col.reshape(n, n, 3))
+    img_pil = toimage(color.reshape(n, n, 3))
 
     if ax is None:
         fig, ax = plt.subplots(facecolor='white')
@@ -268,7 +268,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
         the crystal coordinate frame.
     proj : list or numpy array(3) (optional)
         Family of direction projected in the pole figure.
-        Default: [1,0,0]
+        Default: [1, 0, 0]
     ax : AxesSubplot instance (optional)
         The pole figure will be plotted in the provided instance 'ax'
     sel : boolean numpy 1D array
@@ -413,7 +413,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
 
 
 def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
-                  ax=None, colordict=None, colorfill=[0, 0, 0, 1], fillvalue=np.nan,
+                  ax=None, colordict=None, colorfill='black', fillvalue=np.nan,
                   sel=None, gray=None, grid='HexGrid', tiling=None, w=2048,
                   scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
@@ -484,18 +484,21 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     vmin = kwargs.pop('vmin', np.min(prop[sel]))
     vmax = kwargs.pop('vmax', np.max(prop[sel]))
 
+    # Converts string, or list to tuple with RGB color. Drops alpha channel if RGBA is provided
+    colorfill = matplotlib.colors.to_rgb(colorfill)
+
     # coloring
-    col = np.ndarray((N, 4))
-    col[:] = colorfill
+    color = np.ndarray((N, 3))
+    color[:] = colorfill
     if isinstance(colordict, dict):
-        for p, rgba in colordict.items():
-            col[prop == float(p)] = rgba
+        for p, color_code in colordict.items():
+            color[prop == float(p)] = matplotlib.colors.to_rgb(color_code)
     else:
-        # normalizes prop to range [0,1] and makes colormap
-        col[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])
+        # normalizes prop to range [0,1] and makes rgb colormap
+        color[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])[:, :3]
 
     # filling invalid/non-selected data points
-    col[not_sel] = colorfill
+    color[not_sel] = colorfill
     if fillvalue is np.nan:
         prop = prop.astype(float)
     prop[not_sel] = fillvalue
@@ -506,8 +509,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             raise Exception('M.shape and gray.shape differ')
         else:
             gray = gray.reshape(-1, 1)/np.max(gray)
-            col[sel] = col[sel]*gray[sel]
-            col[:, 3] = 1.  # set alpha = 1. for all points
+            color[sel] = color[sel]*gray[sel]
 
     # getting AxesSubplot object
     if ax is None:
@@ -528,7 +530,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
 
     # plotting maps
     if tiling == 'hex':
-        col = (255*col[sel]).astype(int)
+        color = (255*color[sel]).astype(int)
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
 
@@ -546,20 +548,19 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         img_pil = Image.new('RGB', (w, h), 'black')
         draw = ImageDraw.Draw(img_pil)
         for i in range(len(x_hex)):
-            color = col[i, 0], col[i, 1], col[i, 2]
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
-            draw.polygon(hexagon, fill=color)
+            draw.polygon(hexagon, fill=tuple(color[i]))
 
     elif tiling == 'rect':
         if grid.lower() == 'hexgrid':
             # double pixels
             sel = np.repeat(sel, 2)
-            col = np.repeat(col, 2, axis=0)
+            color = np.repeat(color, 2, axis=0)
             # remove extra pixels
             rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                             np.arange(ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
-            col = np.delete(col, rm, axis=0)
+            color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
@@ -580,9 +581,9 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         else:
             h = np.int(scale*(ymax - ymin))
 
-        col = col.reshape(nrows, ncols, -1)
+        color = color.reshape(nrows, ncols, -1)
 
-        img_pil = toimage(col[imin:imax, jmin:jmax, :])
+        img_pil = toimage(color[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
 
     else:
@@ -686,10 +687,10 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     d_IPF = np.abs(d_IPF)
     d_IPF = np.sort(d_IPF, axis=1)
     d_IPF = d_IPF[:, [1, 0, 2]]
-    col = get_color_IPF(d_IPF, issorted=True)
+    color = get_color_IPF(d_IPF, issorted=True)
     # filling invalid/non-selected data points
     d_IPF[not_sel] = [np.nan, np.nan, np.nan]
-    col[not_sel] = [0, 0, 0]  # RGB
+    color[not_sel] = [0, 0, 0]  # RGB
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
@@ -697,7 +698,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             raise Exception('N and len(gray) differ')
         else:
             gray = gray.reshape(-1, 1)/np.max(gray)
-            col[sel] = col[sel]*gray[sel]
+            color[sel] = color[sel]*gray[sel]
 
     # getting AxesSubplot object
     if ax is None:
@@ -718,7 +719,7 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
 
     # plotting maps
     if tiling == 'hex':
-        col = col[sel]
+        color = color[sel]
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
 
@@ -738,18 +739,17 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         img_pil = Image.new('RGB', (w, h), 'black')
         draw = ImageDraw.Draw(img_pil)
         for i in range(len(x_hex)):
-            color = col[i, 0], col[i, 1], col[i, 2]
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
-            draw.polygon(hexagon, fill=color)
+            draw.polygon(hexagon, fill=tuple(color[i]))
 
     elif tiling == 'rect':
         if grid.lower() == 'hexgrid':
             # double pixels
             sel = np.repeat(sel, 2)
-            col = np.repeat(col, 2, axis=0)
+            color = np.repeat(color, 2, axis=0)
             # remove extra pixels
             sel = np.delete(sel, rm, axis=0)
-            col = np.delete(col, rm, axis=0)
+            color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
             ncols = ncols_odd
 
@@ -770,9 +770,9 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         else:
             h = np.int(scale*(ymax - ymin))
 
-        col = col.reshape(nrows, ncols, -1)
+        color = color.reshape(nrows, ncols, -1)
 
-        img_pil = toimage(col[imin:imax, jmin:jmax, :])
+        img_pil = toimage(color[imin:imax, jmin:jmax, :])
         img_pil = img_pil.resize(size=(w, h))
 
     else:
