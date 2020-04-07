@@ -107,8 +107,9 @@ class ScanData(object):
         self._M = None
         self._R = None
 
-        self.figs_maps = []
-        self.axes_maps = []
+        self.figs = []
+        self.axes = []
+        self.ebsdmaps = []
 
     @property
     def M(self):
@@ -424,8 +425,9 @@ class ScanData(object):
         ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
                            self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar,
                            verbose, **kwargs)
-        self.figs_maps.append(ebsdmap.ax.get_figure())
-        self.axes_maps.append(ebsdmap.ax)
+        self.ebsdmaps.append(ebsdmap)
+        self.figs.append(ebsdmap.ax.get_figure())
+        self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_property(self, prop, ax=None, colordict=None, colorfill='black',
@@ -448,7 +450,7 @@ class ScanData(object):
             E.g: {'1': 'red', '2': 'green'}
             If None is provided, the the colors are assigned automatically
             by cycling through the classic matplotlib colors defined in 
-            the class data member colors (self.colors, which can be changed 
+            the data member colors (self.colors, which can be changed 
             at will). Colors are assigned to the phases in alphabetical 
             (numerical) order
             Default: None
@@ -497,8 +499,9 @@ class ScanData(object):
         ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
                                 self.dx, self.dy, ax, colordict, colorfill, fillvalue, sel, gray,
                                 self.grid, tiling, w, scalebar, colorbar, verbose, **kwargs)
-        self.figs_maps.append(ebsdmap.ax.get_figure())
-        self.axes_maps.append(ebsdmap.ax)
+        self.ebsdmaps.append(ebsdmap)
+        self.figs.append(ebsdmap.ax.get_figure())
+        self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_phase(self, ax=None, colordict=None,
@@ -521,7 +524,7 @@ class ScanData(object):
             E.g: {'1': 'red', '2': 'green'}
             If None is provided, the the colors are assigned automatically
             by cycling through the classic matplotlib colors defined in 
-            the class data member colors (self.colors, which can be changed 
+            the data member colors (self.colors, which can be changed 
             at will). Colors are assigned to the phases in alphabetical 
             (numerical) order
             Default: None
@@ -570,8 +573,9 @@ class ScanData(object):
             colordict = {ph: next(ccycler) for ph in ph_code}
         ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, fillvalue, sel, gray,
                                      tiling, w, scalebar, False, verbose, **kwargs)
-        self.figs_maps.append(ebsdmap.ax.get_figure())
-        self.axes_maps.append(ebsdmap.ax)
+        self.ebsdmaps.append(ebsdmap)
+        self.figs.append(ebsdmap.ax.get_figure())
+        self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
@@ -647,8 +651,9 @@ class ScanData(object):
         ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray,
                                      tiling, w, scalebar, colorbar, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
-        self.figs_maps.append(ebsdmap.ax.get_figure())
-        self.axes_maps.append(ebsdmap.ax)
+        self.ebsdmaps.append(ebsdmap)
+        self.figs.append(ebsdmap.ax.get_figure())
+        self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
@@ -760,6 +765,11 @@ class ScanData(object):
             raise
         else:
             print('scandata successfully saved as "{}"'.format(fname))
+
+    def clear_maps(self):
+        del self.ebsdmaps[:]
+        del self.figs[:]
+        del self.axes[:]
 
 
 def _get_rectangle_surrounding_selection_hexgrid(scan, sel):
