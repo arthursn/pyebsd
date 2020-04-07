@@ -483,7 +483,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     vmin = kwargs.pop('vmin', np.min(prop[sel]))
     vmax = kwargs.pop('vmax', np.max(prop[sel]))
 
-    # Converts string, or list to tuple with RGB color. Drops alpha channel if RGBA is provided
+    # min and max values of the gray mask
+    graymin = kwargs.pop('graymin', 0.)
+    graymax = kwargs.pop('graymax', None)
+
+    # converts string, or list to tuple with RGB color. Drops alpha channel if RGBA is provided
     colorfill = matplotlib.colors.to_rgb(colorfill)
 
     # coloring
@@ -509,7 +513,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         if N != gray.shape[0]:
             raise Exception('M.shape and gray.shape differ')
         else:
-            gray = gray.reshape(-1, 1)/np.max(gray)
+            if graymax is None:
+                graymax = gray.max()
+            gray = (gray.reshape(-1, 1) - graymin)/(graymax - graymin)
+            gray[gray < 0.] = 0.
+            gray[gray > 1.] = 1.
             color[sel] = color[sel]*gray[sel]
 
     # getting AxesSubplot object
@@ -682,6 +690,10 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     # getting kwargs parameters
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
+    # min and max values of the gray mask
+    graymin = kwargs.pop('graymin', 0.)
+    graymax = kwargs.pop('graymax', None)
+
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
     d_IPF = IPF(M, d)
@@ -698,7 +710,11 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         if N != gray.shape[0]:
             raise Exception('N and len(gray) differ')
         else:
-            gray = gray.reshape(-1, 1)/np.max(gray)
+            if graymax is None:
+                graymax = gray.max()
+            gray = (gray.reshape(-1, 1) - graymin)/(graymax - graymin)
+            gray[gray < 0.] = 0.
+            gray[gray > 1.] = 1.
             color[sel] = color[sel]*gray[sel]
 
     # getting AxesSubplot object

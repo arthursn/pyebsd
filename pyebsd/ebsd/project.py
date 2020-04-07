@@ -723,7 +723,7 @@ class ScanData(object):
         Saves ebsd map plotted last
         """
         kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
-        plt.savefig(fname, **kwargs)
+        self.figs[-1].savefig(fname, **kwargs)
 
     def save_ang_file(self, fname, sel=None, **kwargs):
         """
@@ -767,6 +767,7 @@ class ScanData(object):
             print('scandata successfully saved as "{}"'.format(fname))
 
     def clear_maps(self):
+        plt.close('all')
         del self.ebsdmaps[:]
         del self.figs[:]
         del self.axes[:]
