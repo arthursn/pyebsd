@@ -252,9 +252,11 @@ class ScanData(object):
         """
         if self.grid.lower() == 'hexgrid':
             index = (i//2)*self.ncols + (j//2)
-            # this is actually the normal situation
+            # ncols_odd > ncols_even is the normal situation
             if self.ncols_odd > self.ncols_even:
                 index += (j % 2)*self.ncols_odd
+            else:
+                index += (1 - j % 2)*self.ncols_odd
             # this turns negative every i, j pair where j > ncols
             index *= (1 - self.N*(j//self.ncols))
         else:
