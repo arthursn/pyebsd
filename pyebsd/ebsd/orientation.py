@@ -4,7 +4,8 @@ import numpy as np
 
 __all__ = ['trace_to_angle', 'stereographic_projection',
            'stereographic_projection_to_direction', 'avg_orientation',
-           'misorientation_two_rotations', 'misorientation', 'minimize_disorientation',
+           'misorientation_two_rotations', 'misorientation',
+           'kernel_average_misorientation', 'minimize_disorientation',
            'euler_angles_to_rotation_matrix', 'rotation_matrix_to_euler_angles',
            'axis_angle_to_rotation_matrix', 'list_cubic_symmetry_operators_KS',
            'list_cubic_symmetry_operators', 'list_cubic_family_directions',
@@ -271,6 +272,25 @@ def misorientation(M, neighbors, sel=None, **kwargs):
     ok = tr >= -1.
     misang[ok] = trace_to_angle(tr[ok])
     return misang
+
+
+def kernel_average_misorientation(M, neighbors, sel=None, maxmis=None, **kwargs):
+    misang = misorientation(M, neighbors, sel, **kwargs)
+
+    outliers = misang < 0  # filter out negative values
+    if maxmis is not None:
+        outliers |= misang > maxmis  # and values > maxmis
+
+    misang[outliers] = 0.
+    nneighbors = np.count_nonzero(~outliers, axis=1)
+    nneighbors[nneighbors == 0] = 1  # to prevent division by 0
+
+    KAM = np.sum(misang, axis=1)/nneighbors
+
+    if maxmis is not None:
+        KAM[nneighbors == 0] = np.nan
+
+    return KAM
 
 
 def minimize_disorientation(V, V0, **kwargs):
