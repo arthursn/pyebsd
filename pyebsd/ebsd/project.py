@@ -82,6 +82,10 @@ class ScanData(object):
 
         # total number of columns
         if self.grid.lower() == 'hexgrid':
+            diff = abs(self.ncols_odd - self.ncols_even)
+            if diff != 1:
+                raise Exception('|ncols_odd - ncols_even| (|{} - {}| = {}) must be equal to 1'.format(
+                    self.ncols_odd, self.ncols_even, diff))
             self.ncols = self.ncols_odd + self.ncols_even
         else:
             if self.ncols_odd != self.ncols_even:
@@ -107,6 +111,8 @@ class ScanData(object):
         self._M = None
         self._R = None
 
+        # keeps history of Figure, AxesSubplot and EBSDMap objects in these
+        # lists. self.clear_history() can be used to clear the history
         self.figs = []
         self.axes = []
         self.ebsdmaps = []
@@ -154,7 +160,14 @@ class ScanData(object):
         if self._j is None:
             rem = self.index % self.ncols  # remainder
             if self.grid.lower() == 'hexgrid':
-                self._j = rem//self.ncols_odd + 2*(rem % self.ncols_odd)
+                rem_div = rem//self.ncols_odd
+                rem_rem = rem % self.ncols_odd
+                # special case
+                if self.ncols_odd < self.ncols_even:
+                    rem_div[self.ncols-1::self.ncols] = 1
+                    rem_div = 1 - rem_div
+                    rem_rem[self.ncols-1::self.ncols] = self.ncols_even - 1
+                self._j = rem_div + 2*rem_rem
             else:
                 self._j = rem
         return self._j
@@ -238,9 +251,12 @@ class ScanData(object):
 
         """
         if self.grid.lower() == 'hexgrid':
-            # 1 - self.N*(j/self.ncols) turns negative every i, j
-            # pair where j > ncols
-            index = (1 - self.N*(j//self.ncols)) * ((i//2)*self.ncols + (j % 2)*self.ncols_odd + (j//2))
+            index = (i//2)*self.ncols + (j//2)
+            # this is actually the normal situation
+            if self.ncols_odd > self.ncols_even:
+                index += (j % 2)*self.ncols_odd
+            # this turns negative every i, j pair where j > ncols
+            index *= (1 - self.N*(j//self.ncols))
         else:
             index = i*self.ncols + j
         return index
@@ -766,8 +782,13 @@ class ScanData(object):
         else:
             print('scandata successfully saved as "{}"'.format(fname))
 
-    def clear_maps(self):
-        plt.close('all')
+    def clear_history(self):
+        """
+        Closes all figure windows and clear history of Figure, AxesSubplot
+        and EBSDMap objects
+        """
+        for fig in self.figs:
+            plt.close(fig)
         del self.ebsdmaps[:]
         del self.figs[:]
         del self.axes[:]

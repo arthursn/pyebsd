@@ -530,9 +530,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         fig = ax.get_figure()
 
     if grid.lower() == 'hexgrid':
-        N, ncols = 2*N, 2*ncols_even  # N pixels and ncols for rect grid plotting
-        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                        np.arange(ncols+1, N, 2*(ncols+1))])
+        N, ncols = 2*N, 2*min(ncols_odd, ncols_even)  # N pixels and ncols for rect grid plotting
+        if ncols_odd > ncols_even:
+            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                            np.arange(ncols+1, N, 2*(ncols+1))])
+        else:
+            rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
+                            np.arange(2*ncols+1, N, 2*(ncols+1))])
         _prop = np.repeat(_prop, 2, axis=0)
         _prop = np.delete(_prop, rm, axis=0)
     else:
@@ -568,8 +572,6 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
             sel = np.repeat(sel, 2)
             color = np.repeat(color, 2, axis=0)
             # remove extra pixels
-            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                            np.arange(ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
@@ -729,9 +731,13 @@ def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         fig = ax.get_figure()
 
     if grid.lower() == 'hexgrid':
-        N, ncols = 2*N, 2*ncols_even  # N pixels and ncols for rect grid plotting
-        rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                        np.arange(ncols+1, N, 2*(ncols+1))])
+        N, ncols = 2*N, 2*min(ncols_odd, ncols_even)  # N pixels and ncols for rect grid plotting
+        if ncols_odd > ncols_even:
+            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                            np.arange(ncols+1, N, 2*(ncols+1))])
+        else:
+            rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
+                            np.arange(2*ncols+1, N, 2*(ncols+1))])
         d_IPF = np.repeat(d_IPF, 2, axis=0)
         d_IPF = np.delete(d_IPF, rm, axis=0)
     else:
