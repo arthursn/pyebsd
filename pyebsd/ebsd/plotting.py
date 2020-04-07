@@ -362,8 +362,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
         fill = kwargs.pop('fill', True)
         bins = kwargs.pop('bins', (256, 256))
 
-        hist, xedges, yedges = np.histogram2d(
-            yp.ravel(), xp.ravel(), bins=bins, range=[[-1, 1], [-1, 1]])
+        hist, xedges, yedges = np.histogram2d(yp.ravel(), xp.ravel(), bins=bins, range=[[-1, 1], [-1, 1]])
         fn = kwargs.pop('fn', 'sqrt')
 
         if fn:
@@ -497,11 +496,13 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         # normalizes prop to range [0,1] and makes rgb colormap
         color[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])[:, :3]
 
+    # makes copy of prop
+    _prop = prop.copy()
     # filling invalid/non-selected data points
     color[not_sel] = colorfill
     if fillvalue is np.nan:
-        prop = prop.astype(float)
-    prop[not_sel] = fillvalue
+        _prop = _prop.astype(float)
+    _prop[not_sel] = fillvalue
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
@@ -522,11 +523,11 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         N, ncols = 2*N, 2*ncols_even  # N pixels and ncols for rect grid plotting
         rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
                         np.arange(ncols+1, N, 2*(ncols+1))])
-        prop = np.repeat(prop, 2, axis=0)
-        prop = np.delete(prop, rm, axis=0)
+        _prop = np.repeat(_prop, 2, axis=0)
+        _prop = np.delete(_prop, rm, axis=0)
     else:
         ncols = ncols_odd
-    prop = prop.reshape(nrows, ncols)
+    _prop = _prop.reshape(nrows, ncols)
 
     # plotting maps
     if tiling == 'hex':
@@ -590,7 +591,7 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), prop)
+    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), _prop)
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
