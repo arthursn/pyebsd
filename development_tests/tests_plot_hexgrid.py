@@ -9,7 +9,7 @@ def plot_tests(scan, **kwargs):
     fig, axes = plt.subplots(2, 2)
     scan.plot_property(scan.IQ, cmap='gray', ax=axes[0, 0], **kwargs)
     scan.plot_phase(gray=scan.IQ, ax=axes[0, 1], **kwargs)
-    scan.plot_KAM(distance=5, ax=axes[1, 0], maxmis=5, sel=scan.ph==1, **kwargs)
+    scan.plot_KAM(ax=axes[1, 0], maxmis=60, **kwargs)
     scan.plot_IPF(gray=scan.IQ, ax=axes[1, 1], **kwargs)
     title = 'nrows={}, ncols_odd={}, ncols_even={}, tiling={}'.format(
         scan.nrows, scan.ncols_odd, scan.ncols_even, kwargs.pop('tiling', None))
@@ -61,7 +61,7 @@ def drop_last_row(data, nrows, ncols_odd, ncols_even):
 
 if __name__ == '__main__':
     fname = os.path.join('..', 'data', 'ADI_bcc_fcc_cropped.ang')
-    kwargs = dict(tiling='rect')
+    kwargs = dict(tiling='hex')
 
     # Test 1: ncols_odd > ncols_even and odd number of rows
     scan1 = pyebsd.load_scandata(fname)
@@ -92,5 +92,5 @@ if __name__ == '__main__':
     scan4 = pyebsd.ScanData(data, 'HexGrid', scan1.dx, scan1.dy, ncols_odd, ncols_even, nrows, scan1.header)
     plot_tests(scan4, **kwargs)
 
-    plt.ion()
+    # plt.ion()
     plt.show()
