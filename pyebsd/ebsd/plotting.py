@@ -33,6 +33,10 @@ def set_threshold_tiling(threshold):
 
 
 class _CoordsFormatter(object):
+    """
+    Formats coordinates and z values in interactive plot mode
+    """
+
     def __init__(self, extent, Z, name='z'):
         self.xmin = min(extent[:2])
         self.ymin = min(extent[2:])
@@ -57,7 +61,24 @@ class _CoordsFormatter(object):
 
 class EBSDMap(object):
     """
-    Documentation
+    Stores EBSD map plotting information (img, ax, fig, cax) and
+    provides wrapper for selector functions
+
+    Parameters
+    ----------
+    x : numpy ndarray
+        x pixel coordinates
+    y : numpy ndarray
+        y pixel coordinates
+    img : matplotlib AxesImage object
+        AxesImage object
+    ax : matplotlib AxesSubplot object
+        AxesSubplot object
+    fig : matplotlib Figure object
+        Figure object
+    cax : matplotlib Colorbar object (optional)
+        Colorbar object
+        Default: None
     """
 
     def __init__(self, x, y, img, ax, fig, cax=None):
@@ -72,11 +93,17 @@ class EBSDMap(object):
 
     @property
     def sel(self):
+        """
+        Boolean numpy ndarray masking pixels inside selection
+        """
         if self.selector is not None:
             return self.selector.sel
 
     @property
     def selector(self):
+        """
+        Selector object, either LassoSelector2 or RectangleSelector2
+        """
         return self._selector
 
     @selector.setter
@@ -90,15 +117,24 @@ class EBSDMap(object):
         self._selector = selector_widget
 
     def lasso_selector(self, lineprops=dict(color='white')):
+        """
+        Initializes LassoSelector2
+        """
         self.selector = LassoSelector2(self.ax, self.x, self.y, lineprops=lineprops)
         return self.selector
 
     def rect_selector(self, rectprops=dict(edgecolor='white', fill=False), aspect=None):
+        """
+        Initializes RectangleSelector2
+        """
         self.selector = RectangleSelector2(self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
         return self.selector
 
 
 def _calculate_barycenter_unit_triangle():
+    """
+    Function name speaks for itself
+    """
     from ..crystal import stereographic_projection_to_direction
 
     # Barycenter half circular cap
@@ -188,7 +224,18 @@ def get_color_IPF(uvw, **kwargs):
 
 def unit_triangle(ax=None, n=512, **kwargs):
     """
-    Only valid for cubic system
+    Creates IPF unit triangle. Only valid for cubic system
+
+    Parameters
+    ----------
+    ax : matplotlib AxesSubplot object
+        AxesSubplot object
+    n : int (optional)
+        Rasterization resolution
+        Default: 512 
+
+    **kwargs :
+        kwargs parameters are passed to get_color_IPF function
     """
     # x and y max values in the stereographic projection corresponding to
     # the unit triangle
@@ -411,12 +458,92 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     return ax
 
 
-def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
+def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
                   ax=None, colordict=None, colorfill='black', fillvalue=np.nan,
                   sel=None, gray=None, grid='HexGrid', tiling=None, w=2048,
                   scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
-    Documentation
+    Plots any EBSD property
+
+    Parameters
+    ----------
+    prop : array shape(N)
+        Property to be plotted provided as np.ndarray(N), where N is the
+        size of the data file
+    nrows : int
+        Number of rows
+    ncols_odd : int
+        Number of columns in the odd rows
+    ncols_even : int
+        Number of columns in the even rows
+    x : numpy ndarray shape(N)
+        x pixel coordinates
+    y : numpy ndarray shape(N)
+        y pixel coordinates
+    dx : float (optional)
+        Grid spacing along x coordinates. If None is provided, guesses
+        it from x.
+        Default: None
+    dy : float (optional)
+        Grid spacing along y coordinates. If None is provided, guesses
+        it from y.
+        Default: None
+    ax : AxesSubplot object (optional)
+        The pole figure will be plotted in the provided object 'ax'
+        Default: None
+    colordict : dict(str: str or list) (optional)
+        Dictionary that maps indexed phase to respective color provided
+        as string, list shape(3) (RGB), or list shape(4) (RGBA)
+        E.g: {'1': 'red', '2': 'green'}
+        If None is provided, the the colors are assigned automatically
+        by cycling through the classic matplotlib colors defined in 
+        the data member colors (self.colors, which can be changed 
+        at will). Colors are assigned to the phases in alphabetical 
+        (numerical) order
+        Default: None
+    colorfill : str or list shape(3) or shape(4) (optional)
+        Color used to fill unindexed pixels. It can be provided as RGB 
+        or RGBA values as an iterable. If RGBA is provided, alpha channel
+        is droppped
+        Default: 'black'
+    fillvalue : float, int
+        Value used to fill non valid/non selected points 
+        Default: np.nan
+    sel : bool numpy 1D array (optional)
+        Boolean array indicating which data points should be plotted
+        Default: None
+    gray : numpy ndarray (optional)
+        Grayscale mask plotted over IPF.
+        For example, one may want to overlay the IPF map with the image
+        quality data.
+        Default: None
+    grid : str (optional)
+        Grid type
+        Default: 'HexGrid'
+    tiling : str (optional)
+        Valid options are 'rect' or 'hex'
+        If no option is provided, uses as default 'rect' if 
+        N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
+        __THRESHOLD_TILING__ is 10000, but it can be set to any value
+        by calling pyebsd.set_threshold_tiling(..)
+        Default: None
+    w : int (optional)
+        Width in pixel
+        Default: 2048
+    scalebar : bool (optional)
+        If True, displays scalebar over IPF map
+        Default: True
+    verbose : bool (optional)
+        If True, prints computation time
+        Default: True
+
+    **kwargs :
+        kwargs parameters are passed to function ax.imshow:
+        ax.imshow(img, ..., **kwargs)
+
+    Returns
+    -------
+    ebsdmap : EBSDMap object
     """
     # get N based on nrows, ncols_odd and ncols_even
     if verbose:
@@ -630,11 +757,76 @@ def plot_property(prop, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
     return EBSDMap(x, y, img, ax, fig, cax)
 
 
-def plot_IPF(M, nrows, ncols_even, ncols_odd, x, y, dx=None, dy=None,
+def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
              d=[0, 0, 1], ax=None, sel=None, gray=None, grid='HexGrid',
              tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
     """
-    Documentation
+    Plots inverse pole figure map
+
+    Parameters
+    ----------
+    M : numpy ndarray shape(N,3,3)
+        Transformation matrix from the sample coordinate frame to
+        the crystal coordinate frame.
+    nrows : int
+        Number of rows
+    ncols_odd : int
+        Number of columns in the odd rows
+    ncols_even : int
+        Number of columns in the even rows
+    x : numpy ndarray shape(N)
+        x pixel coordinates
+    y : numpy ndarray shape(N)
+        y pixel coordinates
+    dx : float (optional)
+        Grid spacing along x coordinates. If None is provided, guesses
+        it from x.
+        Default: None
+    dy : float (optional)
+        Grid spacing along y coordinates. If None is provided, guesses
+        it from y.
+        Default: None
+    d : list or array shape(3)
+        Reference direction in the sample coordinate frame.
+        Default: [0, 0, 1] (i.e., normal direction)
+    ax : AxesSubplot object (optional)
+        The pole figure will be plotted in the provided object 'ax'
+        Default: None
+    sel : bool numpy 1D array (optional)
+        Boolean array indicating which data points should be plotted
+        Default: None
+    gray : numpy ndarray (optional)
+        Grayscale mask plotted over IPF.
+        For example, one may want to overlay the IPF map with the image
+        quality data.
+        Default: None
+    grid : str (optional)
+        Grid type
+        Default: 'HexGrid'
+    tiling : str (optional)
+        Valid options are 'rect' or 'hex'
+        If no option is provided, uses as default 'rect' if 
+        N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
+        __THRESHOLD_TILING__ is 10000, but it can be set to any value
+        by calling pyebsd.set_threshold_tiling(..)
+        Default: None
+    w : int (optional)
+        Width in pixel
+        Default: 2048
+    scalebar : bool (optional)
+        If True, displays scalebar over IPF map
+        Default: True
+    verbose : bool (optional)
+        If True, prints computation time
+        Default: True
+
+    **kwargs :
+        kwargs parameters are passed to function ax.imshow:
+        ax.imshow(img, ..., **kwargs)
+
+    Returns
+    -------
+    ebsdmap : EBSDMap object
     """
     if verbose:
         t0 = time.time()

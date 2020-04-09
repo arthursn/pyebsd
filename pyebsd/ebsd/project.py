@@ -31,8 +31,36 @@ rcParams['savefig.pad_inches'] = 0.0
 
 
 class ScanData(object):
+    """
+    EBSD scan data
+
+    Parameters
+    ----------
+    data : pandas DataFrame
+        DataFrame containing the EBSD data. It is compulsory for data to
+        contain the following columns: phi1, Phi, phi2 (Euler angles), x, 
+        y (pixel coordinates), and ph (phase code). These columns are
+        then parsed as data members of the ScanData object. If IQ and CI 
+        are also provided as columns, they are also parsed.
+    grid : str
+        Grid type. Possible options are 'HexGrid' and 'SqrGrid'
+    dx : float
+        Grid spacing along x coordinate
+    dy : float
+        Grid spacing along y coordinate
+    ncols_odd : int
+        Number of columns in the odd rows (first row is indexed as 1, odd)
+    ncols_even : int
+        Number of columns in the even rows
+    nrows : int
+        Number of rows
+    header : str (optional)
+        Header of the scan data file
+        Default: ''
+    """
     __supported_grids = ['hexgrid', 'sqrgrid']
 
+    __2pi = 2*np.pi
     __cos60 = .5  # cos(60deg)
     __sin60 = .5*3.**.5  # sin(60deg)
 
@@ -94,16 +122,26 @@ class ScanData(object):
             self.ncols = self.ncols_odd
         self.N = len(self.data)
 
+        # Mandatory columns
         # .values: pandas Series to numpy array
         self.index = self.data.index.values
         self.phi1 = self.data.phi1.values
         self.Phi = self.data.Phi.values
         self.phi2 = self.data.phi2.values
+        if abs(self.phi1.max()) > self.__2pi or abs(self.Phi.max()) > self.__2pi or abs(self.phi2.max()) > self.__2pi:
+            print('Euler angles out of allowed range! Please check if they are really provided in radians.')
         self.x = self.data.x.values
         self.y = self.data.y.values
-        self.IQ = self.data.IQ.values
-        self.CI = self.data.CI.values
         self.ph = self.data.ph.values
+        # Optional columns
+        try:
+            self.IQ = self.data.IQ.values
+        except:
+            pass
+        try:
+            self.CI = self.data.CI.values
+        except:
+            pass
 
         self._i = None  # row number
         self._j = None  # col number
@@ -176,8 +214,8 @@ class ScanData(object):
         """
         i, j grid positions to pixel index (self.index)
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         i : int
             Column number (y coordinate) according to grid description below
         j : int
@@ -388,7 +426,6 @@ class ScanData(object):
         Returns
         -------
         KAM : np.ndarray(N) with KAM values in degrees
-
         """
         neighbors = self.get_neighbors(distance, perimeteronly, distance_convention)
         return kernel_average_misorientation(self.M, neighbors, sel, maxmis, **kwargs)
@@ -431,16 +468,15 @@ class ScanData(object):
             If True, prints computation time
             Default: True
 
-        **kwargs:
-            Variables are passed to function ax.imshow:
+        **kwargs :
+            kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
         -------
         ebsdmap : EBSDMap object
-
         """
-        ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
+        ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
                            self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar,
                            verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
@@ -505,16 +541,15 @@ class ScanData(object):
             If True, prints computation time
             Default: True
 
-        **kwargs:
-            Variables are passed to function ax.imshow:
+        **kwargs :
+            kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
         -------
         ebsdmap : EBSDMap object
-
         """
-        ebsdmap = plot_property(prop, self.nrows, self.ncols_even, self.ncols_odd, self.x, self.y,
+        ebsdmap = plot_property(prop, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
                                 self.dx, self.dy, ax, colordict, colorfill, fillvalue, sel, gray,
                                 self.grid, tiling, w, scalebar, colorbar, verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
@@ -576,14 +611,13 @@ class ScanData(object):
             If True, prints computation time
             Default: True
 
-        **kwargs:
-            Variables are passed to function ax.imshow:
+        **kwargs :
+            kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
         -------
         ebsdmap : EBSDMap object
-
         """
         if colordict is None:
             ph_code = set(self.ph)
@@ -656,14 +690,13 @@ class ScanData(object):
             If True, prints computation time
             Default: True
 
-        **kwargs:
-            Variables are passed to function ax.imshow:
+        **kwargs :
+            kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
         -------
         ebsdmap : EBSDMap object
-
         """
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
         ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray,
@@ -701,7 +734,7 @@ class ScanData(object):
             If True, prints computation time
             Default: True
 
-        **kwargs:
+        **kwargs :
             lw_frame : float
                 line width of PF frame
                 Default: 0.5
@@ -732,13 +765,21 @@ class ScanData(object):
         Returns
         -------
         ax : matplotlib.pyplot.axes.Axes
-
         """
         return plot_PF(None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs)
 
     def savefig(self, fname, **kwargs):
         """
-        Saves ebsd map plotted last
+        Saves EBSD map plotted last
+
+        Parameters
+        ----------
+        fname : str
+            File name
+
+        **kwargs :
+            kwargs parameters are passed to fig.savefig(fname, **kwargs) 
+            function
         """
         kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
         self.figs[-1].savefig(fname, **kwargs)
@@ -747,14 +788,13 @@ class ScanData(object):
         """
         Export ScanData as ang file
 
-        Arguments
-        ---------
-        fname : string
+        Parameters
+        ----------
+        fname : str
             File name
         sel : list of array of booleans
             selection
         """
-
         if sel is None:
             newscan = self
         else:
@@ -856,8 +896,8 @@ def selection_to_scandata(scan, sel):
     """
     Convert selection to new ScanData object
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     scan : ScanData object
         Original ScanData object
     sel : numpy array
