@@ -6,7 +6,7 @@ import pyebsd
 
 
 def plot_tests(scan, **kwargs):
-    fig, axes = plt.subplots(2, 2)
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True)
     scan.plot_property(scan.IQ, cmap='gray', ax=axes[0, 0], **kwargs)
     scan.plot_phase(gray=scan.IQ, ax=axes[0, 1], **kwargs)
     scan.plot_KAM(ax=axes[1, 0], maxmis=60, **kwargs)
