@@ -756,9 +756,25 @@ class ScanData(object):
         -------
         ebsdmap : EBSDMap object
         """
+        xlim, ylim = None, None
+        if isinstance(plotlimits, (EBSDMap, plt.Axes)):
+            xlim, ylim = plotlimits.get_xlim(), plotlimits.get_ylim()
+        elif isinstance(plotlimits, (tuple, list, np.ndarray)):
+            if len(plotlimits) == 4:
+                xlim, ylim = plotlimits[:2], plotlimits[2:]
+            else:
+                print('plotlimits should be provided as list/tuple of length 4')
+        if xlim is not None and ylim is not None:
+            xlim, ylim = sorted(xlim), sorted(ylim)
+            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (self.y >= ylim[0]) & (self.y <= ylim[1])
+            if sel is None:
+                sel = sellim
+            else:
+                sel = sel & sellim
+
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
         ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray, tiling,
-                                     w, scalebar, colorbar, plotlimits, verbose, **kwargs)
+                                     w, scalebar, colorbar, None, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
         return ebsdmap
 
