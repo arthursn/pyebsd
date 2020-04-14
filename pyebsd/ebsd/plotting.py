@@ -87,8 +87,10 @@ class EBSDMap(object):
         self.img = img
         self.ax = ax
         self.fig = fig
+        self.fig.canvas.mpl_connect('draw_event', self.ondraw)
         self.cax = cax
-
+        self.xlim = None
+        self.ylim = None
         self._selector = None
 
     @property
@@ -115,6 +117,16 @@ class EBSDMap(object):
                 pass
             self._selector.disconnect()
         self._selector = selector_widget
+
+    def ondraw(self, event):
+        self.xlim = self.ax.get_xlim()
+        self.ylim = self.ax.get_ylim()
+
+    def get_xlim(self):
+        return self.xlim
+
+    def get_ylim(self):
+        return self.ylim
 
     def lasso_selector(self, lineprops=dict(color='white')):
         """

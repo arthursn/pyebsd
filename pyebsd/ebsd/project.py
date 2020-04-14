@@ -6,7 +6,7 @@ from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
 from .orientation import euler_angles_to_rotation_matrix, misorientation, kernel_average_misorientation
-from .plotting import plot_property, plot_IPF, plot_PF
+from .plotting import EBSDMap, plot_property, plot_IPF, plot_PF
 
 __all__ = ['ScanData', 'selection_to_scandata']
 
@@ -431,7 +431,7 @@ class ScanData(object):
         return kernel_average_misorientation(self.M, neighbors, sel, maxmis, **kwargs)
 
     def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling=None,
-                 w=2048, scalebar=True, verbose=True, **kwargs):
+                 w=2048, scalebar=True, plotlimits=None, verbose=True, **kwargs):
         """
         Plots inverse pole figure map
 
@@ -464,6 +464,13 @@ class ScanData(object):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+            (optional)
+            x and y limits of the plot. It works similarly as sel. Only
+            pixels fall inside the provided x and y limits are plotted.
+            If an EBSDMap or AxesSubplot object is provided, then limits
+            are retrieved by calling get_xlim() and get_ylim() functions.
+            Default: None
         verbose : bool (optional)
             If True, prints computation time
             Default: True
@@ -476,17 +483,34 @@ class ScanData(object):
         -------
         ebsdmap : EBSDMap object
         """
+        xlim, ylim = None, None
+        if isinstance(plotlimits, (EBSDMap, plt.Axes)):
+            xlim, ylim = plotlimits.get_xlim(), plotlimits.get_ylim()
+        elif isinstance(plotlimits, (tuple, list, np.ndarray)):
+            if len(plotlimits) == 4:
+                xlim, ylim = plotlimits[:2], plotlimits[2:]
+            else:
+                print('plotlimits should be provided as list/tuple of length 4')
+        if xlim is not None and ylim is not None:
+            xlim, ylim = sorted(xlim), sorted(ylim)
+            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (self.y >= ylim[0]) & (self.y <= ylim[1])
+            if sel is None:
+                sel = sellim
+            else:
+                sel = sel & sellim
+
         ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
                            self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar,
                            verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
-        self.figs.append(ebsdmap.ax.get_figure())
+        self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_property(self, prop, ax=None, colordict=None, colorfill='black',
                       fillvalue=np.nan, sel=None, gray=None, tiling=None, w=2048,
-                      scalebar=True, colorbar=True, verbose=True, **kwargs):
+                      scalebar=True, colorbar=True, plotlimits=None, verbose=True,
+                      **kwargs):
         """
         Plots any EBSD property
 
@@ -537,6 +561,13 @@ class ScanData(object):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+            (optional)
+            x and y limits of the plot. It works similarly as sel. Only
+            pixels fall inside the provided x and y limits are plotted.
+            If an EBSDMap or AxesSubplot object is provided, then limits
+            are retrieved by calling get_xlim() and get_ylim() functions.
+            Default: None
         verbose : bool (optional)
             If True, prints computation time
             Default: True
@@ -549,17 +580,33 @@ class ScanData(object):
         -------
         ebsdmap : EBSDMap object
         """
+        xlim, ylim = None, None
+        if isinstance(plotlimits, (EBSDMap, plt.Axes)):
+            xlim, ylim = plotlimits.get_xlim(), plotlimits.get_ylim()
+        elif isinstance(plotlimits, (tuple, list, np.ndarray)):
+            if len(plotlimits) == 4:
+                xlim, ylim = plotlimits[:2], plotlimits[2:]
+            else:
+                print('plotlimits should be provided as list/tuple of length 4')
+        if xlim is not None and ylim is not None:
+            xlim, ylim = sorted(xlim), sorted(ylim)
+            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (self.y >= ylim[0]) & (self.y <= ylim[1])
+            if sel is None:
+                sel = sellim
+            else:
+                sel = sel & sellim
+
         ebsdmap = plot_property(prop, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
                                 self.dx, self.dy, ax, colordict, colorfill, fillvalue, sel, gray,
                                 self.grid, tiling, w, scalebar, colorbar, verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
-        self.figs.append(ebsdmap.ax.get_figure())
+        self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_phase(self, ax=None, colordict=None,
-                   colorfill='black', fillvalue=-1, sel=None, gray=None,
-                   tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
+    def plot_phase(self, ax=None, colordict=None, colorfill='black', fillvalue=-1,
+                   sel=None, gray=None, tiling=None, w=2048, scalebar=True,
+                   plotlimits=None, verbose=True, **kwargs):
         """
         Plots phases map
 
@@ -607,6 +654,13 @@ class ScanData(object):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+            (optional)
+            x and y limits of the plot. It works similarly as sel. Only
+            pixels fall inside the provided x and y limits are plotted.
+            If an EBSDMap or AxesSubplot object is provided, then limits
+            are retrieved by calling get_xlim() and get_ylim() functions.
+            Default: None
         verbose : bool (optional)
             If True, prints computation time
             Default: True
@@ -624,16 +678,13 @@ class ScanData(object):
             ccycler = cycle(self.colors)
             colordict = {ph: next(ccycler) for ph in ph_code}
         ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, fillvalue, sel, gray,
-                                     tiling, w, scalebar, False, verbose, **kwargs)
-        self.ebsdmaps.append(ebsdmap)
-        self.figs.append(ebsdmap.ax.get_figure())
-        self.axes.append(ebsdmap.ax)
+                                     tiling, w, scalebar, False, plotlimits, verbose, **kwargs)
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
                  distance_convention='OIM', colorfill='black', fillvalue=np.nan,
-                 sel=None, gray=None, tiling=None, w=2048, scalebar=True, colorbar=True,
-                 verbose=True, **kwargs):
+                 sel=None, gray=None, tiling=None, w=2048, scalebar=True,
+                 colorbar=True, plotlimits=None, verbose=True, **kwargs):
         """
         Plots kernel average misorientation map
 
@@ -686,6 +737,13 @@ class ScanData(object):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+            (optional)
+            x and y limits of the plot. It works similarly as sel. Only
+            pixels fall inside the provided x and y limits are plotted.
+            If an EBSDMap or AxesSubplot object is provided, then limits
+            are retrieved by calling get_xlim() and get_ylim() functions.
+            Default: None
         verbose : bool (optional)
             If True, prints computation time
             Default: True
@@ -699,12 +757,9 @@ class ScanData(object):
         ebsdmap : EBSDMap object
         """
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
-        ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray,
-                                     tiling, w, scalebar, colorbar, verbose, **kwargs)
+        ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray, tiling,
+                                     w, scalebar, colorbar, plotlimits, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
-        self.ebsdmaps.append(ebsdmap)
-        self.figs.append(ebsdmap.ax.get_figure())
-        self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
