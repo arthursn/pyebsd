@@ -53,7 +53,8 @@ class _CoordsFormatter(object):
         string = 'x={:g}    y={:g}'.format(x, y)
         if i > 0 and j > 0:
             try:
-                string += '    {}={}'.format(self.name, self.Z[i, j])
+                if not np.any(np.isnan(self.Z[i, j])):
+                    string += '    {}={}'.format(self.name, self.Z[i, j])
             except:
                 pass
         return string
@@ -276,19 +277,18 @@ def unit_triangle(ax=None, n=512, **kwargs):
 
     ax.set_aspect('equal')
     ax.axis('off')
+    # Plots the unit triangle
     img = ax.imshow(img_pil, interpolation='None', origin='lower', extent=(0, xmax, 0, ymax))
 
-    # Draw borders of unit triangle
+    # Coordinates displayed in the interactive plot window
+    _uvw = uvw.copy()
+    _uvw[~sel] = [np.nan, np.nan, np.nan]
+    ax.format_coord = _CoordsFormatter((0, xmax, 0, ymax), _uvw.reshape(n, n, 3).round(6), 'd')
+
+    # Calculate coordinates of borders of unit triangle
     t = np.linspace(0, 1., n)
-
-    # [np.repeat(1.,n), t, np.repeat(1.,n)]
-    # [t[::-1], t[::-1], np.repeat(1.,n)]
-    # [t, np.repeat(0,n), np.repeat(1.,n)]
-
-    # u = np.hstack([np.repeat(1., n), t[::-1], t])
-    # v = np.hstack([t, t[::-1], np.repeat(0, n)])
-    # w = np.hstack([np.repeat(1., n), np.repeat(1., n), np.repeat(1., n)])
-    uvw = np.full((3*n, 3), 1.)
+    # Trust me, this works
+    uvw = np.full((3*n, 3), 1., dtype=float)
     # u
     uvw[n:2*n, 0] = t[::-1]
     uvw[2*n:, 0] = t
@@ -296,11 +296,13 @@ def unit_triangle(ax=None, n=512, **kwargs):
     uvw[:n, 1] = t
     uvw[n:2*n, 1] = t[::-1]
     uvw[2*n:, 1] = 0.
-    # w: Nothing do to. All values are equal to 1.
+    # w: Nothing do to. All values are equal to 1
 
     x, y = stereographic_projection(uvw)
+    # Plots borders of unit triangle
     ax.plot(x, y, 'k-', lw=2)
 
+    # Reference directions
     ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(0, -10),
                 textcoords='offset points', ha='center', va='top', size=30)
     ax.annotate('101', xy=stereographic_projection([1, 0, 1]), xytext=(0, -10),
