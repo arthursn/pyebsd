@@ -1010,7 +1010,7 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), d_IPF, 'd')
+    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), d_IPF.round(6), 'd')
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
