@@ -48,6 +48,8 @@ pip install numpy matplotlib pandas scipy pillow
 ```
 # Basic usage
 
+Examples can be found in the [examples](https://github.com/arthursn/pyebsd/tree/master/examples) folder. A jupyter notebook with interactive examples is provided [here](https://github.com/arthursn/pyebsd/blob/master/examples/plot_EBSD_maps.ipynb).
+
 Load EBSD data:
 
 ```python
