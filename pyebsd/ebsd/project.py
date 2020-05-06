@@ -350,7 +350,7 @@ class ScanData(object):
             raise Exception('get_neighbors_fixed not yet supported for grid type {}'.format(self.grid))
         return list(j_list), list(i_list)
 
-    def get_neighbors(self, distance, perimeteronly=True, distance_convention='OIM'):
+    def get_neighbors(self, distance, perimeteronly=True, distance_convention='OIM', sel=None):
         """
         Returns list of indices of the neighboring pixels for every pixel
         for a given distance in pixels
@@ -373,15 +373,22 @@ class ScanData(object):
                 j_shift += j_sh
                 i_shift += i_sh
 
-        # j, i indices as np arrays
-        j0, i0 = self.j, self.i
+        n_neighbors = len(j_shift)
+        if sel is None:
+            sel = np.full(self.N, True, dtype=bool)
+
         # x
-        j_neighbors = np.vstack([j0 + shift for shift in j_shift]).T.astype(int)
+        j_neighbors = np.full((self.N, n_neighbors), -1, dtype=int)
+        j_neighbors[sel] = np.add.outer(self.j[sel], j_shift)
         # y
-        i_neighbors = np.vstack([i0 + shift for shift in i_shift]).T.astype(int)
+        i_neighbors = np.full((self.N, n_neighbors), -1, dtype=int)
+        i_neighbors[sel] = np.add.outer(self.i[sel], i_shift)
+
+        # i, j out of allowed range
         outliers = (j_neighbors < 0) | (j_neighbors >= self.ncols) | (i_neighbors < 0) | (i_neighbors >= self.nrows)
 
-        neighbors_ind = self.ij_to_index(i_neighbors, j_neighbors)
+        neighbors_ind = np.full((self.N, n_neighbors), -1, dtype=int)
+        neighbors_ind[sel] = self.ij_to_index(i_neighbors[sel], j_neighbors[sel])
         neighbors_ind[outliers] = -1
 
         return neighbors_ind.astype(int)
@@ -427,7 +434,7 @@ class ScanData(object):
         -------
         KAM : np.ndarray(N) with KAM values in degrees
         """
-        neighbors = self.get_neighbors(distance, perimeteronly, distance_convention)
+        neighbors = self.get_neighbors(distance, perimeteronly, distance_convention, sel)
         return kernel_average_misorientation(self.M, neighbors, sel, maxmis, **kwargs)
 
     def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling=None,
