@@ -189,9 +189,10 @@ def get_color_IPF(uvw, **kwargs):
     if isinstance(uvw, (list, tuple)):
         uvw = np.array(uvw)
 
-    ndim = uvw.ndim
-    if ndim == 1:
-        uvw = uvw.reshape(1, -1)
+    shape = uvw.shape  # original shape
+    ndim = uvw.ndim  # original number of dimensions
+    if ndim != 2:
+        uvw = uvw.reshape(-1, 3)
 
     if not kwargs.pop('issorted', False):
         uvw = np.abs(uvw)
@@ -227,10 +228,10 @@ def get_color_IPF(uvw, **kwargs):
     rgb = rgb*255/rgbmax
 
     # rgb to int and invert axes (transpose)
-    rgb = np.ndarray.astype(rgb, int).T
+    rgb = rgb.astype(np.uint8).T
 
-    if ndim == 1:
-        rgb = rgb.ravel()
+    if ndim != 2:
+        rgb = rgb.reshape(shape)  # reshapes to match original shape of uvw
 
     return rgb
 
