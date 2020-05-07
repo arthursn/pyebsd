@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import pyebsd
 from pyebsd.ebsd.plotting import _CoordsFormatter
@@ -61,9 +62,8 @@ def get_IPF_from_color(rgb, **kwargs):
     return uvw
 
 
-if __name__ == '__main__':
-    # img = Image.open('../data/unit_triangle.png')
-    img = Image.open('IPF_ND_gray_IQ.png')
+def reconstruct_IPF_map(fname):
+    img = Image.open(fname)
     w, h = img.size
 
     rgb = np.array(img)[:, :, :3]  # drop alpha channel
@@ -91,5 +91,43 @@ if __name__ == '__main__':
     cbar = fig.colorbar(diffmap, ax=ax3, extend='both')
 
     fig.tight_layout()
+
+# def reconstruct_orientations(fname1, d1, fname2, d2):
+#     fname1, d1 = 'IPF_100_gray_IQ.png', [1, 0, 0]
+#     fname2, d2 = 'IPF_001_gray_IQ.png', [0, 0, 1]
+
+#     img1 = Image.open(fname1)
+#     img2 = Image.open(fname2)
+
+#     if img1.size != img2.size:
+#         raise Exception('Images have different sizes')
+
+#     w, h = img1.size
+
+#     rgb1 = np.array(img1)[:, :, :3].reshape(-1, 3)
+#     rgb2 = np.array(img2)[:, :, :3].reshape(-1, 3)
+
+#     ipf1 = get_IPF_from_color(rgb1)
+#     ipf2 = get_IPF_from_color(rgb2)
+
+#     C = pyebsd.list_cubic_symmetry_operators()
+
+#     A = np.array([d1, d2, np.cross(d1, d2)])
+#     B = np.array([ipf1, ipf2, np.cross(ipf1, ipf2)]).transpose(1, 0, 2)
+#     R = np.dot(B, A).transpose(0, 1, 2)
+
+#     x, y = np.mgrid[:w, :h]
+
+#     data = pd.DataFrame(columns=['x', 'y', 'phi1', 'Phi', 'phi2', 'ph', 'IQ'])
+#     data['phi1'], data['Phi'], data['phi2'] = pyebsd.rotation_matrix_to_euler_angles(R)
+#     data['x'], data['y'] = x.ravel(), y.ravel()
+#     data['IQ'] = get_gray_from_color(rgb1)
+#     data.fillna(1, inplace=True)
+#     scan = pyebsd.ScanData(data, 'SqrGrid', 1, 1, w, w, h)
+
+
+if __name__ == '__main__':
+    reconstruct_IPF_map('../data/unit_triangle.png')
+    reconstruct_IPF_map('IPF_100_gray_IQ.png')
 
     plt.show()
