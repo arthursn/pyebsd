@@ -12,11 +12,14 @@ __all__ = ['trace_to_angle', 'stereographic_projection',
            'reduce_cubic_transformations', 'IPF', 'PF']
 
 
-def trace_to_angle(tr):
+def trace_to_angle(tr, out='deg'):
     """
     Converts the trace of a orientation matrix to the misorientation angle
     """
-    return np.degrees(np.arccos((tr-1.)/2.))
+    ang = np.arccos((tr-1.)/2.)
+    if out == 'deg':
+        ang = np.degrees(ang)
+    return ang
 
 
 """ Steographic projection functions """
@@ -61,6 +64,19 @@ def stereographic_projection(d, norm=True, coord='cartesian'):
 
 
 def stereographic_projection_to_direction(xy):
+    """
+    Calculates the direction from the stereographic projection coordinates
+
+    Arguments
+    ---------
+    xy : iterable shape(2) or shape(N, 2)
+        List with stereographic projection coordinates
+
+    Returns
+    -------
+    uvw : np.ndarray(3) or np.ndarray(N, 3)
+        List with corresponding directions
+    """
     xy = np.asarray(xy)
     ndim = xy.ndim
 
@@ -78,7 +94,7 @@ def stereographic_projection_to_direction(xy):
 
     if ndim == 1:
         uvw = uvw.ravel()
-    # d = [c0*(1.+d2), c1*(1.+d2), d2]
+
     return uvw
 
 
@@ -87,7 +103,27 @@ def stereographic_projection_to_direction(xy):
 
 def avg_orientation(M, sel=None, **kwargs):
     """
-    Average orientation
+    Calculates rotation matrix corresponding to average orientation
+
+    M : numpy ndarray shape(N, 3, 3)
+        List of rotation matrices describing the rotation from the sample 
+        coordinate frame to the crystal coordinate frame
+    sel : bool numpy 1D array (optional)
+        Boolean array indicating data points calculations should be 
+        performed
+        Default: None
+    **kwargs :
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+        vectorized : bool (optional)
+            If True, performs all operations vectorized using numpy
+            Default: True
+
+    Returns
+    -------
+    M_avg : numpy ndarray shape(3, 3)
+        Average orientation matrix
     """
     # verbose is pased to 'rotation_matrix_to_euler_angles', so use kwargs.get, not kwargs.pop
     verbose = kwargs.get('verbose', True)
@@ -105,9 +141,8 @@ def avg_orientation(M, sel=None, **kwargs):
     MrefT = M_sel[N//2].T
     C = list_cubic_symmetry_operators()
 
-    # tr = np.ndarray((M_sel.shape[0], len(C)))
-    # vectorized is passed to rotation_matrix_to_euler_angles, which in turn is passed
-    # to minimize_disorientation, so use kwargs.get, not kwargs.pop
+    # 'vectorized' is passed to rotation_matrix_to_euler_angles, which in turn is passed
+    # to minimize_disorientation. That's why I'm using kwargs.get instead of kwargs.pop
     if kwargs.get('vectorized', True):
         # 4 dimensional numpy narray(N,24,3,3)
         Mprime = np.tensordot(C, M_sel,
@@ -119,12 +154,6 @@ def avg_orientation(M, sel=None, **kwargs):
         tr[neg] = -tr[neg]
         Mprime[neg] = -Mprime[neg]
         M_sel = Mprime[(list(range(N)), np.argmax(tr, axis=1))]
-        # Mprime = np.tensordot(M_sel, MrefT, axes=[[-1],[-2]])
-        # for m in len(C):
-        #     a, b = C[m].nonzero()
-        #     tr[m] = np.einsum('ij,j->i', Mprime[:,a,b], C[m,a,b])
-        # m = np.argmax(np.abs(tr), axis=1)
-        # Mprime = np.sign(tr[m])*np.tensordot(C[m], M_sel)
     else:
         for i in range(N):
             Mprime = np.tensordot(C, M_sel[i], axes=[[-1], [-2]])
@@ -152,6 +181,36 @@ def avg_orientation(M, sel=None, **kwargs):
 def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
     """
     Calculates the misorientation between A e B
+
+    A : numpy ndarray shape(3, 3) or shape(N, 3, 3)
+        Rotation matrix of list of rotation matrices
+    B : numpy ndarray shape(3, 3) or shape(N, 3, 3)
+        Rotation matrix of list of rotation matrices
+    out : str (optional)
+        Format or unit of the output. Possible values are:
+        'tr': trace of misorientation matrix
+        'deg': misorientation in degrees
+        'rad': misorientation in radians
+        Default: 'deg'
+    math : str (optional)
+        Possible values are:
+        'avg': average misorientation
+        'max': maximum misorientation
+        'min': minimum misorientation
+        None: list of misorientations for each combination
+        Default: 'avg'
+    **kwargs :
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+        vectorized : bool (optional)
+            If True, performs all operations vectorized using numpy
+            Default: True
+
+    Returns
+    -------
+    x : float or numpy ndarray
+        Output depends on the options provided, as explained above
     """
 
     Adim, Bdim = np.ndim(A), np.ndim(B)
@@ -212,11 +271,35 @@ def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
     return x
 
 
-def misorientation(M, neighbors, sel=None, **kwargs):
+def misorientation(M, neighbors, sel=None, out='deg', **kwargs):
     """
     Calculates the misorientation angle of every data point with respective
     orientation matrix provided in 'M' with respect to an arbitrary number 
     of neighbors, whose indices are provided in the 'neighbors' argument.
+
+    M : numpy ndarray shape(N, 3, 3)
+        List of rotation matrices describing the rotation from the sample 
+        coordinate frame to the crystal coordinate frame
+    neighbors : numpy ndarray shape(N, K) - K being the number of neighbors
+        Indices of the neighboring pixels
+    sel : bool numpy 1D array (optional)
+        Boolean array indicating data points calculations should be 
+        performed
+        Default: None
+    out : str (optional)
+        Unit of the output. Possible values are:
+        'deg': angle(s) in degrees
+        'rad': angle(s) in radians
+        Default: 'deg'
+    **kwargs :
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+
+    Returns
+    -------
+    misang : numpy ndarray shape(N, K) - K being the number of neighbors
+        KAM : numpy ndarray shape(N) with KAM values
     """
     N = M.shape[0]
     nneighbors = neighbors.shape[1]
@@ -270,12 +353,39 @@ def misorientation(M, neighbors, sel=None, **kwargs):
 
     # Filter out invalid trace values
     ok = tr >= -1.
-    misang[ok] = trace_to_angle(tr[ok])
+    misang[ok] = trace_to_angle(tr[ok], out)
     return misang
 
 
-def kernel_average_misorientation(M, neighbors, sel=None, maxmis=None, **kwargs):
-    misang = misorientation(M, neighbors, sel, **kwargs)
+def kernel_average_misorientation(M, neighbors, sel=None, maxmis=None, out='deg', **kwargs):
+    """
+    Calculates the Kernel Average Misorientation (KAM)
+
+    M : numpy ndarray shape(N, 3, 3)
+        List of rotation matrices describing the rotation from the sample 
+        coordinate frame to the crystal coordinate frame
+    neighbors : numpy ndarray shape(N, K) - K being the number of neighbors
+        Indices of the neighboring pixels
+    sel : bool numpy 1D array (optional)
+        Boolean array indicating data points calculations should be 
+        performed
+        Default: None
+    out : str (optional)
+        Unit of the output. Possible values are:
+        'deg': angle(s) in degrees
+        'rad': angle(s) in radians
+        Default: 'deg'
+    **kwargs :
+        verbose : bool (optional)
+            If True, prints computation time
+            Default: True
+
+    Returns
+    -------
+    KAM : numpy ndarray shape(N) - M being the number of neighbors
+        KAM : numpy ndarray shape(N) with KAM values
+    """
+    misang = misorientation(M, neighbors, sel, out, **kwargs)
 
     outliers = misang < 0  # filter out negative values
     if maxmis is not None:
@@ -327,7 +437,8 @@ def minimize_disorientation(V, V0, **kwargs):
                 i+1, np.degrees(theta[imax]), np.degrees(phi[imax]), np.degrees(psi[imax]), dth))
         if plot:
             Rscan = np.dot(A, V0).transpose([0, 2, 1])
-            plot_PF(R=Rscan, ax=axmin, scatter=True, s=30, marker='s', c=np.repeat(B, 3), verbose=False)
+            plot_PF(R=Rscan, ax=axmin, scatter=True, s=30,
+                    marker='s', c=np.repeat(B, 3), verbose=False)
             plot_PF(R=Rscan[imax], ax=axmin, scatter=True, s=200, marker='x', c='r', verbose=False)
 
         V0 = np.dot(A[imax], V0)

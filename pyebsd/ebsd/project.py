@@ -5,7 +5,8 @@ from itertools import cycle
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
 
-from .orientation import euler_angles_to_rotation_matrix, misorientation, kernel_average_misorientation
+from .orientation import (euler_angles_to_rotation_matrix, misorientation,
+                          kernel_average_misorientation)
 from .plotting import EBSDMap, plot_property, plot_IPF, plot_PF
 
 __all__ = ['ScanData', 'selection_to_scandata']
@@ -112,8 +113,8 @@ class ScanData(object):
         if self.grid.lower() == 'hexgrid':
             diff = abs(self.ncols_odd - self.ncols_even)
             if diff != 1:
-                raise Exception('|ncols_odd - ncols_even| (|{} - {}| = {}) must be equal to 1'.format(
-                    self.ncols_odd, self.ncols_even, diff))
+                raise Exception(('| ncols_odd - ncols_even | ( | {} - {} | = {}) must be '
+                                 'equal to 1').format(self.ncols_odd, self.ncols_even, diff))
             self.ncols = self.ncols_odd + self.ncols_even
         else:
             if self.ncols_odd != self.ncols_even:
@@ -128,8 +129,10 @@ class ScanData(object):
         self.phi1 = self.data.phi1.values
         self.Phi = self.data.Phi.values
         self.phi2 = self.data.phi2.values
-        if abs(self.phi1.max()) > self.__2pi or abs(self.Phi.max()) > self.__2pi or abs(self.phi2.max()) > self.__2pi:
-            print('Euler angles out of allowed range! Please check if they are really provided in radians.')
+        if (abs(self.phi1.max()) > self.__2pi or abs(self.Phi.max()) > self.__2pi or
+                abs(self.phi2.max()) > self.__2pi):
+            print('Euler angles out of allowed range! Please check if they are really '
+                  'provided in radians.')
         self.x = self.data.x.values
         self.y = self.data.y.values
         self.ph = self.data.ph.values
@@ -347,20 +350,51 @@ class ScanData(object):
                     self.__n_neighbors_hexgrid_fixed))
             j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance-1]))
         else:
-            raise Exception('get_neighbors_fixed not yet supported for grid type {}'.format(self.grid))
+            raise Exception(
+                'get_neighbors_fixed not yet supported for grid type {}'.format(self.grid))
         return list(j_list), list(i_list)
 
     def get_neighbors(self, distance, perimeteronly=True, distance_convention='OIM', sel=None):
         """
         Returns list of indices of the neighboring pixels for every pixel
         for a given distance in pixels
+
+        Arguments
+        ---------
+        distance : int
+            Distance with respect to the central pixel defined in terms of
+            the nearest neighbor, i.e., distance = 3 represents the 3rd 
+            closest neighbor pixels
+        perimeteronly : bool (optional)
+            If True, considers only pixels in the perimeter. If False, then
+            also includes innermost pixels
+            Default : True
+        distance_convention : str (optional)
+            Distance convention used for selecting the neighboring pixels.
+            Two possible values are allowed: 'OIM' or 'fixed'.
+            The OIM convention is used by the TSL OIM software and is
+            explained in its manual. 'fixed' stands for fixed distance,
+            meaning that the neighbors are defined based on a fixed
+            distance from the central pixel.
+            Default : OIM
+        sel : bool numpy 1D array (optional)
+            Boolean array indicating data points calculations should be 
+            performed
+            Default: None
+
+        Returns
+        -------
+        neighbors_ind : numpy ndarray shape(N, K) - K being the number of 
+            neighbors
+            Indices of the neighboring pixels
         """
         if distance_convention.lower() == 'oim':
             _get_neighbors = self.get_neighbors_oim
         elif distance_convention.lower() == 'fixed':
             _get_neighbors = self.get_neighbors_fixed
         else:
-            raise Exception('get_neighbors: unknown distance convention "{}"'.format(distance_convention))
+            raise Exception(
+                'get_neighbors: unknown distance convention "{}"'.format(distance_convention))
 
         if perimeteronly:
             # only pixels in the perimeter
@@ -385,7 +419,8 @@ class ScanData(object):
         i_neighbors[sel] = np.add.outer(self.i[sel], i_shift)
 
         # i, j out of allowed range
-        outliers = (j_neighbors < 0) | (j_neighbors >= self.ncols) | (i_neighbors < 0) | (i_neighbors >= self.nrows)
+        outliers = (j_neighbors < 0) | (j_neighbors >= self.ncols) | (
+            i_neighbors < 0) | (i_neighbors >= self.nrows)
 
         neighbors_ind = np.full((self.N, n_neighbors), -1, dtype=int)
         neighbors_ind[sel] = self.ij_to_index(i_neighbors[sel], j_neighbors[sel])
@@ -394,12 +429,36 @@ class ScanData(object):
         return neighbors_ind.astype(int)
 
     def get_distance_neighbors(self, distance, distance_convention='OIM'):
+        """
+        Returns distance, in um, to the n-th (distance-th) neighbor
+
+        Arguments
+        ---------
+        distance : int
+            Distance with respect to the central pixel defined in terms of
+            the nearest neighbor, i.e., distance = 3 represents the 3rd 
+            closest neighbor pixels
+        distance_convention : str (optional)
+            Distance convention used for selecting the neighboring pixels.
+            Two possible values are allowed: 'OIM' or 'fixed'.
+            The OIM convention is used by the TSL OIM software and is
+            explained in its manual. 'fixed' stands for fixed distance,
+            meaning that the neighbors are defined based on a fixed
+            distance from the central pixel.
+            Default : OIM
+
+        Returns
+        -------
+        d : float
+            Distance, in um, to the n-th (distance-th) neighbor
+        """
         if distance_convention.lower() == 'oim':
             j, i = self.get_neighbors_oim(distance)
         elif distance_convention.lower() == 'fixed':
             j, i = self.get_neighbors_fixed(distance)
         else:
-            raise Exception('get_distance_neighbors: unknown distance convention "{}"'.format(distance_convention))
+            raise Exception(('get_distance_neighbors: unknown distance convention '
+                             '"{}"').format(distance_convention))
 
         if self.grid.lower() == 'hexgrid':
             d = .5*(np.array(j)**2 + 3.*np.array(i)**2)**.5
@@ -432,10 +491,11 @@ class ScanData(object):
 
         Returns
         -------
-        KAM : np.ndarray(N) with KAM values in degrees
+        KAM : numpy ndarray shape(N) with KAM values in degrees
         """
         neighbors = self.get_neighbors(distance, perimeteronly, distance_convention, sel)
-        return kernel_average_misorientation(self.M, neighbors, sel, maxmis, **kwargs)
+        return kernel_average_misorientation(self.M, neighbors, sel, maxmis,
+                                             kwargs.pop('out', 'deg'), **kwargs)
 
     def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling=None,
                  w=2048, scalebar=True, plotlimits=None, verbose=True, **kwargs):
@@ -500,7 +560,8 @@ class ScanData(object):
                 print('plotlimits should be provided as list/tuple of length 4')
         if xlim is not None and ylim is not None:
             xlim, ylim = sorted(xlim), sorted(ylim)
-            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (self.y >= ylim[0]) & (self.y <= ylim[1])
+            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (
+                self.y >= ylim[0]) & (self.y <= ylim[1])
             if sel is None:
                 sel = sellim
             else:
@@ -597,7 +658,8 @@ class ScanData(object):
                 print('plotlimits should be provided as list/tuple of length 4')
         if xlim is not None and ylim is not None:
             xlim, ylim = sorted(xlim), sorted(ylim)
-            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (self.y >= ylim[0]) & (self.y <= ylim[1])
+            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (
+                self.y >= ylim[0]) & (self.y <= ylim[1])
             if sel is None:
                 sel = sellim
             else:
@@ -773,7 +835,8 @@ class ScanData(object):
                 print('plotlimits should be provided as list/tuple of length 4')
         if xlim is not None and ylim is not None:
             xlim, ylim = sorted(xlim), sorted(ylim)
-            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (self.y >= ylim[0]) & (self.y <= ylim[1])
+            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (
+                self.y >= ylim[0]) & (self.y <= ylim[1])
             if sel is None:
                 sel = sellim
             else:
@@ -970,6 +1033,47 @@ def _get_rectangle_surrounding_selection_hexgrid(scan, sel):
     return ncols_odd, ncols_even, nrows, rect
 
 
+def _get_rectangle_surrounding_selection_sqrgrid(scan, sel):
+    """
+    Select rectangle surrounding the selected data.
+    """
+    # x
+    ind_xmin = scan.data.x[sel].idxmin()
+    ind_xmax = scan.data.x[sel].idxmax()
+    # y
+    ind_ymin = scan.data.y[sel].idxmin()
+    ind_ymax = scan.data.y[sel].idxmax()
+
+    # j
+    jmin = scan.j[ind_xmin]
+    jmax = scan.j[ind_xmax]
+    # i
+    imin = scan.i[ind_ymin]
+    imax = scan.i[ind_ymax]
+
+    xmin = scan.x[ind_xmin]
+    xmax = scan.x[ind_xmax]
+    ymin = scan.y[ind_ymin]
+    ymax = scan.y[ind_ymax]
+
+    ncols_even = jmax - jmin + 1
+    ncols_odd = ncols_even
+    nrows = imax - imin + 1
+
+    # select rectangle surrounding the selected data
+    rect = (scan.x >= xmin) & (scan.x <= xmax) & \
+        (scan.y >= ymin) & (scan.y <= ymax)
+
+    # total number of points
+    N = ncols_even*nrows
+    if N != np.count_nonzero(rect):
+        raise Exception(('Something went wrong: expected number '
+                         'of points ({}) differs from what '
+                         'we got ({})').format(N, np.count_nonzero(rect)))
+
+    return ncols_odd, ncols_even, nrows, rect
+
+
 def selection_to_scandata(scan, sel):
     """
     Convert selection to new ScanData object
@@ -1004,7 +1108,7 @@ def selection_to_scandata(scan, sel):
     if scan.grid.lower() == 'hexgrid':
         ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_hexgrid(scan, sel)
     else:
-        raise Exception('selection_to_scandata not yet supported for grid type {}'.format(scan.grid))
+        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_sqrgrid(scan, sel)
 
     # data to be exported is a rectangle
     newdata = newdata[rect]
