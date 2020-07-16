@@ -92,7 +92,7 @@ ax8.set_ylabel('Counts')
 # np.savetxt(basename + '_mis_KS.txt', mis_KS[filt & (scan.ph == 1)], fmt='%.6e')
 
 
-print('Current')
+print('Experimental')
 print('cpp: {:.4f} deg'.format(angle_2ds(V0, 'cpp')))
 print('cpd: {:.4f} deg'.format(angle_2ds(V0, 'cpd')))
 

@@ -10,8 +10,8 @@ import pyebsd
 if 'fname_local' not in locals() or 'fname_local' not in globals():
     fname_local = ''
 
-# fname = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
-fname = os.path.join('..', 'data', 'QP_bcc_fcc_single_austenite_grain.ang')
+fname = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
+# fname = os.path.join('..', 'data', 'QP_bcc_fcc_single_austenite_grain.ang')
 
 basename = os.path.basename(fname)
 basename = os.path.splitext(basename)[0]
@@ -47,7 +47,7 @@ pyebsd.set_tight_plt()
 proj = [1, 0, 0]
 
 key = ''
-while key is not 'q':
+while key != 'q':
     if np.count_nonzero(ipf.sel) > 0:
         M_fcc = pyebsd.avg_orientation(scan.M, sel=ipf.sel & (scan.ph == 2) & (
             scan.CI > .2), vectorized=False, verbose=True)  # , plot=True, n=10, maxdev=10., it=5)
