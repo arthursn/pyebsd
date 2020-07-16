@@ -106,29 +106,27 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     p_prt, d_prt = ps[0], ds[0]  # parent phase
     p_chd, d_chd = ps[1], ds[1]  # child phase
 
+    C = list_cubic_symmetry_operators()
+
     # check variants normal to plane 'n'. Due to numerical truncation,
     # instead of choosing the variants 'd' based on np.dot(d,n) == 0,
     # a tolerance 'trunc' is set. i.e., the variants are chosen
     # according to the criteria np.abs(np.dot(d,n)) <= trunc (1e-8)
-    if np.abs(np.dot(p_prt, d_prt)) > trunc:
-        ds = list_cubic_family_directions(d_prt)
-        sel = np.abs(np.asarray([np.dot(p_prt, d) for d in ds])) <= trunc
-        d_prt = ds[sel][0]
-    if np.abs(np.dot(p_chd, d_chd)) > trunc:
-        ds = list_cubic_family_directions(d_chd)
-        sel = np.abs(np.asarray([np.dot(p_chd, d) for d in ds])) <= trunc
-        d_chd = ds[sel][0]
+    ds = np.dot(C, d_prt)
+    sel = np.abs(np.asarray([np.dot(p_prt, d) for d in ds])) <= trunc
+    d_prt = ds[sel][0]
 
-    p_prt = p_prt/np.linalg.norm(p_prt)
-    p_chd = p_chd/np.linalg.norm(p_chd)
-    d_prt = d_prt/np.linalg.norm(d_prt)
-    d_chd = d_chd/np.linalg.norm(d_chd)
+    ds = np.dot(C, d_chd)
+    sel = np.abs(np.asarray([np.dot(p_chd, d) for d in ds])) <= trunc
+    d_chd = ds[sel][0]
 
-    M_prt = np.array([d_prt, -np.cross(d_prt, p_prt), p_prt]).T
-    M_chd = np.array([d_chd, -np.cross(d_chd, p_chd), p_chd]).T
+    R_prt = np.array([d_prt, -np.cross(d_prt, p_prt), p_prt])
+    R_chd = np.array([d_chd, -np.cross(d_chd, p_chd), p_chd])
 
-    V0 = np.dot(M_chd, M_prt.T)
-    C = list_cubic_symmetry_operators()
+    R_prt = R_prt/np.linalg.norm(R_prt, axis=1).reshape(-1, 1)
+    R_chd = R_chd/np.linalg.norm(R_chd, axis=1).reshape(-1, 1)
+
+    V0 = np.dot(R_chd.T, R_prt)
     V = np.tensordot(V0, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
 
     return reduce_cubic_transformations(V)
