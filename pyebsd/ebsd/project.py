@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from .orientation import (euler_angles_to_rotation_matrix, misorientation,
                           kernel_average_misorientation)
-from .plotting import EBSDMap, plot_property, plot_IPF, plot_PF
+from .plotting import GridIndexing, EBSDMap, plot_property, plot_IPF, plot_PF
 
 __all__ = ['ScanData', 'selection_to_scandata']
 
@@ -31,7 +31,7 @@ rcParams['savefig.bbox'] = 'tight'
 rcParams['savefig.pad_inches'] = 0.0
 
 
-class ScanData(object):
+class ScanData(GridIndexing):
     """
     EBSD scan data
 
@@ -59,8 +59,6 @@ class ScanData(object):
         Header of the scan data file
         Default: ''
     """
-    __supported_grids = ['hexgrid', 'sqrgrid']
-
     __2pi = 2*np.pi
     __cos60 = .5  # cos(60deg)
     __sin60 = .5*3.**.5  # sin(60deg)
@@ -98,34 +96,20 @@ class ScanData(object):
     __n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
 
     def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=''):
+        # Initializes base class GridIndexing
+        super(ScanData, self).__init__(grid, ncols_odd, ncols_even, nrows)
+
         self.data = data  # pandas DataFrame
-        self.grid = grid  # string (e.g., hexgrid)
-        if self.grid.lower() not in self.__supported_grids:
-            raise Exception('Unknown grid type "{}"'.format(self.grid))
+        if len(data) != self.N:
+            raise Exception(('Number of pixels ({}) does not match expected value '
+                             '({})').format(len(data), self.N))
+
         self.dx = dx  # float
         self.dy = dy  # float
-        self.ncols_odd = ncols_odd  # int
-        self.ncols_even = ncols_even  # int
-        self.nrows = nrows  # int
         self.header = header  # string
 
-        # total number of columns
-        if self.grid.lower() == 'hexgrid':
-            diff = abs(self.ncols_odd - self.ncols_even)
-            if diff != 1:
-                raise Exception(('| ncols_odd - ncols_even | ( | {} - {} | = {}) must be '
-                                 'equal to 1').format(self.ncols_odd, self.ncols_even, diff))
-            self.ncols = self.ncols_odd + self.ncols_even
-        else:
-            if self.ncols_odd != self.ncols_even:
-                raise Exception('NCOLS_ODD ({}) and NCOLS_EVEN ({}) should be equal for {}'.format(
-                    self.ncols_odd, self.ncols_even, self.grid))
-            self.ncols = self.ncols_odd
-        self.N = len(self.data)
-
-        # Mandatory columns
-        # .values: pandas Series to numpy array
-        self.index = self.data.index.values
+        # Compulsory columns
+        # (.values: pandas Series to numpy array)
         self.phi1 = self.data.phi1.values
         self.Phi = self.data.Phi.values
         self.phi2 = self.data.phi2.values
@@ -136,6 +120,7 @@ class ScanData(object):
         self.x = self.data.x.values
         self.y = self.data.y.values
         self.ph = self.data.ph.values
+
         # Optional columns
         try:
             self.IQ = self.data.IQ.values
@@ -178,131 +163,6 @@ class ScanData(object):
             self._R = euler_angles_to_rotation_matrix(
                 self.phi1, self.Phi, self.phi2)
         return self._R
-
-    @property
-    def i(self):
-        """
-        row number (0 -> nrows - 1)
-        """
-        if self._i is None:
-            if self.grid.lower() == 'hexgrid':
-                self._i = 2*(self.index//self.ncols)
-                shift = np.tile([0]*self.ncols_odd + [1]*self.ncols_even, self.nrows)
-                self._i += shift[:self.N]
-            else:
-                self._i = self.index // self.ncols
-        return self._i
-
-    @property
-    def j(self):
-        """
-        col number (0 -> ncols - 1)
-        """
-        if self._j is None:
-            rem = self.index % self.ncols  # remainder
-            if self.grid.lower() == 'hexgrid':
-                rem_div = rem//self.ncols_odd
-                rem_rem = rem % self.ncols_odd
-                # special case
-                if self.ncols_odd < self.ncols_even:
-                    rem_div[self.ncols-1::self.ncols] = 1
-                    rem_div = 1 - rem_div
-                    rem_rem[self.ncols-1::self.ncols] = self.ncols_even - 1
-                self._j = rem_div + 2*rem_rem
-            else:
-                self._j = rem
-        return self._j
-
-    def ij_to_index(self, i, j):
-        """
-        i, j grid positions to pixel index (self.index)
-
-        Parameters
-        ----------
-        i : int
-            Column number (y coordinate) according to grid description below
-        j : int
-            Row number (x coordinate) according to grid description below
-
-        Returns
-        -------
-        index : int
-            Pixel index
-
-        Grid description for HexGrid:
-        -----------------------------
-        o : ncols_odd
-        c : ncols_odd + ncols_even
-        r : nrows
-        n : total number of pixels
-
-        ===================================
-                     index
-         0     1     2       o-2   o-1
-         *     *     *  ...   *     *
-            o    o+1            c-1
-            *     *     ...      *
-         c    c+1   c+2     c+o-2 c+o-1
-         *     *     *  ...   *     *
-                         .
-                         .
-                         .      n-1
-            *     *     ...      *
-
-        ===================================
-                      j, i
-         0  1  2  3  4   j         m-1
-         *     *     *  ...   *     *   0
-
-            *     *     ...      *      1
-
-         *     *     *  ...   *     *   2
-                         .
-                         .              i
-                         .
-            *     *     ...      *     r-1
-
-        Grid description for SqrGrid
-        ----------------------------
-        c : ncols_odd = ncols_even
-        r : nrows
-        n : total number of pixels
-
-        ===================================
-                     index
-         0     1     2       c-2   c-1
-         *     *     *  ...   *     *
-         c    c+1   c+2     2c-2  2c-1
-         *     *     *  ...   *     *
-                         .
-                         .
-                         .   n-2   n-1
-         *     *     *  ...   *     *
-
-        ===================================
-                      j, i
-         0     1     2   j   n-2   n-1
-         *     *     *  ...   *     *   0
-
-         *     *     *        *     *   1
-                         .
-                         .              i
-                         .
-         *     *     *  ...   *     *  r-1
-
-        """
-        if self.grid.lower() == 'hexgrid':
-            index = (i//2)*self.ncols + (j//2)
-            # ncols_odd > ncols_even is the normal situation
-            if self.ncols_odd > self.ncols_even:
-                index += (j % 2)*self.ncols_odd
-            else:
-                index += (1 - j % 2)*self.ncols_odd
-            # this turns negative every i, j pair where j > ncols
-            index *= (1 - self.N*(j//self.ncols))
-        else:
-            index = i*self.ncols + j
-        return index
 
     def get_neighbors_oim(self, distance):
         """
@@ -575,7 +435,7 @@ class ScanData(object):
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_property(self, prop, ax=None, colordict=None, colorfill='black',
+    def plot_property(self, prop, propname='z', ax=None, colordict=None, colorfill='black',
                       fillvalue=np.nan, sel=None, gray=None, tiling=None, w=2048,
                       scalebar=True, colorbar=True, plotlimits=None, verbose=True,
                       **kwargs):
@@ -587,6 +447,9 @@ class ScanData(object):
         prop : array shape(N)
             Property to be plotted provided as np.ndarray(N), where N is the
             size of the data file
+        propname : str
+            Property name (optional)
+            Default: value
         ax : AxesSubplot object (optional)
             The pole figure will be plotted in the provided object 'ax'
             Default: None
@@ -666,8 +529,9 @@ class ScanData(object):
                 sel = sel & sellim
 
         ebsdmap = plot_property(prop, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
-                                self.dx, self.dy, ax, colordict, colorfill, fillvalue, sel, gray,
-                                self.grid, tiling, w, scalebar, colorbar, verbose, **kwargs)
+                                self.dx, self.dy, propname, ax, colordict, colorfill, fillvalue,
+                                sel, gray, self.grid, tiling, w, scalebar, colorbar, verbose,
+                                **kwargs)
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
@@ -746,8 +610,9 @@ class ScanData(object):
             ph_code = set(self.ph)
             ccycler = cycle(self.colors)
             colordict = {ph: next(ccycler) for ph in ph_code}
-        ebsdmap = self.plot_property(self.ph, ax, colordict, colorfill, fillvalue, sel, gray,
-                                     tiling, w, scalebar, False, plotlimits, verbose, **kwargs)
+        ebsdmap = self.plot_property(self.ph, 'phase', ax, colordict, colorfill, fillvalue, sel,
+                                     gray, tiling, w, scalebar, False, plotlimits, verbose,
+                                     **kwargs)
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
@@ -843,7 +708,7 @@ class ScanData(object):
                 sel = sel & sellim
 
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
-        ebsdmap = self.plot_property(KAM, ax, None, colorfill, fillvalue, sel, gray, tiling,
+        ebsdmap = self.plot_property(KAM, 'KAM', ax, None, colorfill, fillvalue, sel, gray, tiling,
                                      w, scalebar, colorbar, None, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
         return ebsdmap

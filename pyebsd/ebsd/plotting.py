@@ -13,7 +13,7 @@ from .orientation import euler_angles_to_rotation_matrix, PF, IPF, stereographic
 from ..draw import modify_show, set_tight_plt, draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
 
-__all__ = ['set_threshold_tiling', 'EBSDMap', 'get_color_IPF',
+__all__ = ['set_threshold_tiling', 'GridIndexing', 'EBSDMap', 'get_color_IPF',
            'unit_triangle', 'plot_PF', 'plot_property', 'plot_IPF']
 
 __THRESHOLD_TILING__ = 10000
@@ -32,31 +32,207 @@ def set_threshold_tiling(threshold):
     __THRESHOLD_TILING__ = int(threshold)
 
 
-class _CoordsFormatter(object):
+class GridIndexing(object):
+    __supported_grids = ['hexgrid', 'sqrgrid']
+
+    def __init__(self, grid, ncols_odd, ncols_even, nrows):
+        self.grid = grid  # string (e.g., hexgrid)
+        if self.grid.lower() not in self.__supported_grids:
+            raise Exception('Unknown grid type "{}"'.format(self.grid))
+
+        self.ncols_odd = ncols_odd  # int
+        self.ncols_even = ncols_even  # int
+        self.nrows = nrows  # int
+        self.ncols = None
+        self.N = None
+
+        # total number of columns
+        if self.grid.lower() == 'hexgrid':
+            diff = abs(self.ncols_odd - self.ncols_even)
+            if diff != 1:
+                raise Exception(('| ncols_odd - ncols_even | ( | {} - {} | = {}) must be '
+                                 'equal to 1').format(self.ncols_odd, self.ncols_even, diff))
+            # Number of columns according to indexing system (see ij_to_index)
+            self.ncols = self.ncols_odd + self.ncols_even
+            # Number of pixels
+            self.N = self.ncols_even*(self.nrows//2) + self.ncols_odd*(self.nrows - self.nrows//2)
+        elif self.grid.lower() == 'sqrgrid':
+            if self.ncols_odd != self.ncols_even:
+                raise Exception('NCOLS_ODD ({}) and NCOLS_EVEN ({}) should be equal for {}'.format(
+                    self.ncols_odd, self.ncols_even, self.grid))
+
+            # Number of columns according to indexing system (see ij_to_index)
+            self.ncols = self.ncols_odd
+            # Number of pixels
+            self.N = self.ncols * self.nrows
+
+        self.index = np.arange(self.N)
+
+    @property
+    def i(self):
+        """
+        row number (0 -> nrows - 1)
+        """
+        if self._i is None:
+            if self.grid.lower() == 'hexgrid':
+                self._i = 2*(self.index//self.ncols)
+                shift = np.tile([0]*self.ncols_odd + [1]*self.ncols_even, self.nrows)
+                self._i += shift[:self.N]
+            else:
+                self._i = self.index // self.ncols
+        return self._i
+
+    @property
+    def j(self):
+        """
+        col number (0 -> ncols - 1)
+        """
+        if self._j is None:
+            rem = self.index % self.ncols  # remainder
+            if self.grid.lower() == 'hexgrid':
+                rem_div = rem//self.ncols_odd
+                rem_rem = rem % self.ncols_odd
+                # special case
+                if self.ncols_odd < self.ncols_even:
+                    rem_div[self.ncols-1::self.ncols] = 1
+                    rem_div = 1 - rem_div
+                    rem_rem[self.ncols-1::self.ncols] = self.ncols_even - 1
+                self._j = rem_div + 2*rem_rem
+            else:
+                self._j = rem
+        return self._j
+
+    def ij_to_index(self, i, j):
+        """
+        i, j grid positions to pixel index (self.index)
+
+        Parameters
+        ----------
+        i : int
+            Column number (y coordinate) according to grid description below
+        j : int
+            Row number (x coordinate) according to grid description below
+
+        Returns
+        -------
+        index : int
+            Pixel index
+
+        Grid description for HexGrid:
+        -----------------------------
+        o : ncols_odd
+        c : ncols_odd + ncols_even
+        r : nrows
+        n : total number of pixels
+
+        ===================================
+                     index
+         0     1     2       o-2   o-1
+         *     *     *  ...   *     *
+            o    o+1            c-1
+            *     *     ...      *
+         c    c+1   c+2     c+o-2 c+o-1
+         *     *     *  ...   *     *
+                         .
+                         .
+                         .      n-1
+            *     *     ...      *
+
+        ===================================
+                      j, i
+         0  1  2  3  4   j         m-1
+         *     *     *  ...   *     *   0
+
+            *     *     ...      *      1
+
+         *     *     *  ...   *     *   2
+                         .
+                         .              i
+                         .
+            *     *     ...      *     r-1
+
+        Grid description for SqrGrid
+        ----------------------------
+        c : ncols_odd = ncols_even
+        r : nrows
+        n : total number of pixels
+
+        ===================================
+                     index
+         0     1     2       c-2   c-1
+         *     *     *  ...   *     *
+         c    c+1   c+2     2c-2  2c-1
+         *     *     *  ...   *     *
+                         .
+                         .
+                         .   n-2   n-1
+         *     *     *  ...   *     *
+
+        ===================================
+                      j, i
+         0     1     2   j   n-2   n-1
+         *     *     *  ...   *     *   0
+
+         *     *     *        *     *   1
+                         .
+                         .              i
+                         .
+         *     *     *  ...   *     *  r-1
+
+        """
+        if self.grid.lower() == 'hexgrid':
+            index = (i//2)*self.ncols + (j//2)
+            # ncols_odd > ncols_even is the normal situation
+            if self.ncols_odd > self.ncols_even:
+                index += (j % 2)*self.ncols_odd
+            else:
+                index += (1 - j % 2)*self.ncols_odd
+            # this turns negative every i, j pair where j > ncols
+            index *= (1 - self.N*(j//self.ncols))
+        else:
+            index = i*self.ncols + j
+        return index
+
+
+class CoordsFormatter(object):
     """
     Formats coordinates and z values in interactive plot mode
     """
 
-    def __init__(self, extent, Z, name='z'):
-        self.xmin = min(extent[:2])
-        self.ymin = min(extent[2:])
-        self.xrng = abs(extent[1] - extent[0])
-        self.yrng = abs(extent[3] - extent[2])
+    def __init__(self, grid_indexing, xlim, ylim, Z, name='z'):
+        self.grid_indexing = grid_indexing
+        self.xmin, self.xmax = sorted(xlim)
+        self.ymin, self.ymax = sorted(ylim)
+        self.dx = (self.xmax - self.xmin)/(self.grid_indexing.ncols - 1)
+        self.dy = (self.ymax - self.ymin)/(self.grid_indexing.nrows - 1)
         self.Z = Z
-        self.name = name
-        self.jmax = self.Z.shape[1] - 1
-        self.imax = self.Z.shape[0] - 1
+        self.valuefmt = '  {}='.format(name)
+        self.valuefmt += '{:g}' if self.Z.ndim == 1 else '{}'
 
     def __call__(self, x, y):
-        j = int(round(self.jmax*(x - self.xmin)/self.xrng))
-        i = int(round(self.imax*(y - self.ymin)/self.yrng))
-        string = 'x={:g}    y={:g}'.format(x, y)
-        if i > 0 and j > 0:
+        string = ''
+        i = int(round((y - self.ymin)/self.dy))
+        if self.grid_indexing.grid.lower() == 'hexgrid':
+            # This part is tricky because the odd and even rows are shifted from each other
+            j = int((x - self.xmin)/self.dx) + 1
+            if self.grid_indexing.ncols_odd > self.grid_indexing.ncols_even:
+                if i % 2 != j % 2:
+                    j -= 1
+            else:
+                if i % 2 == j % 2:
+                    j -= 1
+        else:
+            j = int(round((x - self.xmin)/self.dx))
+        if i >= 0 and j >= 0:
+            idx = self.grid_indexing.ij_to_index(i, j)
+            # string += 'i={:}  j={:}  '.format(i, j)  # useful for testing
+            string += 'index={:}  x={:g}  y={:g}'.format(idx, x, y)
             try:
-                if not np.any(np.isnan(self.Z[i, j])):
-                    string += '    {}={}'.format(self.name, self.Z[i, j])
-            except:
+                if not np.any(np.isnan(self.Z[idx])):
+                    string += self.valuefmt.format(self.Z[idx])
+            except Exception as ex:
                 pass
+
         return string
 
 
@@ -140,7 +316,8 @@ class EBSDMap(object):
         """
         Initializes RectangleSelector2
         """
-        self.selector = RectangleSelector2(self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
+        self.selector = RectangleSelector2(
+            self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
         return self.selector
 
 
@@ -254,6 +431,8 @@ def unit_triangle(ax=None, n=512, **kwargs):
     # x and y max values in the stereographic projection corresponding to
     # the unit triangle
     xmax, ymax = 2.**.5 - 1, (3.**.5 - 1)/2.
+    dx = xmax/(n-1)
+    dy = ymax/(n-1)
 
     # map n x n square around unit triangle
     xp, yp = np.meshgrid(np.linspace(0, xmax, n), np.linspace(0, ymax, n))
@@ -279,12 +458,14 @@ def unit_triangle(ax=None, n=512, **kwargs):
     ax.set_aspect('equal')
     ax.axis('off')
     # Plots the unit triangle
-    img = ax.imshow(img_pil, interpolation='None', origin='lower', extent=(0, xmax, 0, ymax))
+    img = ax.imshow(img_pil, interpolation='None', origin='lower',
+                    extent=(-dx/2, xmax+dx/2, -dy/2, ymax+dy/2))
 
     # Coordinates displayed in the interactive plot window
     _uvw = uvw.copy()
     _uvw[~sel] = [np.nan, np.nan, np.nan]
-    ax.format_coord = _CoordsFormatter((0, xmax, 0, ymax), _uvw.reshape(n, n, 3).round(6), 'd')
+    ax.format_coord = CoordsFormatter(GridIndexing('SqrGrid', n, n, n),
+                                      [0, xmax], [0, ymax], _uvw.round(6), 'd')
 
     # Calculate coordinates of borders of unit triangle
     t = np.linspace(0, 1., n)
@@ -424,7 +605,8 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
         fill = kwargs.pop('fill', True)
         bins = kwargs.pop('bins', (256, 256))
 
-        hist, xedges, yedges = np.histogram2d(yp.ravel(), xp.ravel(), bins=bins, range=[[-1, 1], [-1, 1]])
+        hist, xedges, yedges = np.histogram2d(yp.ravel(), xp.ravel(), bins=bins,
+                                              range=[[-1, 1], [-1, 1]])
         fn = kwargs.pop('fn', 'sqrt')
 
         if fn:
@@ -474,9 +656,9 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
 
 
 def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
-                  ax=None, colordict=None, colorfill='black', fillvalue=np.nan,
-                  sel=None, gray=None, grid='HexGrid', tiling=None, w=2048,
-                  scalebar=True, colorbar=True, verbose=True, **kwargs):
+                  propname='z', ax=None, colordict=None, colorfill='black',
+                  fillvalue=np.nan, sel=None, gray=None, grid='HexGrid', tiling=None,
+                  w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
     """
     Plots any EBSD property
 
@@ -503,6 +685,9 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         Grid spacing along y coordinates. If None is provided, guesses
         it from y.
         Default: None
+    propname : str
+        Property name (optional)
+        Default: value
     ax : AxesSubplot object (optional)
         The pole figure will be plotted in the provided object 'ax'
         Default: None
@@ -566,13 +751,8 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         sys.stdout.write('Plotting property map... ')
         sys.stdout.flush()
 
-    # get N based on nrows, ncols_odd and ncols_even
-    if grid.lower() == 'hexgrid':
-        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
-    elif grid.lower() == 'sqrgrid':
-        N = nrows*ncols_odd
-    else:
-        raise Exception('Unknown grid type "{}"'.format(grid))
+    grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows)
+    N = grid_indexing.N
 
     if N != len(prop):
         raise Exception('N and len(prop) differ')
@@ -642,10 +822,10 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         # normalizes prop to range [0,1] and makes rgb colormap
         color[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])[:, :3]
 
-    # makes copy of prop
-    _prop = prop.copy()
     # filling invalid/non-selected data points
     color[not_sel] = colorfill
+    # makes copy of prop for displaying in the interactive window
+    _prop = prop.copy()
     if fillvalue is np.nan:
         _prop = _prop.astype(float)
     _prop[not_sel] = fillvalue
@@ -670,20 +850,6 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
     else:
         ax.cla()
         fig = ax.get_figure()
-
-    if grid.lower() == 'hexgrid':
-        N, ncols = 2*N, 2*min(ncols_odd, ncols_even)  # N pixels and ncols for rect grid plotting
-        if ncols_odd > ncols_even:
-            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                            np.arange(ncols+1, N, 2*(ncols+1))])
-        else:
-            rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
-                            np.arange(2*ncols+1, N, 2*(ncols+1))])
-        _prop = np.repeat(_prop, 2, axis=0)
-        _prop = np.delete(_prop, rm, axis=0)
-    else:
-        ncols = ncols_odd
-    _prop = _prop.reshape(nrows, ncols)
 
     # plotting maps
     if tiling == 'hex':
@@ -713,7 +879,16 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
             # double pixels
             sel = np.repeat(sel, 2)
             color = np.repeat(color, 2, axis=0)
+            # N pixels and ncols for rect grid plotting
+            N, ncols = 2*N, 2*min(ncols_odd, ncols_even)
+
             # remove extra pixels
+            if ncols_odd > ncols_even:
+                rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                                np.arange(ncols+1, N, 2*(ncols+1))])
+            else:
+                rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
+                                np.arange(2*ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
@@ -739,13 +914,14 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         color = color.reshape(nrows, ncols, -1)
 
         img_pil = toimage(color[imin:imax, jmin:jmax, :])
-        img_pil = img_pil.resize(size=(w, h))
+        img_pil = img_pil.resize(size=(w, h), resample=Image.BOX)
 
     else:
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), _prop)
+    ax.format_coord = CoordsFormatter(grid_indexing, [x.min(), x.max()], [y.min(), y.max()],
+                                      _prop, propname)
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
@@ -848,13 +1024,8 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
-    # get N based on nrows, ncols_odd and ncols_even
-    if grid.lower() == 'hexgrid':
-        N = int((nrows//2)*(ncols_odd + ncols_even) + (nrows % 2)*ncols_odd)
-    elif grid.lower() == 'sqrgrid':
-        N = nrows*ncols_odd
-    else:
-        raise Exception('Unknown grid type "{}"'.format(grid))
+    grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows)
+    N = grid_indexing.N
 
     if N != len(M):
         raise Exception('N and len(M) differ')
@@ -937,20 +1108,6 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         ax.cla()
         fig = ax.get_figure()
 
-    if grid.lower() == 'hexgrid':
-        N, ncols = 2*N, 2*min(ncols_odd, ncols_even)  # N pixels and ncols for rect grid plotting
-        if ncols_odd > ncols_even:
-            rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                            np.arange(ncols+1, N, 2*(ncols+1))])
-        else:
-            rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
-                            np.arange(2*ncols+1, N, 2*(ncols+1))])
-        d_IPF = np.repeat(d_IPF, 2, axis=0)
-        d_IPF = np.delete(d_IPF, rm, axis=0)
-    else:
-        ncols = ncols_odd
-    d_IPF = d_IPF.reshape(nrows, ncols, -1)
-
     # plotting maps
     if tiling == 'hex':
         color = color[sel]
@@ -981,7 +1138,16 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
             # double pixels
             sel = np.repeat(sel, 2)
             color = np.repeat(color, 2, axis=0)
+            # N pixels and ncols for rect grid plotting
+            N, ncols = 2*N, 2*min(ncols_odd, ncols_even)
+
             # remove extra pixels
+            if ncols_odd > ncols_even:
+                rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
+                                np.arange(ncols+1, N, 2*(ncols+1))])
+            else:
+                rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
+                                np.arange(2*ncols+1, N, 2*(ncols+1))])
             sel = np.delete(sel, rm, axis=0)
             color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
@@ -1007,13 +1173,14 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         color = color.reshape(nrows, ncols, -1)
 
         img_pil = toimage(color[imin:imax, jmin:jmax, :])
-        img_pil = img_pil.resize(size=(w, h))
+        img_pil = img_pil.resize(size=(w, h), resample=Image.BOX)
 
     else:
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = _CoordsFormatter((x.min(), x.max(), y.max(), y.min()), d_IPF.round(6), 'd')
+    ax.format_coord = CoordsFormatter(grid_indexing, [x.min(), x.max()], [y.min(), y.max()],
+                                      d_IPF.round(6), 'd')
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
