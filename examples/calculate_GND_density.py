@@ -74,10 +74,7 @@ if __name__ == '__main__':
     def plot_kam_vs_distance(event):
         if event.inaxes == ax1:
             try:
-                # i, j coordinates of the click event
-                i = int(round(event.ydata/scan.dy))
-                j = int(2*round(event.xdata/scan.dx))
-                idx = scan.ij_to_index(i, j)
+                idx = scan.xy_to_index(event.xdata, event.ydata)
             except:
                 pass
 

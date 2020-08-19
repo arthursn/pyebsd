@@ -97,19 +97,21 @@ class ScanData(GridIndexing):
 
     def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=''):
         # Initializes base class GridIndexing
-        super(ScanData, self).__init__(grid, ncols_odd, ncols_even, nrows)
+        super(ScanData, self).__init__(grid, ncols_odd, ncols_even, nrows, dx, dy)
 
         self.data = data  # pandas DataFrame
         if len(data) != self.N:
             raise Exception(('Number of pixels ({}) does not match expected value '
                              '({})').format(len(data), self.N))
 
-        self.dx = dx  # float
-        self.dy = dy  # float
         self.header = header  # string
 
-        # Compulsory columns
+        # Compulsory columns in data
         # (.values: pandas Series to numpy array)
+        self.x = self.data.x.values
+        self.x -= self.x.min()  # makes sure min(x) == 0
+        self.y = self.data.y.values
+        self.y -= self.y.min()  # makes sure min(y) == 0
         self.phi1 = self.data.phi1.values
         self.Phi = self.data.Phi.values
         self.phi2 = self.data.phi2.values
@@ -117,8 +119,6 @@ class ScanData(GridIndexing):
                 abs(self.phi2.max()) > self.__2pi):
             print('Euler angles out of allowed range! Please check if they are really '
                   'provided in radians.')
-        self.x = self.data.x.values
-        self.y = self.data.y.values
         self.ph = self.data.ph.values
 
         # Optional columns

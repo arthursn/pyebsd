@@ -35,7 +35,7 @@ def set_threshold_tiling(threshold):
 class GridIndexing(object):
     __supported_grids = ['hexgrid', 'sqrgrid']
 
-    def __init__(self, grid, ncols_odd, ncols_even, nrows):
+    def __init__(self, grid, ncols_odd, ncols_even, nrows, dx=None, dy=None):
         self.grid = grid  # string (e.g., hexgrid)
         if self.grid.lower() not in self.__supported_grids:
             raise Exception('Unknown grid type "{}"'.format(self.grid))
@@ -43,6 +43,9 @@ class GridIndexing(object):
         self.ncols_odd = ncols_odd  # int
         self.ncols_even = ncols_even  # int
         self.nrows = nrows  # int
+        self.dx = dx
+        self.dy = dy
+
         self.ncols = None
         self.N = None
 
@@ -50,13 +53,13 @@ class GridIndexing(object):
         if self.grid.lower() == 'hexgrid':
             diff = abs(self.ncols_odd - self.ncols_even)
             if diff != 1:
-                raise Exception(('| ncols_odd - ncols_even | ( | {} - {} | = {}) must be '
-                                 'equal to 1').format(self.ncols_odd, self.ncols_even, diff))
+                raise Exception(('| ncols_odd - ncols_even | ( | {} - {} | = {}) must '
+                                 'be 1').format(self.ncols_odd, self.ncols_even, diff))
             # Number of columns according to indexing system (see ij_to_index)
             self.ncols = self.ncols_odd + self.ncols_even
             # Number of pixels
             self.N = self.ncols_even*(self.nrows//2) + self.ncols_odd*(self.nrows - self.nrows//2)
-        elif self.grid.lower() == 'sqrgrid':
+        else:
             if self.ncols_odd != self.ncols_even:
                 raise Exception('NCOLS_ODD ({}) and NCOLS_EVEN ({}) should be equal for {}'.format(
                     self.ncols_odd, self.ncols_even, self.grid))
@@ -193,43 +196,63 @@ class GridIndexing(object):
             index = i*self.ncols + j
         return index
 
+    def xy_to_index(self, x, y):
+        """
+        Converts x, y coordinates to pixel index.
+        Notice that this method does not support x, y as arrays
 
-class CoordsFormatter(object):
-    """
-    Formats coordinates and z values in interactive plot mode
-    """
+        Parameters
+        ----------
+        x : float
+            x coordinate
+        y : float
+            y coordinate
 
-    def __init__(self, grid_indexing, xlim, ylim, Z, name='z'):
-        self.grid_indexing = grid_indexing
-        self.xmin, self.xmax = sorted(xlim)
-        self.ymin, self.ymax = sorted(ylim)
-        self.dx = (self.xmax - self.xmin)/(self.grid_indexing.ncols - 1)
-        self.dy = (self.ymax - self.ymin)/(self.grid_indexing.nrows - 1)
-        self.Z = Z
-        self.valuefmt = '  {}='.format(name)
-        self.valuefmt += '{:g}' if self.Z.ndim == 1 else '{}'
+        Returns
+        -------
+        index : int
+            Pixel index
+        """
+        index = -1
 
-    def __call__(self, x, y):
-        string = ''
-        i = int(round((y - self.ymin)/self.dy))
-        if self.grid_indexing.grid.lower() == 'hexgrid':
+        i = int(round(y/self.dy))
+        if self.grid.lower() == 'hexgrid':
             # This part is tricky because the odd and even rows are shifted from each other
-            j = int((x - self.xmin)/self.dx) + 1
-            if self.grid_indexing.ncols_odd > self.grid_indexing.ncols_even:
+            j = int(2.*x/self.dx) + 1  # dx in terms of j is actually half of the original value
+            if self.ncols_odd > self.ncols_even:
                 if i % 2 != j % 2:
                     j -= 1
             else:
                 if i % 2 == j % 2:
                     j -= 1
         else:
-            j = int(round((x - self.xmin)/self.dx))
-        if i >= 0 and j >= 0:
-            idx = self.grid_indexing.ij_to_index(i, j)
-            # string += 'i={:}  j={:}  '.format(i, j)  # useful for testing
-            string += 'index={:}  x={:g}  y={:g}'.format(idx, x, y)
+            j = int(round(x/self.dx))
+
+        if i >= 0 and i < self.nrows and j >= 0 and j < self.ncols:
+            index = self.ij_to_index(i, j)
+
+        return index
+
+
+class CoordsFormatter(object):
+    """
+    Formats coordinates and z values in interactive plot mode
+    """
+
+    def __init__(self, grid_indexing, Z, name='z'):
+        self.grid_indexing = grid_indexing
+        self.Z = Z
+        self.valuefmt = '  {}='.format(name)
+        self.valuefmt += '{:g}' if self.Z.ndim == 1 else '{}'
+
+    def __call__(self, x, y):
+        string = ''
+        index = self.grid_indexing.xy_to_index(x, y)
+        if index >= 0:
+            string += 'index={:}  x={:g}  y={:g}'.format(index, x, y)
             try:
-                if not np.any(np.isnan(self.Z[idx])):
-                    string += self.valuefmt.format(self.Z[idx])
+                if not np.any(np.isnan(self.Z[index])):
+                    string += self.valuefmt.format(self.Z[index])
             except Exception as ex:
                 pass
 
@@ -464,8 +487,7 @@ def unit_triangle(ax=None, n=512, **kwargs):
     # Coordinates displayed in the interactive plot window
     _uvw = uvw.copy()
     _uvw[~sel] = [np.nan, np.nan, np.nan]
-    ax.format_coord = CoordsFormatter(GridIndexing('SqrGrid', n, n, n),
-                                      [0, xmax], [0, ymax], _uvw.round(6), 'd')
+    ax.format_coord = CoordsFormatter(GridIndexing('SqrGrid', n, n, n), _uvw.round(6), 'd')
 
     # Calculate coordinates of borders of unit triangle
     t = np.linspace(0, 1., n)
@@ -751,7 +773,12 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         sys.stdout.write('Plotting property map... ')
         sys.stdout.flush()
 
-    grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows)
+    if dx is None:
+        dx = (np.max(x) - np.min(x))/ncols_odd
+    if dy is None:
+        dy = (np.max(y) - np.min(y))/(nrows - 1)
+
+    grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows, dx, dy)
     N = grid_indexing.N
 
     if N != len(prop):
@@ -779,11 +806,6 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
-
-    if dx is None:
-        dx = (np.max(x) - np.min(x))/ncols_odd
-    if dy is None:
-        dy = (np.max(y) - np.min(y))/(nrows - 1)
 
     if tiling == 'hex':
         edge_length = dx/3.**.5
@@ -920,8 +942,7 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = CoordsFormatter(grid_indexing, [x.min(), x.max()], [y.min(), y.max()],
-                                      _prop, propname)
+    ax.format_coord = CoordsFormatter(grid_indexing, _prop, propname)
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
@@ -1024,7 +1045,12 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         sys.stdout.write('Plotting Inverse Pole Figure... ')
         sys.stdout.flush()
 
-    grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows)
+    if dx is None:
+        dx = (np.max(x) - np.min(x))/ncols_odd
+    if dy is None:
+        dy = (np.max(y) - np.min(y))/(nrows - 1)
+
+    grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows, dx, dy)
     N = grid_indexing.N
 
     if N != len(M):
@@ -1051,11 +1077,6 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
-
-    if dx is None:
-        dx = (np.max(x) - np.min(x))/ncols_odd
-    if dy is None:
-        dy = (np.max(y) - np.min(y))/(nrows - 1)
 
     if tiling == 'hex':
         edge_length = dx/3.**.5
@@ -1179,8 +1200,7 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = CoordsFormatter(grid_indexing, [x.min(), x.max()], [y.min(), y.max()],
-                                      d_IPF.round(6), 'd')
+    ax.format_coord = CoordsFormatter(grid_indexing, d_IPF.round(6), 'd')
     img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
 
     # add scalebar
