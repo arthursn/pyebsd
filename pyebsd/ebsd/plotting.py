@@ -111,14 +111,14 @@ class GridIndexing(object):
 
         Parameters
         ----------
-        i : int
+        i : int or numpy ndarray
             Column number (y coordinate) according to grid description below
-        j : int
+        j : int or numpy ndarray
             Row number (x coordinate) according to grid description below
 
         Returns
         -------
-        index : int
+        index : int or numpy ndarray
             Pixel index
 
         Grid description for HexGrid:
@@ -188,10 +188,17 @@ class GridIndexing(object):
             # ncols_odd > ncols_even is the normal situation
             if self.ncols_odd > self.ncols_even:
                 index += (j % 2)*self.ncols_odd
+                forbidden = i % 2 != j % 2  # forbidden i, j pairs
             else:
                 index += (1 - j % 2)*self.ncols_odd
-            # this turns negative every i, j pair where j > ncols
+                forbidden = i % 2 == j % 2
+            # This turns negative every i, j pair where j > ncols
             index *= (1 - self.N*(j//self.ncols))
+            # Turns forbidden values negative
+            index = np.array(index)
+            index[forbidden] = -1
+            if index.ndim == 0:
+                index = int(index)
         else:
             index = i*self.ncols + j
         return index
@@ -199,39 +206,35 @@ class GridIndexing(object):
     def xy_to_index(self, x, y):
         """
         Converts x, y coordinates to pixel index.
-        Notice that this method does not support x, y as arrays
 
         Parameters
         ----------
-        x : float
+        x : float or numpy ndarray
             x coordinate
-        y : float
+        y : float or numpy ndarray
             y coordinate
 
         Returns
         -------
-        index : int
+        index : int or numpy ndarray
             Pixel index
         """
-        index = -1
-
-        i = int(round(y/self.dy))
+        i = np.round(y/self.dy).astype(int)
         if self.grid.lower() == 'hexgrid':
             # This part is tricky because the odd and even rows are shifted from each other
-            j = int(2.*x/self.dx) + 1  # dx in terms of j is actually half of the original value
+            oldtype = type(x)
+            # dx in terms of j is actually half of the original value
+            j = np.array(2.*x/self.dx + 1).astype(int)
             if self.ncols_odd > self.ncols_even:
-                if i % 2 != j % 2:
-                    j -= 1
+                forbidden = i % 2 != j % 2
             else:
-                if i % 2 == j % 2:
-                    j -= 1
+                forbidden = i % 2 == j % 2
+            # Approximate forbidden values by nearest pixel
+            j[forbidden] -= 1
         else:
-            j = int(round(x/self.dx))
+            j = np.round(x/self.dx).astype(int)
 
-        if i >= 0 and i < self.nrows and j >= 0 and j < self.ncols:
-            index = self.ij_to_index(i, j)
-
-        return index
+        return self.ij_to_index(i, j)
 
 
 class CoordsFormatter(object):
