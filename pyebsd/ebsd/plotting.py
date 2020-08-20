@@ -35,7 +35,7 @@ def set_threshold_tiling(threshold):
 class GridIndexing(object):
     __supported_grids = ['hexgrid', 'sqrgrid']
 
-    def __init__(self, grid, ncols_odd, ncols_even, nrows, dx=None, dy=None):
+    def __init__(self, grid, ncols_odd, ncols_even, nrows, dx, dy):
         self.grid = grid  # string (e.g., hexgrid)
         if self.grid.lower() not in self.__supported_grids:
             raise Exception('Unknown grid type "{}"'.format(self.grid))
@@ -490,7 +490,8 @@ def unit_triangle(ax=None, n=512, **kwargs):
     # Coordinates displayed in the interactive plot window
     _uvw = uvw.copy()
     _uvw[~sel] = [np.nan, np.nan, np.nan]
-    ax.format_coord = CoordsFormatter(GridIndexing('SqrGrid', n, n, n), _uvw.round(6), 'd')
+    ax.format_coord = CoordsFormatter(GridIndexing('SqrGrid', n, n, n, dx, dy),
+                                      _uvw.round(6), 'd')
 
     # Calculate coordinates of borders of unit triangle
     t = np.linspace(0, 1., n)
