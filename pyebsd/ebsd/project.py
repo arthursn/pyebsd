@@ -784,11 +784,10 @@ class ScanData(GridIndexing):
             File name
 
         **kwargs :
-            kwargs parameters are passed to fig.savefig(fname, **kwargs) 
+            kwargs parameters are passed to ebsdmap.fig.savefig(fname, **kwargs) 
             function
         """
-        kwargs.update({'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0})
-        self.figs[-1].savefig(fname, **kwargs)
+        self.ebsdmaps[-1].savefig(fname, **kwargs)
 
     def save_ang_file(self, fname, sel=None, **kwargs):
         """

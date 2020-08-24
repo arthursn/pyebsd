@@ -346,6 +346,23 @@ class EBSDMap(object):
             self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
         return self.selector
 
+    def savefig(self, fname, **kwargs):
+        """
+        Saves EBSD map
+
+        Parameters
+        ----------
+        fname : str
+            File name
+
+        **kwargs :
+            kwargs parameters are passed to fig.savefig(fname, **kwargs) 
+            function
+        """
+        kw = {'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0}
+        kw.update(kwargs)
+        self.fig.savefig(fname, **kw)
+
 
 def _calculate_barycenter_unit_triangle():
     """
