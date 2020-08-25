@@ -393,12 +393,12 @@ def kernel_average_misorientation(M, neighbors, sel=None, maxmis=None, out='deg'
 
     misang[outliers] = 0.
     nneighbors = np.count_nonzero(~outliers, axis=1)
-    nneighbors[nneighbors == 0] = 1  # to prevent division by 0
+
+    noneighbors = nneighbors == 0
+    nneighbors[noneighbors] = 1  # to prevent division by 0
 
     KAM = np.sum(misang, axis=1)/nneighbors
-
-    if maxmis is not None:
-        KAM[nneighbors == 0] = np.nan
+    KAM[noneighbors] = np.nan  # invalid KAM when nneighbors is 0
 
     return KAM
 
