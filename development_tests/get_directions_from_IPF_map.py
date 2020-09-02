@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import pyebsd
-from pyebsd.ebsd.plotting import _CoordsFormatter
 from PIL import Image
 
 
@@ -81,11 +80,12 @@ def reconstruct_IPF_map(fname):
     rgb1 = (rgb1.T*gray.T).T.astype(np.uint8)
 
     ax2.imshow(rgb1)
-    ax2.format_coord = _CoordsFormatter((0, w, 0, h), uvw, 'd')
     ax2.axis('off')
-    ax2.set_title('Reconstructed figure by first calculating\ndirections and then converting to colors')
+    ax2.set_title('Reconstructed figure by first calculating\n'
+                  'directions and then converting to colors')
 
-    diffmap = ax3.imshow((((rgb.astype(int) - rgb1.astype(int))**2.).sum(axis=2))**.5, vmin=0, vmax=2, cmap='magma')
+    diffmap = ax3.imshow((((rgb.astype(int) - rgb1.astype(int))**2.).sum(axis=2))
+                         ** .5, vmin=0, vmax=2, cmap='magma')
     ax3.axis('off')
     ax3.set_title('Difference (squared residuals)')
     cbar = fig.colorbar(diffmap, ax=ax3, extend='both')
