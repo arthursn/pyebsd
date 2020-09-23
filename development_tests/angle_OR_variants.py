@@ -1,37 +1,43 @@
-import sys
-from itertools import combinations
-
 import numpy as np
-import matplotlib.pyplot as plt
-
 import pyebsd
 
 
-def angle_OR_vars(V, ax=None):
-    pairs = list(combinations(list(range(len(V))), 2))
+def misorientation_between_variants(V):
     C = pyebsd.list_cubic_symmetry_operators()
-    T = np.dot(C, V).transpose([2, 0, 1, 3])
-    mis = [pyebsd.mis(T[p[0]], V[p[1]].T, math='min') for p in pairs]
-
+    mis = []
+    for i in range(len(V)):
+        for j in range(len(V)):
+            if i != j:
+                mis.append(pyebsd.misorientation_two_rotations(np.dot(C, V[i]), V[j].T, math='min'))
     return mis
 
 
-fig, ax = plt.subplots()
-
-V = pyebsd.OR()  # KS
-# V = pyebsd.OR(ps=([1,0,0],[1,0,0]), ds=([0,1,0],[0,1,1])) # Bain
-# V = pyebsd.OR(ps=([0,1,0],[1,0,1]), ds=([1,0,1],[-1,1,1])) # Pitsch
-# V = pyebsd.OR(ds=([1,1,0],[1,0,0]))
-# V = pyebsd.OR(ds=([1,1,0],[1,0,0])) # NW
-mis = angle_OR_vars(V)
-ax.hist(mis, bins=100)
+def plot_hist_misorientation_variants(V, ax, title=None):
+    mis = misorientation_between_variants(V)
+    ax.hist(mis, bins=100)
+    ax.set_xlabel('Misorientation angle (deg)')
+    ax.set_ylabel('Frequency')
+    ax.set_title(title)
 
 
-# mis = angle_OR_vars(V, ax=ax)
-# ax.hist(mis, bins=100)
+if __name__ == '__main__':
+    from itertools import cycle
+    import matplotlib.pyplot as plt
 
-# V = pyebsd.OR(ds=([5,12,17],[7,17,17])) # GT
-# mis = angle_OR_vars(V, ax=ax)
-# ax.hist(mis, bins=100)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.subplots_adjust(hspace=.3)
+    cyaxes = cycle(axes.ravel())
 
-plt.show()
+    V = pyebsd.OR()  # KS
+    plot_hist_misorientation_variants(V, next(cyaxes), 'KS OR')
+
+    V = pyebsd.OR(ds=([1, 1, 0], [1, 0, 0]))  # NW
+    plot_hist_misorientation_variants(V, next(cyaxes), 'NW OR')
+
+    V = pyebsd.OR(ps=([1, 0, 0], [1, 0, 0]), ds=([0, 1, 0], [0, 1, 1]))  # Bain
+    plot_hist_misorientation_variants(V, next(cyaxes), 'Bain OR')
+
+    V = pyebsd.OR(ps=([0, 1, 0], [1, 0, 1]), ds=([1, 0, 1], [-1, 1, 1]))  # Pitsch
+    plot_hist_misorientation_variants(V, next(cyaxes), 'Pitsch OR')
+
+    plt.show()
