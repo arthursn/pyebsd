@@ -24,7 +24,7 @@ ncols_odd, ncols_even = scan.ncols_odd, scan.ncols_even
 
 R = scan.R
 M = scan.M
-near = scan.get_neighbors()
+near = scan.get_neighbors(1)
 
 C = pyebsd.list_cubic_symmetry_operators()
 
