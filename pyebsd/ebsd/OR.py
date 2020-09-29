@@ -126,7 +126,10 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     R_prt = R_prt/np.linalg.norm(R_prt, axis=1).reshape(-1, 1)
     R_chd = R_chd/np.linalg.norm(R_chd, axis=1).reshape(-1, 1)
 
-    V0 = np.dot(R_chd.T, R_prt)
-    V = np.tensordot(V0, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
+    V = np.dot(R_chd.T, R_prt)
 
-    return reduce_cubic_transformations(V)
+    if not kwargs.pop('single', False):
+        V = np.tensordot(V, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
+        V = reduce_cubic_transformations(V)
+
+    return V
