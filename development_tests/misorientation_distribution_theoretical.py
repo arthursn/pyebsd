@@ -6,9 +6,8 @@ def misorientation_between_variants(V):
     C = pyebsd.list_cubic_symmetry_operators()
     mis = []
     for i in range(len(V)):
-        for j in range(len(V)):
-            if i != j:
-                mis.append(pyebsd.misorientation_two_rotations(np.dot(C, V[i]), V[j].T, math='min'))
+        for j in range(i + 1, len(V)):
+            mis.append(pyebsd.misorientation_two_rotations(np.dot(C, V[i]), V[j].T, math='min'))
     return mis
 
 
