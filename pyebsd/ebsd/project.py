@@ -357,8 +357,8 @@ class ScanData(GridIndexing):
         return kernel_average_misorientation(self.M, neighbors, sel, maxmis,
                                              kwargs.pop('out', 'deg'), **kwargs)
 
-    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, tiling=None,
-                 w=2048, scalebar=True, plotlimits=None, verbose=True, **kwargs):
+    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, graymin=0, graymax=None,
+                 tiling=None, w=2048, scalebar=True, plotlimits=None, verbose=True, **kwargs):
         """
         Plots inverse pole figure map
 
@@ -377,6 +377,14 @@ class ScanData(GridIndexing):
             Grayscale mask plotted over IPF.
             For example, one may want to overlay the IPF map with the image
             quality data.
+            Default: None
+        graymin : float (optional)
+            Minimum gray value used for calculation of the gray mask.
+            If None, min(gray) is used.
+            Default: 0
+        graymax : float (optional)
+            Maximum gray value used for calculation of the gray mask.
+            If None, max(gray) is used.
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
@@ -428,17 +436,17 @@ class ScanData(GridIndexing):
                 sel = sel & sellim
 
         ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
-                           self.dx, self.dy, d, ax, sel, gray, self.grid, tiling, w, scalebar,
-                           verbose, **kwargs)
+                           self.grid, self.dx, self.dy, d, ax, sel, gray, graymin, graymax,
+                           tiling, w, scalebar, verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_property(self, prop, propname='z', ax=None, colordict=None, colorfill='black',
-                      fillvalue=np.nan, sel=None, gray=None, tiling=None, w=2048,
-                      scalebar=True, colorbar=True, plotlimits=None, verbose=True,
-                      **kwargs):
+                      fillvalue=np.nan, sel=None, gray=None, graymin=0, graymax=None,
+                      tiling=None, w=2048, scalebar=True, colorbar=True, plotlimits=None,
+                      verbose=True, **kwargs):
         """
         Plots any EBSD property
 
@@ -478,6 +486,14 @@ class ScanData(GridIndexing):
             Grayscale mask plotted over IPF.
             For example, one may want to overlay the IPF map with the image
             quality data.
+            Default: None
+        graymin : float (optional)
+            Minimum gray value used for calculation of the gray mask.
+            If None, min(gray) is used.
+            Default: 0
+        graymax : float (optional)
+            Maximum gray value used for calculation of the gray mask.
+            If None, max(gray) is used.
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
@@ -529,17 +545,17 @@ class ScanData(GridIndexing):
                 sel = sel & sellim
 
         ebsdmap = plot_property(prop, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
-                                self.dx, self.dy, propname, ax, colordict, colorfill, fillvalue,
-                                sel, gray, self.grid, tiling, w, scalebar, colorbar, verbose,
-                                **kwargs)
+                                self.grid, self.dx, self.dy, propname, ax, colordict, colorfill,
+                                fillvalue, sel, gray, graymin, graymax, tiling, w, scalebar,
+                                colorbar, verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
     def plot_phase(self, ax=None, colordict=None, colorfill='black', fillvalue=-1,
-                   sel=None, gray=None, tiling=None, w=2048, scalebar=True,
-                   plotlimits=None, verbose=True, **kwargs):
+                   sel=None, gray=None, graymin=0, graymax=None, tiling=None, w=2048,
+                   scalebar=True, plotlimits=None, verbose=True, **kwargs):
         """
         Plots phases map
 
@@ -573,6 +589,14 @@ class ScanData(GridIndexing):
             Grayscale mask plotted over IPF.
             For example, one may want to overlay the IPF map with the image
             quality data.
+            Default: None
+        graymin : float (optional)
+            Minimum gray value used for calculation of the gray mask.
+            If None, min(gray) is used.
+            Default: 0
+        graymax : float (optional)
+            Maximum gray value used for calculation of the gray mask.
+            If None, max(gray) is used.
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
@@ -611,14 +635,15 @@ class ScanData(GridIndexing):
             ccycler = cycle(self.colors)
             colordict = {ph: next(ccycler) for ph in ph_code}
         ebsdmap = self.plot_property(self.ph, 'phase', ax, colordict, colorfill, fillvalue, sel,
-                                     gray, tiling, w, scalebar, False, plotlimits, verbose,
-                                     **kwargs)
+                                     gray, graymin, graymax, tiling, w, scalebar, False, plotlimits,
+                                     verbose, **kwargs)
         return ebsdmap
 
     def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
                  distance_convention='OIM', colorfill='black', fillvalue=np.nan,
-                 sel=None, gray=None, tiling=None, w=2048, scalebar=True,
-                 colorbar=True, plotlimits=None, verbose=True, **kwargs):
+                 sel=None, gray=None, graymin=0, graymax=None, tiling=None,
+                 w=2048, scalebar=True, colorbar=True, plotlimits=None, verbose=True,
+                 **kwargs):
         """
         Plots kernel average misorientation map
 
@@ -657,6 +682,14 @@ class ScanData(GridIndexing):
             Grayscale mask plotted over IPF.
             For example, one may want to overlay the IPF map with the image
             quality data.
+            Default: None
+        graymin : float (optional)
+            Minimum gray value used for calculation of the gray mask.
+            If None, min(gray) is used.
+            Default: 0
+        graymax : float (optional)
+            Maximum gray value used for calculation of the gray mask.
+            If None, max(gray) is used.
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
@@ -708,8 +741,9 @@ class ScanData(GridIndexing):
                 sel = sel & sellim
 
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
-        ebsdmap = self.plot_property(KAM, 'KAM', ax, None, colorfill, fillvalue, sel, gray, tiling,
-                                     w, scalebar, colorbar, None, verbose, **kwargs)
+        ebsdmap = self.plot_property(KAM, 'KAM', ax, None, colorfill, fillvalue, sel,
+                                     gray, graymin, graymax, tiling, w, scalebar, colorbar,
+                                     None, verbose, **kwargs)
         ebsdmap.cax.set_label(u'KAM (°)')
         return ebsdmap
 

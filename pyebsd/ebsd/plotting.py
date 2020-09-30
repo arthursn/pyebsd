@@ -698,10 +698,11 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     return ax
 
 
-def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
+def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
                   propname='z', ax=None, colordict=None, colorfill='black',
-                  fillvalue=np.nan, sel=None, gray=None, grid='HexGrid', tiling=None,
-                  w=2048, scalebar=True, colorbar=True, verbose=True, **kwargs):
+                  fillvalue=np.nan, sel=None, gray=None, graymin=0, graymax=None,
+                  tiling=None, w=2048, scalebar=True, colorbar=True,
+                  verbose=True, **kwargs):
     """
     Plots any EBSD property
 
@@ -728,6 +729,8 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         Grid spacing along y coordinates. If None is provided, guesses
         it from y.
         Default: None
+    grid : str
+        Grid type ('HexGrid' or 'SqrGrid')
     propname : str
         Property name (optional)
         Default: value
@@ -760,9 +763,14 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         For example, one may want to overlay the IPF map with the image
         quality data.
         Default: None
-    grid : str (optional)
-        Grid type
-        Default: 'HexGrid'
+    graymin : float (optional)
+        Minimum gray value used for calculation of the gray mask.
+        If None, min(gray) is used.
+        Default: 0
+    graymax : float (optional)
+        Maximum gray value used for calculation of the gray mask.
+        If None, max(gray) is used.
+        Default: None
     tiling : str (optional)
         Valid options are 'rect' or 'hex'
         If no option is provided, uses as default 'rect' if 
@@ -847,10 +855,6 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
     vmin = kwargs.pop('vmin', np.min(prop[sel]))
     vmax = kwargs.pop('vmax', np.max(prop[sel]))
-
-    # min and max values of the gray mask
-    graymin = kwargs.pop('graymin', None)
-    graymax = kwargs.pop('graymax', None)
 
     # converts string, or list to tuple with RGB color. Drops alpha channel if RGBA is provided
     colorfill = matplotlib.colors.to_rgb(colorfill)
@@ -990,8 +994,8 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
     return EBSDMap(x, y, img, ax, fig, cax)
 
 
-def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
-             d=[0, 0, 1], ax=None, sel=None, gray=None, grid='HexGrid',
+def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
+             d=[0, 0, 1], ax=None, sel=None, gray=None, graymin=0, graymax=None,
              tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
     """
     Plots inverse pole figure map
@@ -1011,6 +1015,8 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         x pixel coordinates
     y : numpy ndarray shape(N)
         y pixel coordinates
+    grid : str
+        Grid type ('HexGrid' or 'SqrGrid')
     dx : float (optional)
         Grid spacing along x coordinates. If None is provided, guesses
         it from x.
@@ -1033,9 +1039,14 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
         For example, one may want to overlay the IPF map with the image
         quality data.
         Default: None
-    grid : str (optional)
-        Grid type
-        Default: 'HexGrid'
+    graymin : float (optional)
+        Minimum gray value used for calculation of the gray mask.
+        If None, min(gray) is used.
+        Default: 0
+    graymax : float (optional)
+        Maximum gray value used for calculation of the gray mask.
+        If None, max(gray) is used.
+        Default: None
     tiling : str (optional)
         Valid options are 'rect' or 'hex'
         If no option is provided, uses as default 'rect' if 
@@ -1115,7 +1126,7 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, dx=None, dy=None,
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
     # min and max values of the gray mask
-    graymin = kwargs.pop('graymin', None)
+    graymin = kwargs.pop('graymin', 0)  # zero by default, i.e., only positive values are considered
     graymax = kwargs.pop('graymax', None)
 
     # call IPF to get crystal directions parallel to d and
