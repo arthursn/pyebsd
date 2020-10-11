@@ -19,6 +19,9 @@ if __name__ == '__main__':
         # Plot 001 pole figures fro each variant
         pyebsd.plot_PF(M, marker='${}$'.format(i+2), ms=8, ax=ax, verbose=False)
 
+    ax.text(1.05, 0, r'[100]$\gamma$', size=15)
+    ax.text(0, 1.05, r'[010]$\gamma$', ha='center', size=15)
+
     # Calculate misorientation with respect to the first variant
     variant = 0
     misang = pyebsd.misorientation(M=M_KS,
