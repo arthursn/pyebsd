@@ -325,7 +325,7 @@ def misorientation(M, neighbors, sel=None, out='deg', **kwargs):
 
     for k in range(nneighbors):
         # valid points, i.e., those part of the selection and with valid neighrbor index (> 0)
-        ok = (neighbors[:, k] >= 0) & sel
+        ok = (neighbors[:, k] >= 0) & sel & sel[neighbors[:, k]]
         # The einsum below is equivalent to:
         # np.matmul(M[neighbors[ok,k]], M[ok].transpose([0,2,1]))
         S = np.einsum('ijk,imk->ijm', M[neighbors[ok, k]], M[ok])
