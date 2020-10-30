@@ -8,11 +8,10 @@ if __name__ == '__main__':
     KS = pyebsd.OR(ps=[[1, 1, 1], [0, 1, 1]], ds=[[-1, 0, 1], [-1, -1, 1]],
                    single=True)  # only the first matrix
 
-    # The orientations in M_KS are in the order of the variants convetion
+    # The orientations in M_KS are in the order of the variants convention
     # published in papers such as:
-    # T. Furuhara, T. Chiba, T. Kaneshita, H. Wu, G. Miyamoto, Metall.
-    # Mater. Trans. A 48 (2017) 2739–2752.
-    M_KS = np.tensordot(KS, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
+    # T. Furuhara, T. Maki, Mater. Sci. Eng. A 312 (2001) 145–154.
+    M_KS = np.matmul(KS, C.transpose([0, 2, 1]))  # Mj = M0 . C^-1
 
     ax = pyebsd.plot_PF(M_KS[0], marker='$1$', ms=8, verbose=False)
     for i, M in enumerate(M_KS[1:]):

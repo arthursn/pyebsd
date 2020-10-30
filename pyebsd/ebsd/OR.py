@@ -129,7 +129,7 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([0, 1, 1], [1, 1, 1]), **kwargs):
     V = np.dot(R_chd.T, R_prt)
 
     if not kwargs.pop('single', False):
-        V = np.tensordot(V, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
+        V = np.matmul(V, C.transpose(0, 2, 1))
         V = reduce_cubic_transformations(V)
 
     return V
