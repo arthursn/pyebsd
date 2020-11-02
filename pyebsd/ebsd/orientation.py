@@ -3,8 +3,8 @@ import time
 import numpy as np
 
 __all__ = ['trace_to_angle', 'stereographic_projection',
-           'stereographic_projection_to_direction', 'avg_orientation',
-           'misorientation_two_rotations', 'misorientation',
+           'stereographic_projection_to_direction', 'average_orientation',
+           'misorientation', 'misorientation_neighbors',
            'kernel_average_misorientation', 'minimize_disorientation',
            'euler_angles_to_rotation_matrix', 'rotation_matrix_to_euler_angles',
            'axis_angle_to_rotation_matrix', 'list_cubic_symmetry_operators_KS',
@@ -101,7 +101,7 @@ def stereographic_projection_to_direction(xy):
 """ Misorientation functions """
 
 
-def avg_orientation(M, sel=None, **kwargs):
+def average_orientation(M, sel=None, **kwargs):
     """
     Calculates rotation matrix corresponding to average orientation
 
@@ -165,8 +165,7 @@ def avg_orientation(M, sel=None, **kwargs):
             M_sel[i] = Mprime[np.argmax(tr)]
 
     R_sel = M_sel.transpose([0, 2, 1])
-    phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
-        R_sel, avg=True, **kwargs)  # verbose=True
+    phi1, Phi, phi2 = rotation_matrix_to_euler_angles(R_sel, avg=True, **kwargs)
 
     M_avg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False).T
 
@@ -178,105 +177,57 @@ def avg_orientation(M, sel=None, **kwargs):
     return M_avg
 
 
-def misorientation_two_rotations(A, B, out='deg', math='avg', **kwargs):
+def misorientation(A, B, out='deg'):
     """
     Calculates the misorientation between A e B
-
-    A : numpy ndarray shape(3, 3) or shape(N, 3, 3)
-        Rotation matrix of list of rotation matrices
-    B : numpy ndarray shape(3, 3) or shape(N, 3, 3)
-        Rotation matrix of list of rotation matrices
+    
+    Parameters
+    ----------
+    A : numpy ndarray shape(3, 3)
+        First rotation matrix
+    B : numpy ndarray shape(3, 3)
+        Second rotation matrix
     out : str (optional)
-        Format or unit of the output. Possible values are:
-        'tr': trace of misorientation matrix
-        'deg': misorientation in degrees
-        'rad': misorientation in radians
+        Unit of the output. Possible values are:
+        'tr': as a trace value of the misorientation matrix
+        'deg': as misorientation angle in degrees
+        'rad': as misorientation angle in radians
         Default: 'deg'
-    math : str (optional)
-        Possible values are:
-        'avg': average misorientation
-        'max': maximum misorientation
-        'min': minimum misorientation
-        None: list of misorientations for each combination
-        Default: 'avg'
-    **kwargs :
-        verbose : bool (optional)
-            If True, prints computation time
-            Default: True
-        vectorized : bool (optional)
-            If True, performs all operations vectorized using numpy
-            Default: True
 
     Returns
     -------
-    x : float or numpy ndarray
-        Output depends on the options provided, as explained above
+    misang : float
+        Misorientation angle given in the unit specified by 'out'
     """
 
+    C = list_cubic_symmetry_operators()
     Adim, Bdim = np.ndim(A), np.ndim(B)
 
-    if Bdim > Adim:
-        A, B = B, A
-        Adim, Bdim = Bdim, Adim
-    if (Adim == 3) and (Bdim == 2):
-        D = np.tensordot(A, B, axes=[[-1], [-2]])
-        x = np.abs(np.trace(D, axis1=1, axis2=2))  # trace
+    if (Adim == 2) and (Bdim == 2):
+        # Tj = Cj * A * B^T
+        T = np.tensordot(C, A.dot(B.T), axes=[[-1], [-2]])
+        tr = T.trace(axis1=1, axis2=2)
+        x = tr.max()  # Maximum trace
+        # This might happen due to rounding error
+        if x > 3.:
+            x = 3.
         if out != 'tr':
             x = np.arccos((x-1.)/2.)  # mis x in radians
             if out == 'deg':
                 x = np.degrees(x)  # mis x in degrees
-        if math == 'avg':
-            x = np.mean(x)
-        elif math == 'min':
-            x = np.min(x)
-        elif math == 'max':
-            x = np.max(x)
-    elif (Adim == 3) and (Bdim == 3):
-        if kwargs.pop('vectorized', True):
-            D = np.tensordot(A, B, axes=[[-1], [-2]]).transpose([0, 2, 1, 3])
-            x = np.abs(np.trace(D, axis1=2, axis2=3))  # trace
-            if out != 'tr':
-                x = np.arccos((x-1.)/2.)  # mis x in radians
-                if out == 'deg':
-                    x = np.degrees(x)  # mis x in degrees
-            if math == 'avg':
-                x = np.mean(x, axis=0)
-            elif math == 'min':
-                x = np.min(x, axis=0)
-            elif math == 'max':
-                x = np.max(x, axis=0)
-        else:
-            if math is not None:
-                x = np.ndarray(len(B))
-            else:
-                x = np.ndarray((len(B), len(A)))
-            for i in range(len(B)):
-                D = np.tensordot(A, B[i], axes=[[-1], [-2]])
-                y = np.abs(np.trace(D, axis1=1, axis2=2))  # trace
-                if out != 'tr':
-                    y = np.arccos((y-1.)/2.)  # mis x in radians
-                    if out == 'deg':
-                        y = np.degrees(y)  # mis x in degrees
-                if math == 'avg':
-                    x[i] = np.mean(y)
-                elif math == 'min':
-                    x[i] = np.min(y)
-                elif math == 'max':
-                    x[i] = np.max(y)
-                else:
-                    x[i] = y
-        del D
     else:
-        return
+        raise Exception('Invalid shapes of arrays A or B')
     return x
 
 
-def misorientation(M, neighbors, sel=None, out='deg', **kwargs):
+def misorientation_neighbors(M, neighbors, sel=None, out='deg', **kwargs):
     """
     Calculates the misorientation angle of every data point with respective
     orientation matrix provided in 'M' with respect to an arbitrary number 
     of neighbors, whose indices are provided in the 'neighbors' argument.
-
+    
+    Parameters
+    ----------
     M : numpy ndarray shape(N, 3, 3)
         List of rotation matrices describing the rotation from the sample 
         coordinate frame to the crystal coordinate frame
@@ -326,15 +277,16 @@ def misorientation(M, neighbors, sel=None, out='deg', **kwargs):
     for k in range(nneighbors):
         # valid points, i.e., those part of the selection and with valid neighrbor index (> 0)
         ok = (neighbors[:, k] >= 0) & sel & sel[neighbors[:, k]]
-        # The einsum below is equivalent to:
-        # np.matmul(M[neighbors[ok,k]], M[ok].transpose([0,2,1]))
-        S = np.einsum('ijk,imk->ijm', M[neighbors[ok, k]], M[ok])
+        # Rotation from M[ok] to M[neighbors[ok, k]]
+        # Equivalent to np.matmul(M[neighbors[ok,k]], M[ok].transpose([0,2,1]))
+        T = np.einsum('ijk,imk->ijm', M[neighbors[ok, k]], M[ok])
 
         for m in range(len(C)):
+            # Smart way to calculate the trace using einsum.
+            # Equivalent to np.matmul(C[m], T).trace(axis1=1, axis2=2)
             a, b = C[m].nonzero()
-            # Trace using einsum. Equivalent to (S[:,a,b]*C[m,a,b]).sum(axis=1)
-            T = np.abs(np.einsum('ij,j->i', S[:, a, b], C[m, a, b]))
-            tr[ok, k] = np.max(np.vstack([tr[ok, k], T]), axis=0)
+            ttr = np.einsum('j,ij->i', C[m, a, b], T[:, a, b])
+            tr[ok, k] = np.max(np.vstack([tr[ok, k], ttr]), axis=0)
 
         if verbose:
             if k > 0 and k < nneighbors:
@@ -342,13 +294,13 @@ def misorientation(M, neighbors, sel=None, out='deg', **kwargs):
             sys.stdout.write('{}'.format(k + 1))
             sys.stdout.flush()
 
-    del S, T
+    del T, ttr
 
     if verbose:
         sys.stdout.write('] in {:.2f} s\n'.format(time.time() - t0))
         sys.stdout.flush()
 
-    # Take care of tr > 3. that might happend due to rounding erros
+    # Take care of tr > 3. that might happend due to rounding errors
     tr[tr > 3.] = 3.
 
     # Filter out invalid trace values
@@ -385,7 +337,7 @@ def kernel_average_misorientation(M, neighbors, sel=None, maxmis=None, out='deg'
     KAM : numpy ndarray shape(N) - M being the number of neighbors
         KAM : numpy ndarray shape(N) with KAM values
     """
-    misang = misorientation(M, neighbors, sel, out, **kwargs)
+    misang = misorientation_neighbors(M, neighbors, sel, out, **kwargs)
 
     outliers = misang < 0  # filter out negative values
     if maxmis is not None:
@@ -409,7 +361,8 @@ def minimize_disorientation(V, V0, **kwargs):
     between the list of orientations V and a single orientation V0.
     """
     n = kwargs.pop('n', 5)  # grid size
-    maxdev = kwargs.pop('maxdev', .25)  # maximum deviation
+    maxdev = kwargs.pop('maxdev', .25)  # maximum deviation in degrees
+    maxdev = np.radians(maxdev)  # maxdev in radians
     it = kwargs.pop('it', 3)  # number of iterations
     verbose = kwargs.pop('verbose', False)
     plot = kwargs.pop('plot', False)
@@ -422,28 +375,32 @@ def minimize_disorientation(V, V0, **kwargs):
     for i in range(it):
         step = maxdev/n
         t = np.linspace(-maxdev, maxdev, n)
+        # Euler space in XYZ convention
         theta, phi, psi = np.meshgrid(t, t, t)
-        theta, phi, psi = np.radians(theta.ravel()), np.radians(
-            phi.ravel()), np.radians(psi.ravel())
-        A = euler_angles_to_rotation_matrix(theta, phi, psi,
-                                            conv='xyz', verbose=False)
-        B = misorientation_two_rotations(
-            V, np.tensordot(A, V0, axes=[[-1], [-2]]).transpose([0, 2, 1]),
-            out='tr', **kwargs)
-        imax = np.argmax(B)  # get index of maximum trace value
+        theta, phi, psi = theta.ravel(), phi.ravel(), psi.ravel()
+        # Rotation matrices from euler angles shape(n^3, 3, 3)
+        A = euler_angles_to_rotation_matrix(theta, phi, psi, conv='xyz', verbose=False)
+        # Rotate V0 by A. Resulting B is shape(n^3, 3, 3)
+        B = np.tensordot(A, V0, axes=[[-1], [-2]])
+        # Calculate rotation from B to V. Resulting D is shape(len(V), n^3, 3, 3)
+        D = np.tensordot(V, B.transpose(0, 2, 1), axes=[[-1], [-2]]).transpose([0, 2, 1, 3])
+        # Average (mean) trace of D along axis 0 shape(n^3)
+        tr = np.abs(np.trace(D, axis1=2, axis2=3)).mean(axis=0)
+        # Index of maximum trace value
+        imax = np.argmax(tr)
         if verbose:
             dth = np.degrees(np.arccos((np.trace(A[imax])-1.)/2.))
             sys.stdout.write('{:2d} : {:g}, {:g}, {:g}; mis = {:g} deg\n'.format(
                 i+1, np.degrees(theta[imax]), np.degrees(phi[imax]), np.degrees(psi[imax]), dth))
         if plot:
-            Rscan = np.dot(A, V0).transpose([0, 2, 1])
+            Rscan = A.dot(V0).transpose([0, 2, 1])
             plot_PF(R=Rscan, ax=axmin, scatter=True, s=30,
-                    marker='s', c=np.repeat(B, 3), verbose=False)
+                    marker='s', c=np.repeat(tr, 3), verbose=False)
             plot_PF(R=Rscan[imax], ax=axmin, scatter=True, s=200, marker='x', c='r', verbose=False)
 
-        V0 = np.dot(A[imax], V0)
+        V0 = A[imax].dot(V0)
         maxdev /= n
-    del A, B
+    del A, B, D, tr
 
     return V0
 

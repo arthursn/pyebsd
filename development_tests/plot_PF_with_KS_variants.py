@@ -22,14 +22,10 @@ if __name__ == '__main__':
     ax.text(0, 1.05, r'[010]$\gamma$', ha='center', size=15)
 
     # Calculate misorientation with respect to the first variant
-    variant = 0
-    misang = pyebsd.misorientation(M=M_KS,
-                                   neighbors=np.full(shape=[len(M_KS), 1],
-                                                     fill_value=variant),
-                                   verbose=False)
+    misang = [pyebsd.misorientation(M_KS[j], M_KS[0]) for j in range(len(M_KS))]
 
-    print('Misorientation angle with respect to variant 1')
+    print('Misorientation angle with respect to V1')
     for v, mis in enumerate(misang):
-        print('{:2d}: {:g}'.format(v, float(mis)))
+        print('{:3s}: {:g}'.format("V" + str(v+1), float(mis)))
 
     plt.show()

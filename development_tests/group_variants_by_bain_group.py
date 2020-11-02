@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # published in papers such as:
     # T. Furuhara, T. Chiba, T. Kaneshita, H. Wu, G. Miyamoto, Metall.
     # Mater. Trans. A 48 (2017) 2739–2752.
-    M_KS = np.tensordot(KS, C, axes=[[-1], [-2]]).transpose([1, 0, 2])
+    M_KS = np.matmul(KS, C.transpose(0, 2, 1))  # KS * C^T
 
     v = 0  # variant
     variants_found = set()
@@ -22,10 +22,8 @@ if __name__ == '__main__':
     variants['CP group'] = np.repeat(range(4), 6)
     variants['Bain group'] = -1
     for group in range(3):
-        misang = pyebsd.misorientation(M=M_KS,
-                                       neighbors=np.full(shape=[len(M_KS), 1],
-                                                         fill_value=v),
-                                       verbose=False).ravel()
+        misang = [pyebsd.misorientation(M_KS[j], M_KS[v]) for j in range(len(M_KS))]
+
         if v == 0:
             variants['Rotation from variant 1 (deg)'] = misang
 

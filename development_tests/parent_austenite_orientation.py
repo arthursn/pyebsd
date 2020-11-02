@@ -27,9 +27,9 @@ except:
     sel_fcc = (scan.ph == 2) & (scan.CI > .2)
     R_fcc = scan.R[sel_fcc]
     M_fcc = R_fcc.transpose([0, 2, 1])
-    R_fcc_avg = pyebsd.avg_orientation(R_fcc,
-                                       vectorized=False, verbose=True,
-                                       n=10, maxdev=10., it=5)
+    R_fcc_avg = pyebsd.average_orientation(R_fcc,
+                                           vectorized=False, verbose=True,
+                                           n=10, maxdev=10., it=5)
     M_fcc_avg = R_fcc_avg.T
 
     sel_bcc = (scan.ph == 1) & (scan.CI > .2)

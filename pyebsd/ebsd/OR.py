@@ -4,7 +4,7 @@ import numpy as np
 
 from .orientation import (list_cubic_family_directions,
                           list_cubic_symmetry_operators,
-                          reduce_cubic_transformations, avg_orientation,
+                          reduce_cubic_transformations, average_orientation,
                           rotation_matrix_to_euler_angles,
                           euler_angles_to_rotation_matrix)
 
@@ -39,7 +39,7 @@ def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
         sel[:] = True
 
     # Calculate average rotation matrix of parent phase
-    M_prt = avg_orientation(M, sel=sel & (ph == prt), verbose=False)
+    M_prt = average_orientation(M, sel=sel & (ph == prt), verbose=False)
     # Rotation matrices of child phases
     M_chd = M[sel & (ph == chd)]
 
