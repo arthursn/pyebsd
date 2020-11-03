@@ -180,7 +180,7 @@ def average_orientation(M, sel=None, **kwargs):
 def misorientation(A, B, out='deg'):
     """
     Calculates the misorientation between A e B
-    
+
     Parameters
     ----------
     A : numpy ndarray shape(3, 3)
@@ -225,7 +225,7 @@ def misorientation_neighbors(M, neighbors, sel=None, out='deg', **kwargs):
     Calculates the misorientation angle of every data point with respective
     orientation matrix provided in 'M' with respect to an arbitrary number 
     of neighbors, whose indices are provided in the 'neighbors' argument.
-    
+
     Parameters
     ----------
     M : numpy ndarray shape(N, 3, 3)
@@ -562,7 +562,7 @@ def rotation_matrix_to_euler_angles(R, conv='zxz', **kwargs):
     return phi1, Phi, phi2
 
 
-def axis_angle_to_rotation_matrix(axis, theta, **kwargs):
+def axis_angle_to_rotation_matrix(axis, theta):
     theta_dim = np.ndim(theta)
     axis_dim = np.ndim(axis)
 
@@ -601,11 +601,12 @@ def axis_angle_to_rotation_matrix(axis, theta, **kwargs):
 """ Symmetry operations for the cubic system """
 
 
-def list_cubic_symmetry_operators_KS(**kwargs):
+def list_cubic_symmetry_operators_KS():
     """
     Lists symmetry matrices for cubic symmetry group following KS variants
     convention as represented in, e.g., 
-    T. Furuhara, T. Maki, Mater. Sci. Eng. A 312 (2001) 145–154.
+    T. Furuhara, H. Kawata, S. Morito, T. Maki, Mater. Sci. Eng. A 431 (2006)
+    228-236.
     """
     return np.array([[[1.,  0.,  0.],
                       [0.,  1.,  0.],
@@ -704,7 +705,7 @@ def list_cubic_symmetry_operators_KS(**kwargs):
                       [0.,  0.,  1.]]])
 
 
-def list_cubic_symmetry_operators(**kwargs):
+def list_cubic_symmetry_operators():
     """
     Lists symmetry matrices for cubic symmetry group
     """
@@ -785,12 +786,15 @@ def reduce_cubic_transformations(V, maxdev=1e-3):
     Remove redudant transformations (rotations) and returns a reduced
     number of matrices.
 
-    V : ndarray shape(N,3,3)
+    Parameters
+    ----------
+    V : ndarray shape(N, 3, 3)
         List of N 3x3 arrays (matrices) representing crystal bases.
-    maxdev : float
-        Maximum misorientation angle (deg) between two bases to consider
-        them equivalent to each other.
-        Default: 1e-3
+   
+    Returns
+    -------
+    Vprime : ndarray shape(K, 3, 3), K <= N
+        Subset of V containing only the non-reduntant rotations
     """
     # Convert maxdev from angle in degrees to trace values [-1, 3]. Because
     # maxdev is very small, the new value of maxdev is very close to 3.
@@ -811,8 +815,8 @@ def reduce_cubic_transformations(V, maxdev=1e-3):
                 p.append(j)
         pairs.append(p)
 
-    single = [p.pop() for p in pairs if len(p) == 1]
-    Vprime = V[single]
+    unique = [p.pop() for p in pairs if len(p) == 1]
+    Vprime = V[unique]
 
     return Vprime
 
