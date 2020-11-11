@@ -1125,10 +1125,6 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
     # getting kwargs parameters
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
-    # min and max values of the gray mask
-    graymin = kwargs.pop('graymin', 0)  # zero by default, i.e., only positive values are considered
-    graymax = kwargs.pop('graymax', None)
-
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGB)
     d_IPF = IPF(M, d)
