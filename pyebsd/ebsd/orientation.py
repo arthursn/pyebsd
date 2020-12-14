@@ -27,7 +27,7 @@ def trace_to_angle(tr, out='deg'):
 
 def stereographic_projection(d, norm=True, coord='cartesian'):
     """
-    Returns the coordinates of the stereographic projection of a direction 
+    Returns the coordinates of the stereographic projection of a direction
     'd'
 
     Arguments
@@ -106,10 +106,10 @@ def average_orientation(M, sel=None, **kwargs):
     Calculates rotation matrix corresponding to average orientation
 
     M : numpy ndarray shape(N, 3, 3)
-        List of rotation matrices describing the rotation from the sample 
+        List of rotation matrices describing the rotation from the sample
         coordinate frame to the crystal coordinate frame
     sel : bool numpy 1D array (optional)
-        Boolean array indicating data points calculations should be 
+        Boolean array indicating data points calculations should be
         performed
         Default: None
     **kwargs :
@@ -223,18 +223,18 @@ def misorientation(A, B, out='deg'):
 def misorientation_neighbors(M, neighbors, sel=None, out='deg', **kwargs):
     """
     Calculates the misorientation angle of every data point with respective
-    orientation matrix provided in 'M' with respect to an arbitrary number 
+    orientation matrix provided in 'M' with respect to an arbitrary number
     of neighbors, whose indices are provided in the 'neighbors' argument.
 
     Parameters
     ----------
     M : numpy ndarray shape(N, 3, 3)
-        List of rotation matrices describing the rotation from the sample 
+        List of rotation matrices describing the rotation from the sample
         coordinate frame to the crystal coordinate frame
     neighbors : numpy ndarray shape(N, K) - K being the number of neighbors
         Indices of the neighboring pixels
     sel : bool numpy 1D array (optional)
-        Boolean array indicating data points calculations should be 
+        Boolean array indicating data points calculations should be
         performed
         Default: None
     out : str (optional)
@@ -314,12 +314,12 @@ def kernel_average_misorientation(M, neighbors, sel=None, maxmis=None, out='deg'
     Calculates the Kernel Average Misorientation (KAM)
 
     M : numpy ndarray shape(N, 3, 3)
-        List of rotation matrices describing the rotation from the sample 
+        List of rotation matrices describing the rotation from the sample
         coordinate frame to the crystal coordinate frame
     neighbors : numpy ndarray shape(N, K) - K being the number of neighbors
         Indices of the neighboring pixels
     sel : bool numpy 1D array (optional)
-        Boolean array indicating data points calculations should be 
+        Boolean array indicating data points calculations should be
         performed
         Default: None
     out : str (optional)
@@ -420,15 +420,21 @@ def euler_angles_to_rotation_matrix(phi1, Phi, phi2, conv='zxz', **kwargs):
     Phi : float or list, tuple, or array(N)
     phi2 : float or list, tuple, or array(N)
         Euler angles
-
     conv : string (optional)
         Rotation convention
         Default: zxz (Bunge notation)
-
     **kwargs :
         verbose : boolean
             If True (default), print calculation time
 
+    Returns
+    -------
+    R : numpy ndarray
+        Rotation matrix shape(3,3) list of rotation matrices (shape(N, 3, 3))
+        describing the rotation from the crystal coordinate frame to the
+        sample coordinate frame (EBSD system). Notice that R is different of
+        M = R^-1, which represents the rotation from the crystal coordinate
+        frame to the sample coordinate frame
     """
     verbose = kwargs.pop('verbose', True)
     if verbose:
@@ -604,172 +610,81 @@ def axis_angle_to_rotation_matrix(axis, theta):
 def list_cubic_symmetry_operators_KS():
     """
     Lists symmetry matrices for cubic symmetry group following KS variants
-    convention as represented in, e.g., 
+    convention as represented in, e.g.,
     T. Furuhara, H. Kawata, S. Morito, T. Maki, Mater. Sci. Eng. A 431 (2006)
     228-236.
     """
-    return np.array([[[1.,  0.,  0.],
-                      [0.,  1.,  0.],
-                      [0.,  0.,  1.]],
+    axis_angle = np.array([
+        # CP 1
+        [0., 1., 0., 0.],
+        [np.pi, -1., 0., 1.],
+        [np.pi*2./3., -1., -1., -1.],
+        [np.pi, 1., -1., 0.],
+        [np.pi*2./3., 1., 1., 1.],
+        [np.pi, 0., 1., -1.],
+        # CP 2
+        [np.pi, 1., 0., 1.],
+        [np.pi, 0., 1., 0.],
+        [np.pi/2., 1., 0., 0.],
+        [np.pi*2./3., -1., -1., 1.],
+        [np.pi/2., 0., 0., -1.],
+        [np.pi*2./3., -1., 1., 1.],
+        # CP 3
+        [np.pi/2., 0., 0., 1.],
+        [np.pi*2./3., 1., 1., -1.],
+        [np.pi/2., 0., -1., 0.],
+        [np.pi, 1., 0., 0.],
+        [np.pi, 0., 1., 1.],
+        [np.pi*2./3., -1., 1., -1.],
+        # CP 4
+        [np.pi/2., -1., 0., 0.],
+        [np.pi*2./3., 1., -1., -1.],
+        [np.pi, 1., 1., 0.],
+        [np.pi*2./3., 1., -1., 1.],
+        [np.pi/2., 0., 1., 0.],
+        [np.pi, 0., 0., 1]])
 
-                     [[0.,  0., -1.],
-                      [0., -1.,  0.],
-                      [-1.,  0.,  0.]],
-
-                     [[0.,  1.,  0.],
-                      [0.,  0.,  1.],
-                      [1.,  0.,  0.]],
-
-                     [[0., -1.,  0.],
-                      [-1.,  0.,  0.],
-                      [0.,  0., -1.]],
-
-                     [[0.,  0.,  1.],
-                      [1.,  0.,  0.],
-                      [0.,  1.,  0.]],
-
-                     [[-1.,  0.,  0.],
-                      [0.,  0., -1.],
-                      [0., -1.,  0.]],
-
-                     [[0.,  0.,  1.],
-                      [0., -1.,  0.],
-                      [1.,  0.,  0.]],
-
-                     [[-1.,  0.,  0.],
-                      [0.,  1.,  0.],
-                      [0.,  0., -1.]],
-
-                     [[1.,  0.,  0.],
-                      [0.,  0., -1.],
-                      [0.,  1.,  0.]],
-
-                     [[0.,  0., -1.],
-                      [1.,  0.,  0.],
-                      [0., -1.,  0.]],
-
-                     [[0.,  1.,  0.],
-                      [-1.,  0.,  0.],
-                      [0.,  0.,  1.]],
-
-                     [[0., -1.,  0.],
-                      [0.,  0.,  1.],
-                      [-1.,  0.,  0.]],
-
-                     [[0., -1.,  0.],
-                      [1.,  0.,  0.],
-                      [0.,  0.,  1.]],
-
-                     [[0.,  1.,  0.],
-                      [0.,  0., -1.],
-                      [-1.,  0.,  0.]],
-
-                     [[0.,  0., -1.],
-                      [0.,  1.,  0.],
-                      [1.,  0.,  0.]],
-
-                     [[1.,  0.,  0.],
-                      [0., -1.,  0.],
-                      [0.,  0., -1.]],
-
-                     [[-1.,  0.,  0.],
-                      [0.,  0.,  1.],
-                      [0.,  1.,  0.]],
-
-                     [[0.,  0.,  1.],
-                      [-1.,  0.,  0.],
-                      [0., -1.,  0.]],
-
-                     [[1.,  0.,  0.],
-                      [0.,  0.,  1.],
-                      [0., -1.,  0.]],
-
-                     [[0.,  0., -1.],
-                      [-1.,  0.,  0.],
-                      [0.,  1.,  0.]],
-
-                     [[0.,  1.,  0.],
-                      [1.,  0.,  0.],
-                      [0.,  0., -1.]],
-
-                     [[0., -1.,  0.],
-                      [0.,  0., -1.],
-                      [1.,  0.,  0.]],
-
-                     [[0.,  0.,  1.],
-                      [0.,  1.,  0.],
-                      [-1.,  0.,  0.]],
-
-                     [[-1.,  0.,  0.],
-                      [0., -1.,  0.],
-                      [0.,  0.,  1.]]])
+    return axis_angle_to_rotation_matrix(axis_angle[:, 1:], axis_angle[:, 0]).round(0).astype(int)
 
 
 def list_cubic_symmetry_operators():
     """
     Lists symmetry matrices for cubic symmetry group
     """
-    axis = np.array([[1., 0., 0.],
-                     # 2-fold on <100>
-                     [1., 0., 0.],
-                     [0., 1., 0.],
-                     [0., 0., 1.],
-                     # 4-fold on <100>
-                     [1., 0., 0.],
-                     [0., 1., 0.],
-                     [0., 0., 1.],
-                     [-1., 0., 0.],
-                     [0., -1., 0.],
-                     [0., 0., -1.],
-                     # 2-fold on <110>
-                     [1., 1., 0.],
-                     [1., 0., 1.],
-                     [0., 1., 1.],
-                     [1., -1., 0.],
-                     [-1., 0., 1.],
-                     [0., 1., -1.],
-                     # 3-fold on <111>
-                     [1., 1., 1.],
-                     [1., -1., 1.],
-                     [-1., 1., 1.],
-                     [-1., -1., 1.],
-                     [1., 1., -1.],
-                     [1., -1., -1.],
-                     [-1., 1., -1.],
-                     [-1., -1., -1.]])
-
-    angle = np.array([0.,
-                      # 2-fold on <100>
-                      np.pi,
-                      np.pi,
-                      np.pi,
-                      # 4-fold on <100>
-                      np.pi/2.,
-                      np.pi/2.,
-                      np.pi/2.,
-                      np.pi/2.,
-                      np.pi/2.,
-                      np.pi/2.,
-                      # 2-fold on <110>
-                      np.pi,
-                      np.pi,
-                      np.pi,
-                      np.pi,
-                      np.pi,
-                      np.pi,
-                      # 3-fold on <111>
-                      np.pi*2./3.,
-                      np.pi*2./3.,
-                      np.pi*2./3.,
-                      np.pi*2./3.,
-                      np.pi*2./3.,
-                      np.pi*2./3.,
-                      np.pi*2./3.,
-                      np.pi*2./3.])
+    axis_angle = np.array([
+        # Identity
+        [0., 1., 0., 0.],
+        # 2-fold on <100>
+        [np.pi, 1., 0., 0.],
+        [np.pi, 0., 1., 0.],
+        [np.pi, 0., 0., 1.],
+        # 4-fold on <100>
+        [np.pi/2., 1., 0., 0.],
+        [np.pi/2., 0., 1., 0.],
+        [np.pi/2., 0., 0., 1.],
+        [np.pi/2., -1., 0., 0.],
+        [np.pi/2., 0., -1., 0.],
+        [np.pi/2., 0., 0., -1.],
+        # 2-fold on <110>
+        [np.pi, 1., 1., 0.],
+        [np.pi, 1., 0., 1.],
+        [np.pi, 0., 1., 1.],
+        [np.pi, 1., -1., 0.],
+        [np.pi, -1., 0., 1.],
+        [np.pi, 0., 1., -1.],
+        # 3-fold on <111>
+        [np.pi*2./3., 1., 1., 1.],
+        [np.pi*2./3., 1., -1., 1.],
+        [np.pi*2./3., -1., 1., 1.],
+        [np.pi*2./3., -1., -1., 1.],
+        [np.pi*2./3., 1., 1., -1.],
+        [np.pi*2./3., 1., -1., -1.],
+        [np.pi*2./3., -1., 1., -1.],
+        [np.pi*2./3., -1., -1., -1.]])
 
     # Round and convert float to int. The elements of the operators are
     # the integers 0, 1, and -1
-    return axis_angle_to_rotation_matrix(axis, angle).round(0).astype(int)
+    return axis_angle_to_rotation_matrix(axis_angle[:, 1:], axis_angle[:, 0]).round(0).astype(int)
 
 
 def list_cubic_family_directions(d):
@@ -790,7 +705,7 @@ def reduce_cubic_transformations(V, maxdev=1e-3):
     ----------
     V : ndarray shape(N, 3, 3)
         List of N 3x3 arrays (matrices) representing crystal bases.
-   
+
     Returns
     -------
     Vprime : ndarray shape(K, 3, 3), K <= N
@@ -826,13 +741,13 @@ def reduce_cubic_transformations(V, maxdev=1e-3):
 
 def IPF(M, d=[0, 0, 1]):
     """
-    Calculates crystallographic direction parallel to the direction d 
+    Calculates crystallographic direction parallel to the direction d
     relative to the sample coordinate frame.
 
     Parameters
     ----------
     M : numpy ndarray shape(N,3,3)
-        Rotation matrices describing the transformation from the sample 
+        Rotation matrices describing the transformation from the sample
         coordinate frame to the crystal coordinate frame
     d : list or array shape(3)
         Reference direction in the sample coordinate frame.
@@ -855,13 +770,13 @@ def PF(R, proj=[1, 0, 0], rotation=None):
     Parameters
     ----------
     R : numpy ndarray shape(N,3,3) or numpy array(3,3)
-        Rotation matrices describing the transformation from the crystal 
+        Rotation matrices describing the transformation from the crystal
         coordinate frame to the sample coordinate frame
     proj : list or array shape(3)
         Family of directions projected in the pole figure. Default is '100'
     rotation : list or array shape(3,3)
         Rotation matrix that rotates the pole figure (R' = rotation-1.R).
-        The columns of the matrix correspond to the directions parallel to 
+        The columns of the matrix correspond to the directions parallel to
         the axes of the pole figure.
     """
     if np.ndim(R) == 2:
