@@ -13,20 +13,6 @@ from .plotting import GridIndexing, EBSDMap, plot_property, plot_IPF, plot_PF
 __all__ = ['ScanData', 'selection_to_scandata']
 
 
-def _item2top(lst, item):
-    try:
-        oldindex = lst.index[item]
-        lst.insert(0, lst.pop(oldindex))
-    except Exception:
-        lst.insert(0, item)
-    return lst
-
-
-ssfonts = rcParams['font.sans-serif']
-ssfonts = _item2top(ssfonts, 'Helvetica')
-ssfonts = _item2top(ssfonts, 'Arial')
-
-rcParams['font.sans-serif'] = ssfonts
 rcParams['savefig.dpi'] = 300
 rcParams['savefig.bbox'] = 'tight'
 rcParams['savefig.pad_inches'] = 0.0
