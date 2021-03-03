@@ -1,7 +1,6 @@
-import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D, proj3d, art3d
+from mpl_toolkits.mplot3d import proj3d, art3d
 
 __all__ = ['orthogonal_proj', 'plot_sproj3d']
 
@@ -36,8 +35,8 @@ def plot_sproj3d(n=[1, 0, 1], offset=0., **kwargs):
     r_prime = (r**2. - offset**2.)**.5  # Radius of the circle
 
     fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.set_aspect('equal')
+    ax = fig.add_subplot(projection='3d')
+    # ax.set_aspect('equal')
 
     if (n[0] == 0.) & (n[1] == 0.):
         a = np.asarray([1, 0, 0]).reshape(3, 1)
@@ -51,7 +50,7 @@ def plot_sproj3d(n=[1, 0, 1], offset=0., **kwargs):
         b = b/np.linalg.norm(b)
 
     t1, t2 = 0., 2*np.pi
-    if only_positive == True:
+    if only_positive:
         s = float(C[2]/(b[2]*r_prime))
         if np.abs(s) < 1.:
             t1, t2 = -np.arcsin(s), np.arcsin(s) + np.pi
@@ -115,5 +114,7 @@ def plot_sproj3d(n=[1, 0, 1], offset=0., **kwargs):
 
     return ax
 
-# ax = plot_sproj3d(n=[1,2,3], offset=0.5, show=True, only_positive=True)
-# ax = plot_sproj3d(n=[1.,1.,1.], offset=.95, p=0.)
+
+if __name__ == '__main__':
+    ax = plot_sproj3d(n=[1, 2, 3], offset=0.5, show=True, only_positive=True)
+    ax = plot_sproj3d(n=[1., 1., 1.], offset=.95, p=0.)
