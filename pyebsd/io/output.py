@@ -1,5 +1,3 @@
-from ..ebsd import ScanData
-
 __all__ = ['save_ang_file']
 
 

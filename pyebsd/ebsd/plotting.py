@@ -1,5 +1,4 @@
 import sys
-import os
 import time
 
 import numpy as np
@@ -7,10 +6,9 @@ import matplotlib.colors
 import matplotlib.pyplot as plt
 
 from PIL import Image, ImageDraw
-from itertools import permutations
 
-from .orientation import euler_angles_to_rotation_matrix, PF, IPF, stereographic_projection
-from ..draw import modify_show, set_tight_plt, draw_circle_frame, toimage, ScaleBar
+from .orientation import PF, IPF, stereographic_projection
+from ..draw import set_tight_plt, draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
 
 __all__ = ['set_threshold_tiling', 'GridIndexing', 'EBSDMap', 'get_color_IPF',
@@ -222,7 +220,6 @@ class GridIndexing(object):
         i = np.round(y/self.dy).astype(int)
         if self.grid.lower() == 'hexgrid':
             # This part is tricky because the odd and even rows are shifted from each other
-            oldtype = type(x)
             # dx in terms of j is actually half of the original value
             j = np.array(2.*x/self.dx + 1).astype(int)
             if self.ncols_odd > self.ncols_even:
@@ -316,7 +313,7 @@ class EBSDMap(object):
         if self._selector is not None:
             try:
                 self._selector.clear()
-            except:
+            except Exception:
                 pass
             self._selector.disconnect()
         self._selector = selector_widget
@@ -356,7 +353,7 @@ class EBSDMap(object):
             File name
 
         **kwargs :
-            kwargs parameters are passed to fig.savefig(fname, **kwargs) 
+            kwargs parameters are passed to fig.savefig(fname, **kwargs)
             function
         """
         kw = {'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0}
@@ -401,7 +398,7 @@ def get_color_IPF(uvw, **kwargs):
     It is first necessary to find the direction (in the family of directions)
     that falls inside the unit triangle. Instead of calculating all directions
     using the 24 symmetry operators, this function explores some properties
-    of the cubic system. 
+    of the cubic system.
     In order to a given uvw direction fall inside the unit triangle (delimited
     by the directions 001, 101, and 111), it suffices that u, v, and w are all
     positive numbers and w >= u >= v.
@@ -466,7 +463,7 @@ def unit_triangle(ax=None, n=512, **kwargs):
         AxesSubplot object
     n : int (optional)
         Rasterization resolution
-        Default: 512 
+        Default: 512
 
     **kwargs :
         kwargs parameters are passed to get_color_IPF function
@@ -501,8 +498,8 @@ def unit_triangle(ax=None, n=512, **kwargs):
     ax.set_aspect('equal')
     ax.axis('off')
     # Plots the unit triangle
-    img = ax.imshow(img_pil, interpolation='None', origin='lower',
-                    extent=(-dx/2, xmax+dx/2, -dy/2, ymax+dy/2))
+    ax.imshow(img_pil, interpolation='None', origin='lower',
+              extent=(-dx/2, xmax+dx/2, -dy/2, ymax+dy/2))
 
     # Coordinates displayed in the interactive plot window
     _uvw = uvw.copy()
@@ -544,7 +541,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
             verbose=True, **kwargs):
     """
     The user should provide either R or M. It's more convenient to use
-    R values when plotting raw experimental data. M should be used 
+    R values when plotting raw experimental data. M should be used
     when plotting the variants of a specific orientation relationship.
 
     Parameters
@@ -558,12 +555,12 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     ax : AxesSubplot instance (optional)
         The pole figure will be plotted in the provided instance 'ax'
     sel : boolean numpy 1D array
-        Array with boolean [True, False] values indicating which data 
+        Array with boolean [True, False] values indicating which data
         points should be plotted
         Default: None
     rotation : list or array shape(3,3)
         Rotation matrix that rotates the pole figure.
-        The columns of the matrix correspond to the directions parallel to 
+        The columns of the matrix correspond to the directions parallel to
         the axes of the pole figure.
         Default: None
     contour : [True, False]
@@ -573,18 +570,18 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     **kwargs:
         R : numpy ndarray shape(N,3,3)
             If M is not provided, R has to be provided instead.
-            Transformation matrix from the crystal coordinate frame to 
-            the sample coordinate frame (EBSD system). 
-            R is the inverse/transposed matrix of M (R = M^-1) 
+            Transformation matrix from the crystal coordinate frame to
+            the sample coordinate frame (EBSD system).
+            R is the inverse/transposed matrix of M (R = M^-1)
         lw_frame : float
             line width of PF frame
             Default: 0.5
         fill : [True, False]
-            True: filled contour plot 'plt.contourf'; False: contour 
+            True: filled contour plot 'plt.contourf'; False: contour
             plot 'plt.contour'
             Default: True
         bins : int or tuple or array (int,int)
-            Binning used in the calculation of the points density 
+            Binning used in the calculation of the points density
             histogram (prior to contour plot)
             Default: (256, 256)
         fn : ['sqrt', 'log', 'None'] or function(x)
@@ -594,7 +591,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
             number of levels in the contour plot
             Default: 10
 
-    The kwargs properties not listed here are automatically passed to 
+    The kwargs properties not listed here are automatically passed to
     the plotting functions:
     if not contour:
         plt.plot(..., **kwargs)
@@ -660,7 +657,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
             else:
                 try:
                     hist = fn(hist)
-                except:
+                except Exception:
                     pass
 
         nlevels = kwargs.pop('nlevels', 10)
@@ -742,18 +739,18 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         as string, list shape(3) (RGB), or list shape(4) (RGBA)
         E.g: {'1': 'red', '2': 'green'}
         If None is provided, the the colors are assigned automatically
-        by cycling through the classic matplotlib colors defined in 
-        the data member colors (self.colors, which can be changed 
-        at will). Colors are assigned to the phases in alphabetical 
+        by cycling through the classic matplotlib colors defined in
+        the data member colors (self.colors, which can be changed
+        at will). Colors are assigned to the phases in alphabetical
         (numerical) order
         Default: None
     colorfill : str or list shape(3) or shape(4) (optional)
-        Color used to fill unindexed pixels. It can be provided as RGB 
+        Color used to fill unindexed pixels. It can be provided as RGB
         or RGBA values as an iterable. If RGBA is provided, alpha channel
         is droppped
         Default: 'black'
     fillvalue : float, int
-        Value used to fill non valid/non selected points 
+        Value used to fill non valid/non selected points
         Default: np.nan
     sel : bool numpy 1D array (optional)
         Boolean array indicating which data points should be plotted
@@ -773,7 +770,7 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         Default: None
     tiling : str (optional)
         Valid options are 'rect' or 'hex'
-        If no option is provided, uses as default 'rect' if 
+        If no option is provided, uses as default 'rect' if
         N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
         __THRESHOLD_TILING__ is 10000, but it can be set to any value
         by calling pyebsd.set_threshold_tiling(..)
@@ -1049,7 +1046,7 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         Default: None
     tiling : str (optional)
         Valid options are 'rect' or 'hex'
-        If no option is provided, uses as default 'rect' if 
+        If no option is provided, uses as default 'rect' if
         N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
         __THRESHOLD_TILING__ is 10000, but it can be set to any value
         by calling pyebsd.set_threshold_tiling(..)

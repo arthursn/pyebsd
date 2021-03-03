@@ -3,22 +3,23 @@
 import numpy as np
 from itertools import cycle
 from matplotlib import rcParams
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 
-from .orientation import (euler_angles_to_rotation_matrix, misorientation,
+from .orientation import (euler_angles_to_rotation_matrix,
                           kernel_average_misorientation)
 from .plotting import GridIndexing, EBSDMap, plot_property, plot_IPF, plot_PF
 
 __all__ = ['ScanData', 'selection_to_scandata']
 
 
-def _item2top(l, item):
+def _item2top(lst, item):
     try:
-        oldindex = l.index[item]
-        l.insert(0, l.pop(oldindex))
-    except:
-        l.insert(0, item)
-    return l
+        oldindex = lst.index[item]
+        lst.insert(0, lst.pop(oldindex))
+    except Exception:
+        lst.insert(0, item)
+    return lst
 
 
 ssfonts = rcParams['font.sans-serif']
@@ -39,9 +40,9 @@ class ScanData(GridIndexing):
     ----------
     data : pandas DataFrame
         DataFrame containing the EBSD data. It is compulsory for data to
-        contain the following columns: phi1, Phi, phi2 (Euler angles), x, 
+        contain the following columns: phi1, Phi, phi2 (Euler angles), x,
         y (pixel coordinates), and ph (phase code). These columns are
-        then parsed as data members of the ScanData object. If IQ and CI 
+        then parsed as data members of the ScanData object. If IQ and CI
         are also provided as columns, they are also parsed.
     grid : str
         Grid type. Possible options are 'HexGrid' and 'SqrGrid'
@@ -124,11 +125,11 @@ class ScanData(GridIndexing):
         # Optional columns
         try:
             self.IQ = self.data.IQ.values
-        except:
+        except Exception:
             pass
         try:
             self.CI = self.data.CI.values
-        except:
+        except Exception:
             pass
 
         self._i = None  # row number
@@ -223,7 +224,7 @@ class ScanData(GridIndexing):
         ---------
         distance : int
             Distance with respect to the central pixel defined in terms of
-            the nearest neighbor, i.e., distance = 3 represents the 3rd 
+            the nearest neighbor, i.e., distance = 3 represents the 3rd
             closest neighbor pixels
         perimeteronly : bool (optional)
             If True, considers only pixels in the perimeter. If False, then
@@ -238,13 +239,13 @@ class ScanData(GridIndexing):
             distance from the central pixel.
             Default : OIM
         sel : bool numpy 1D array (optional)
-            Boolean array indicating data points calculations should be 
+            Boolean array indicating data points calculations should be
             performed
             Default: None
 
         Returns
         -------
-        neighbors_ind : numpy ndarray shape(N, K) - K being the number of 
+        neighbors_ind : numpy ndarray shape(N, K) - K being the number of
             neighbors
             Indices of the neighboring pixels
         """
@@ -296,7 +297,7 @@ class ScanData(GridIndexing):
         ---------
         distance : int
             Distance with respect to the central pixel defined in terms of
-            the nearest neighbor, i.e., distance = 3 represents the 3rd 
+            the nearest neighbor, i.e., distance = 3 represents the 3rd
             closest neighbor pixels
         distance_convention : str (optional)
             Distance convention used for selecting the neighboring pixels.
@@ -388,7 +389,7 @@ class ScanData(GridIndexing):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
-            If no option is provided, uses as default 'rect' if 
+            If no option is provided, uses as default 'rect' if
             N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
             __THRESHOLD_TILING__ is 10000, but it can be set to any value
             by calling pyebsd.set_threshold_tiling(..)
@@ -399,7 +400,7 @@ class ScanData(GridIndexing):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
-        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object
             (optional)
             x and y limits of the plot. It works similarly as sel. Only
             pixels fall inside the provided x and y limits are plotted.
@@ -419,7 +420,7 @@ class ScanData(GridIndexing):
         ebsdmap : EBSDMap object
         """
         xlim, ylim = None, None
-        if isinstance(plotlimits, (EBSDMap, plt.Axes)):
+        if isinstance(plotlimits, (EBSDMap, Axes)):
             xlim, ylim = plotlimits.get_xlim(), plotlimits.get_ylim()
         elif isinstance(plotlimits, (tuple, list, np.ndarray)):
             if len(plotlimits) == 4:
@@ -466,18 +467,18 @@ class ScanData(GridIndexing):
             as string, list shape(3) (RGB), or list shape(4) (RGBA)
             E.g: {'1': 'red', '2': 'green'}
             If None is provided, the the colors are assigned automatically
-            by cycling through the classic matplotlib colors defined in 
-            the data member colors (self.colors, which can be changed 
-            at will). Colors are assigned to the phases in alphabetical 
+            by cycling through the classic matplotlib colors defined in
+            the data member colors (self.colors, which can be changed
+            at will). Colors are assigned to the phases in alphabetical
             (numerical) order
             Default: None
         colorfill : str or list shape(3) or shape(4) (optional)
-            Color used to fill unindexed pixels. It can be provided as RGB 
+            Color used to fill unindexed pixels. It can be provided as RGB
             or RGBA values as an iterable. If RGBA is provided, alpha channel
             is droppped
             Default: 'black'
         fillvalue : float, int
-            Value used to fill non valid/non selected points 
+            Value used to fill non valid/non selected points
             Default: np.nan
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
@@ -497,7 +498,7 @@ class ScanData(GridIndexing):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
-            If no option is provided, uses as default 'rect' if 
+            If no option is provided, uses as default 'rect' if
             N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
             __THRESHOLD_TILING__ is 10000, but it can be set to any value
             by calling pyebsd.set_threshold_tiling(..)
@@ -508,7 +509,7 @@ class ScanData(GridIndexing):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
-        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object
             (optional)
             x and y limits of the plot. It works similarly as sel. Only
             pixels fall inside the provided x and y limits are plotted.
@@ -528,7 +529,7 @@ class ScanData(GridIndexing):
         ebsdmap : EBSDMap object
         """
         xlim, ylim = None, None
-        if isinstance(plotlimits, (EBSDMap, plt.Axes)):
+        if isinstance(plotlimits, (EBSDMap, Axes)):
             xlim, ylim = plotlimits.get_xlim(), plotlimits.get_ylim()
         elif isinstance(plotlimits, (tuple, list, np.ndarray)):
             if len(plotlimits) == 4:
@@ -572,18 +573,18 @@ class ScanData(GridIndexing):
             as string, list shape(3) (RGB), or list shape(4) (RGBA)
             E.g: {'1': 'red', '2': 'green'}
             If None is provided, the the colors are assigned automatically
-            by cycling through the classic matplotlib colors defined in 
-            the data member colors (self.colors, which can be changed 
-            at will). Colors are assigned to the phases in alphabetical 
+            by cycling through the classic matplotlib colors defined in
+            the data member colors (self.colors, which can be changed
+            at will). Colors are assigned to the phases in alphabetical
             (numerical) order
             Default: None
         colorfill : str or list shape(3) or shape(4) (optional)
-            Color used to fill unindexed pixels. It can be provided as RGB 
+            Color used to fill unindexed pixels. It can be provided as RGB
             or RGBA values as an iterable. If RGBA is provided, alpha channel
             is droppped
             Default: 'black'
         fillvalue : float, int
-            Value used to fill non valid/non selected points 
+            Value used to fill non valid/non selected points
             Default: -1
         gray : numpy ndarray (optional)
             Grayscale mask plotted over IPF.
@@ -600,7 +601,7 @@ class ScanData(GridIndexing):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
-            If no option is provided, uses as default 'rect' if 
+            If no option is provided, uses as default 'rect' if
             N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
             __THRESHOLD_TILING__ is 10000, but it can be set to any value
             by calling pyebsd.set_threshold_tiling(..)
@@ -611,7 +612,7 @@ class ScanData(GridIndexing):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
-        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object
             (optional)
             x and y limits of the plot. It works similarly as sel. Only
             pixels fall inside the provided x and y limits are plotted.
@@ -668,12 +669,12 @@ class ScanData(GridIndexing):
             Convention used for calculating distance to kernel
             Default: OIM
         colorfill : str or list shape(3) or shape(4) (optional)
-            Color used to fill unindexed pixels. It can be provided as RGB 
+            Color used to fill unindexed pixels. It can be provided as RGB
             or RGBA values as an iterable. If RGBA is provided, alpha channel
             is droppped
             Default: 'black'
         fillvalue : float, int
-            Value used to fill non valid/non selected points 
+            Value used to fill non valid/non selected points
             Default: np.nan
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
@@ -693,7 +694,7 @@ class ScanData(GridIndexing):
             Default: None
         tiling : str (optional)
             Valid options are 'rect' or 'hex'
-            If no option is provided, uses as default 'rect' if 
+            If no option is provided, uses as default 'rect' if
             N > __THRESHOLD_TILING__, else 'hex'. By default, the value of
             __THRESHOLD_TILING__ is 10000, but it can be set to any value
             by calling pyebsd.set_threshold_tiling(..)
@@ -704,7 +705,7 @@ class ScanData(GridIndexing):
         scalebar : bool (optional)
             If True, displays scalebar over IPF map
             Default: True
-        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object 
+        plotlimits: tuple, list, ndarray, EBSDMap or AxesSubplot object
             (optional)
             x and y limits of the plot. It works similarly as sel. Only
             pixels fall inside the provided x and y limits are plotted.
@@ -724,7 +725,7 @@ class ScanData(GridIndexing):
         ebsdmap : EBSDMap object
         """
         xlim, ylim = None, None
-        if isinstance(plotlimits, (EBSDMap, plt.Axes)):
+        if isinstance(plotlimits, (EBSDMap, Axes)):
             xlim, ylim = plotlimits.get_xlim(), plotlimits.get_ylim()
         elif isinstance(plotlimits, (tuple, list, np.ndarray)):
             if len(plotlimits) == 4:
@@ -818,7 +819,7 @@ class ScanData(GridIndexing):
             File name
 
         **kwargs :
-            kwargs parameters are passed to ebsdmap.fig.savefig(fname, **kwargs) 
+            kwargs parameters are passed to ebsdmap.fig.savefig(fname, **kwargs)
             function
         """
         self.ebsdmaps[-1].savefig(fname, **kwargs)
@@ -839,17 +840,26 @@ class ScanData(GridIndexing):
         else:
             newscan = selection_to_scandata(self, sel)
 
-        header = newscan.header
-        for i, line in enumerate(header):
-            if '# NCOLS_ODD:' in line:
-                header[i] = '# NCOLS_ODD: {:d}\n'.format(newscan.ncols_odd)
-                continue
-            if '# NCOLS_EVEN:' in line:
-                header[i] = '# NCOLS_EVEN: {:d}\n'.format(newscan.ncols_even)
-                continue
-            if '# NROWS:' in line:
-                header[i] = '# NROWS: {:d}\n'.format(newscan.nrows)
-                continue
+        header = []
+        if isinstance(newscan.header, list):
+            header = newscan.header
+            for i, line in enumerate(header):
+                if '# NCOLS_ODD:' in line:
+                    header[i] = '# NCOLS_ODD: {:d}\n'.format(newscan.ncols_odd)
+                    continue
+                if '# NCOLS_EVEN:' in line:
+                    header[i] = '# NCOLS_EVEN: {:d}\n'.format(newscan.ncols_even)
+                    continue
+                if '# NROWS:' in line:
+                    header[i] = '# NROWS: {:d}\n'.format(newscan.nrows)
+                    continue
+        else:
+            header.append('# GRID: {:}\n'.format(newscan.grid))
+            header.append('# XSTEP: {:.8f}\n'.format(newscan.dx))
+            header.append('# YSTEP: {:.8f}\n'.format(newscan.dy))
+            header.append('# NCOLS_ODD: {:d}\n'.format(newscan.ncols_odd))
+            header.append('# NCOLS_EVEN: {:d}\n'.format(newscan.ncols_even))
+            header.append('# NROWS: {:d}\n'.format(newscan.nrows))
 
         try:
             file = open(fname, 'w')
@@ -858,7 +868,7 @@ class ScanData(GridIndexing):
             newscan.data.to_csv(fname, mode='a',
                                 header=False, index=False, sep=' ',
                                 float_format=kwargs.pop('float_format', '%.5f'))
-        except:
+        except Exception:
             raise
         else:
             print('scandata successfully saved as "{}"'.format(fname))
@@ -972,6 +982,13 @@ def _get_rectangle_surrounding_selection_sqrgrid(scan, sel):
     return ncols_odd, ncols_even, nrows, rect
 
 
+def _get_rectangle_surrounding_selection(scan, sel):
+    if scan.grid.lower() == 'hexgrid':
+        return _get_rectangle_surrounding_selection_hexgrid(scan, sel)
+    else:
+        return _get_rectangle_surrounding_selection_sqrgrid(scan, sel)
+
+
 def selection_to_scandata(scan, sel):
     """
     Convert selection to new ScanData object
@@ -1002,11 +1019,7 @@ def selection_to_scandata(scan, sel):
     newdata.loc[~sel, 'intensity'] = -1
     newdata.loc[~sel, 'fit'] = 0
 
-    # select rectangle surrounding the selected data
-    if scan.grid.lower() == 'hexgrid':
-        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_hexgrid(scan, sel)
-    else:
-        ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection_sqrgrid(scan, sel)
+    ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection(scan, sel)
 
     # data to be exported is a rectangle
     newdata = newdata[rect]
@@ -1015,4 +1028,7 @@ def selection_to_scandata(scan, sel):
     newdata.x -= newdata.x.min()
     newdata.y -= newdata.y.min()
 
-    return ScanData(newdata, scan.grid, scan.dx, scan.dy, ncols_odd, ncols_even, nrows, scan.header)
+    return ScanData(newdata, scan.grid,
+                    scan.dx, scan.dy,
+                    ncols_odd, ncols_even, nrows,
+                    scan.header)

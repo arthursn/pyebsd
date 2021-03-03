@@ -63,11 +63,13 @@ def plot_sproj3d(n=[1, 0, 1], offset=0., **kwargs):
     ax.plot(P[0], P[1], P[2])  # plot circle
 
     Q = np.ndarray(P.shape)
-    Q[0], Q[1], Q[2] = p*P[0]/(p+P[2]), p*P[1]/(p+P[2]), 0.  # stereographic projection of the circle (trace)
+    # stereographic projection of the circle (trace)
+    Q[0], Q[1], Q[2] = p*P[0]/(p+P[2]), p*P[1]/(p+P[2]), 0.
     sel = (np.abs(Q[0]) <= bound) & (np.abs(Q[1]) <= bound)
     Q = Q[:, sel]
     ax.plot(Q[0], Q[1], 'g.')  # plot trace of the circle
-    ax.quiver(0, 0, 0, n[0], n[1], n[2], pivot='tail', length=r)  # draw an arrow corresponding to the vector n
+    # draw an arrow corresponding to the vector n
+    ax.quiver(0, 0, 0, n[0], n[1], n[2], pivot='tail', length=r)
     xp, yp = p*n[0]/(p+n[2]), p*n[1]/(p+n[2])  # stereographic projection of the pole
     ax.plot([xp], [yp], [0], 'go')
 
@@ -108,7 +110,7 @@ def plot_sproj3d(n=[1, 0, 1], offset=0., **kwargs):
 
     proj3d.persp_transformation = orthogonal_proj  # orthogonal projection
 
-    if show == True:
+    if show:
         plt.show()
 
     return ax

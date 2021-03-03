@@ -1,6 +1,6 @@
 if __name__ == '__main__':
     import argparse
-    from .ebsd import load_scandata, plt
+    from .io import load_scandata
 
     parser = argparse.ArgumentParser()
     parser.add_argument('file', nargs=1)

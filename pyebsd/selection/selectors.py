@@ -96,7 +96,8 @@ class LassoSelector2(_SelectorWidget):
 
 class RectangleSelector2(RectangleSelector):
     def __init__(self, ax, x, y, rectprops=None, aspect=None):
-        RectangleSelector.__init__(self, ax, self.onselect, rectprops=rectprops, useblit=False, interactive=True)
+        RectangleSelector.__init__(self, ax, self.onselect, rectprops=rectprops, useblit=False,
+                                   interactive=True)
 
         self.state_modifier_keys = dict(move=' ', accept='enter', clear='c',
                                         disconnect='escape', square='shift', center='control')
@@ -153,7 +154,8 @@ class RectangleSelector2(RectangleSelector):
                     y2 = event.ydata
 
         # move existing shape
-        elif (('move' in self.state or self.active_handle == 'C') and self._extents_on_press is not None):
+        elif ('move' in self.state or self.active_handle == 'C') \
+                and self._extents_on_press is not None:
             x1, x2, y1, y2 = self._extents_on_press
             dx = event.xdata - self.eventpress.xdata
             dy = event.ydata - self.eventpress.ydata

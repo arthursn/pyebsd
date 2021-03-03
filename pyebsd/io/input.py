@@ -16,34 +16,34 @@ def _parse_info_header(line, pattern, dtype=str):
 
 def load_ang_file(fname):
     """
-    Loads a TSL ang file. 
+    Loads a TSL ang file.
     The fields of each line in the body of the TSL ang file are as follows:
 
         phi1 Phi phi2 x y IQ CI ph intensity fit
 
     where:
-    phi1, Phi, phi2 : Euler angles (in radians) in Bunge's notation for 
+    phi1, Phi, phi2 : Euler angles (in radians) in Bunge's notation for
         describing the lattice orientations and are given in radians.
-        A value of 4 is given to each Euler angle when an EBSP could 
-        not be indexed. These points receive negative confidence index 
+        A value of 4 is given to each Euler angle when an EBSP could
+        not be indexed. These points receive negative confidence index
         values when read into an OIM dataset.
     x, y : The horizontal and vertical coordinates of the points in the
         scan, in micrometers. The origin (0,0) is defined as the top-left
         corner of the scan.
-    IQ : The image quality parameter that characterizes the contrast of 
+    IQ : The image quality parameter that characterizes the contrast of
         the EBSP associated with each measurement point.
     CI : The confidence index that describes how confident the software is
         that it has correctly indexed the EBSP, i.e., confidence that the
         angles are correct.
-    ph : The material phase identifier. This field is 0 for single phase 
+    ph : The material phase identifier. This field is 0 for single phase
         OIM scans or 1,2,3... for multi-phase scans.
     intensity : An integer describing the intensity from whichever detector
-        was hooked up to the OIM system at the time of data collection, 
+        was hooked up to the OIM system at the time of data collection,
         typically a forward scatter detector.
-    fit : The fit metric that describes how the indexing solution matches 
+    fit : The fit metric that describes how the indexing solution matches
         the bands detected by the Hough transform or manually by the user.
     footers:
-        In addition there also may be extra sections - such as EDS counts 
+        In addition there also may be extra sections - such as EDS counts
         data.
 
     Parameters
