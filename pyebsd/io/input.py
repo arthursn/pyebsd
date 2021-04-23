@@ -130,7 +130,7 @@ def load_ang_file(fname):
             else:
                 ncols_even = ncols_odd - 1
 
-        dx = xcoords[1] - xcoords[0]
+        dx = data.x[1] - data.x[0]
         dy = ycoords[1] - ycoords[0]
 
         print('Grid parameters guessed from x, y columns:')
