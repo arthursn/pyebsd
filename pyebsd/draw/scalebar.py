@@ -23,9 +23,9 @@ The following parameters are available for customization in the matplotlibrc:
     - scalebar.box_alpha
     - scalebar.scale_loc
     - scalebar.label_loc
-    
-See the class documentation (:class:`.Scalebar`) for a description of the 
-parameters. 
+
+See the class documentation (:class:`.Scalebar`) for a description of the
+parameters.
 """
 
 # Standard library modules.
@@ -107,11 +107,11 @@ class ScaleBar(Artist):
         :arg dx_m: dimension of one pixel in meters (m)
             Set ``dx_m`` to 1.0 if the axes image has already been calibrated by
             setting its ``extent``.
-        :arg label: optional label associated with the scale bar 
+        :arg label: optional label associated with the scale bar
             (default: ``None``, no label is shown)
-        :arg length_fraction: length of the scale bar as a fraction of the 
+        :arg length_fraction: length of the scale bar as a fraction of the
             axes's width (default: rcParams['scalebar.lenght_fraction'] or ``0.2``)
-        :arg height_fraction: height of the scale bar as a fraction of the 
+        :arg height_fraction: height of the scale bar as a fraction of the
             axes's height (default: rcParams['scalebar.height_fraction'] or ``0.01``)
         :arg location: a location code (same as legend)
             (default: rcParams['scalebar.location'] or ``upper right``)
@@ -121,7 +121,7 @@ class ScaleBar(Artist):
             (default: rcParams['scalebar.border_pad'] or ``0.1``)
         :arg sep : separation between scale bar and label in points
             (default: rcParams['scalebar.sep'] or ``5``)
-        :arg frameon : if True, will draw a box around the scale bar 
+        :arg frameon : if True, will draw a box around the scale bar
             and label (default: rcParams['scalebar.frameon'] or ``True``)
         :arg color : color for the scale bar and label
             (default: rcParams['scalebar.color'] or ``k``)
@@ -133,7 +133,7 @@ class ScaleBar(Artist):
             (default: rcParams['scalebar.scale_loc'] or ``bottom``)
         :arg label_loc: either ``bottom``, ``top``, ``left``, ``right``
             (default: rcParams['scalebar.label_loc'] or ``top``)
-        :arg font_properties: a matplotlib.font_manager.FontProperties instance, 
+        :arg font_properties: a matplotlib.font_manager.FontProperties instance,
             optional sets the font properties for the label text
         """
         Artist.__init__(self)
@@ -217,7 +217,7 @@ class ScaleBar(Artist):
 
         # Create label
         if label:
-            txtlabel = TextArea(label, minimumdescent=False, textprops=textprops)
+            txtlabel = TextArea(label, textprops=textprops)
         else:
             txtlabel = None
 
@@ -232,7 +232,7 @@ class ScaleBar(Artist):
                                      fill=True, facecolor=color,
                                      edgecolor=color))
 
-        txtscale = TextArea(scale_label, minimumdescent=False, textprops=textprops)
+        txtscale = TextArea(scale_label, textprops=textprops)
 
         if scale_loc in ['bottom', 'right']:
             children = [sizebar, txtscale]
