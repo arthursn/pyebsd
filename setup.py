@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='pyebsd',
     version='0.1dev',
-    description='',
+    description='python library for post-processing of Electron Backscattered Diffraction (EBSD) data',
     author='Arthur Nishikawa',
     author_email='nishikawa.poli@gmail.com',
     url='https://github.com/arthursn/pyebsd',
