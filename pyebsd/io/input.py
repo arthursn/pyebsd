@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from ..ebsd import ScanData
+from ..ebsd.project import ScanData, _rename_columns
 
 __all__ = ['load_ang_file', 'load_scandata']
 

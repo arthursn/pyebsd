@@ -18,6 +18,16 @@ rcParams['savefig.bbox'] = 'tight'
 rcParams['savefig.pad_inches'] = 0.0
 
 
+def _rename_columns(colnames, replace_dict):
+    colnames = list(colnames)
+    for cname_default, allowed_cnames in replace_dict.items():
+        for i, cname in enumerate(colnames):
+            if cname in allowed_cnames:
+                colnames[i] = cname_default
+                print('Column "{}" renamed as "{}"'.format(cname, cname_default))
+    return colnames
+
+
 class ScanData(GridIndexing):
     """
     EBSD scan data
@@ -46,9 +56,9 @@ class ScanData(GridIndexing):
         Header of the scan data file
         Default: ''
     """
-    __2pi = 2*np.pi
-    __cos60 = .5  # cos(60deg)
-    __sin60 = .5*3.**.5  # sin(60deg)
+    _2pi = 2*np.pi
+    _cos60 = .5  # cos(60deg)
+    _sin60 = .5*3.**.5  # sin(60deg)
 
     colors = ['red', 'green', 'blue', 'cyan', 'magenta', 'yellow']
 
@@ -80,7 +90,15 @@ class ScanData(GridIndexing):
         [[12, 0], [6, 6], [-6, 6], [-12, 0], [-6, -6], [6, -6]]
     ]
 
-    __n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
+    _n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
+
+    _allowed_colnames = {'x': ['X'],
+                         'y': ['Y'],
+                         'phi1': ['Euler1'],
+                         'Phi': ['Euler2'],
+                         'phi2': ['Euler3'],
+                         'ph': ['phase', 'Phase']}
+    _compulsory_columns = tuple(_allowed_colnames.keys())
 
     def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=''):
         # Initializes base class GridIndexing
@@ -91,32 +109,37 @@ class ScanData(GridIndexing):
             raise Exception(('Number of pixels ({}) does not match expected value '
                              '({})').format(len(data), self.N))
 
+        # Rename columns in dataframe
+        self.data.columns = _rename_columns(self.data.columns, self._allowed_colnames)
         self.header = header  # string
 
         # Compulsory columns in data
         # (.values: pandas Series to numpy array)
-        self.x = self.data.x.values
-        self.x -= self.x.min()  # makes sure min(x) == 0
-        self.y = self.data.y.values
-        self.y -= self.y.min()  # makes sure min(y) == 0
-        self.phi1 = self.data.phi1.values
-        self.Phi = self.data.Phi.values
-        self.phi2 = self.data.phi2.values
-        if (abs(self.phi1.max()) > self.__2pi or abs(self.Phi.max()) > self.__2pi or
-                abs(self.phi2.max()) > self.__2pi):
+        self.x = self.data['x'].values
+        self.y = self.data['y'].values
+        self.phi1 = self.data['phi1'].values
+        self.Phi = self.data['Phi'].values
+        self.phi2 = self.data['phi2'].values
+        if (abs(self.phi1.max()) > self._2pi or abs(self.Phi.max()) > self._2pi or
+                abs(self.phi2.max()) > self._2pi):
             print('Euler angles out of allowed range! Please check if they are really '
                   'provided in radians.')
-        self.ph = self.data.ph.values
+        self.ph = self.data['ph'].values
+
+        # Makes sure min(x) == 0 and min(y) == 0
+        self.x -= self.x.min()
+        self.y -= self.y.min()
 
         # Optional columns
-        try:
-            self.IQ = self.data.IQ.values
-        except Exception:
-            pass
-        try:
-            self.CI = self.data.CI.values
-        except Exception:
-            pass
+        for colname, coldata in self.data.iteritems():
+            if colname not in self._compulsory_columns and isinstance(colname, str):
+                try:
+                    # Check if colname is a valid variable name. Only works on python3,
+                    # that's why the exception handling
+                    if colname.isidentifier():
+                        setattr(self, colname, coldata.values)
+                except AttributeError:
+                    setattr(self, colname, coldata.values)
 
         self._i = None  # row number
         self._j = None  # col number
@@ -157,20 +180,20 @@ class ScanData(GridIndexing):
         a given distance in pixels
         """
         if self.grid.lower() == 'hexgrid':
-            R60 = np.array([[self.__cos60, -self.__sin60],
-                            [self.__sin60,  self.__cos60]])  # 60 degrees rotation matrix
+            R60 = np.array([[self._cos60, -self._sin60],
+                            [self._sin60,  self._cos60]])  # 60 degrees rotation matrix
 
             j_list = np.arange(-distance, distance, 2)
             i_list = np.full(j_list.shape, -distance)
 
-            xy = np.vstack([j_list*self.__cos60, i_list*self.__sin60])
+            xy = np.vstack([j_list*self._cos60, i_list*self._sin60])
 
             j_list, i_list = list(j_list), list(i_list)
 
             for r in range(1, 6):
                 xy = np.dot(R60, xy)  # 60 degrees rotation
-                j_list += list((xy[0]/self.__cos60).round(0).astype(int))
-                i_list += list((xy[1]/self.__sin60).round(0).astype(int))
+                j_list += list((xy[0]/self._cos60).round(0).astype(int))
+                i_list += list((xy[1]/self._sin60).round(0).astype(int))
         else:  # sqrgrid
             R90 = np.array([[0, -1],
                             [1,  0]], dtype=int)  # 90 degrees rotation matrix
@@ -192,9 +215,9 @@ class ScanData(GridIndexing):
         a given distance in pixels
         """
         if self.grid.lower() == 'hexgrid':
-            if distance > self.__n_neighbors_hexgrid_fixed:
+            if distance > self._n_neighbors_hexgrid_fixed:
                 raise Exception('get_neighbors_fixed not supported for distance > {}'.format(
-                    self.__n_neighbors_hexgrid_fixed))
+                    self._n_neighbors_hexgrid_fixed))
             j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance-1]))
         else:
             raise Exception(
