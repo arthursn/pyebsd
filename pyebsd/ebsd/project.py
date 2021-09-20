@@ -18,16 +18,6 @@ rcParams['savefig.bbox'] = 'tight'
 rcParams['savefig.pad_inches'] = 0.0
 
 
-def _rename_columns(colnames, replace_dict):
-    colnames = list(colnames)
-    for cname_default, allowed_cnames in replace_dict.items():
-        for i, cname in enumerate(colnames):
-            if cname in allowed_cnames:
-                colnames[i] = cname_default
-                print('Column "{}" renamed as "{}"'.format(cname, cname_default))
-    return colnames
-
-
 class ScanData(GridIndexing):
     """
     EBSD scan data
@@ -92,13 +82,13 @@ class ScanData(GridIndexing):
 
     _n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
 
-    _allowed_colnames = {'x': ['X'],
-                         'y': ['Y'],
-                         'phi1': ['Euler1'],
-                         'Phi': ['Euler2'],
-                         'phi2': ['Euler3'],
-                         'ph': ['phase', 'Phase']}
-    _compulsory_columns = tuple(_allowed_colnames.keys())
+    _colnames = {'x': dict(aliases=['X'], copy=True),
+                 'y': dict(aliases=['Y'], copy=True),
+                 'phi1': dict(aliases=['Euler1'], copy=False),
+                 'Phi': dict(aliases=['Euler2'], copy=False),
+                 'phi2': dict(aliases=['Euler3'], copy=False),
+                 'ph': dict(aliases=['phase', 'Phase'], copy=False)}
+    _compulsory_columns = tuple(_colnames.keys())
 
     def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=''):
         # Initializes base class GridIndexing
@@ -110,21 +100,22 @@ class ScanData(GridIndexing):
                              '({})').format(len(data), self.N))
 
         # Rename columns in dataframe
-        self.data.columns = _rename_columns(self.data.columns, self._allowed_colnames)
         self.header = header  # string
 
-        # Compulsory columns in data
+        # Set compulsory columns in data (x, y, phi1 ...) as member variables
         # (.values: pandas Series to numpy array)
-        self.x = self.data['x'].values
-        self.y = self.data['y'].values
-        self.phi1 = self.data['phi1'].values
-        self.Phi = self.data['Phi'].values
-        self.phi2 = self.data['phi2'].values
+        for varname, cnames_info in self._colnames.items():
+            for cname in self.data.columns:
+                if cname == varname or cname in cnames_info['aliases']:
+                    if not cnames_info['copy']:
+                        setattr(self, varname, self.data[cname].values)
+                    else:
+                        setattr(self, varname, self.data[cname].values.copy())
+
         if (abs(self.phi1.max()) > self._2pi or abs(self.Phi.max()) > self._2pi or
                 abs(self.phi2.max()) > self._2pi):
             print('Euler angles out of allowed range! Please check if they are really '
                   'provided in radians.')
-        self.ph = self.data['ph'].values
 
         # Makes sure min(x) == 0 and min(y) == 0
         self.x -= self.x.min()
@@ -367,7 +358,7 @@ class ScanData(GridIndexing):
         return kernel_average_misorientation(self.M, neighbors, sel, maxmis,
                                              kwargs.pop('out', 'deg'), **kwargs)
 
-    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, gray=None, graymin=0, graymax=None,
+    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, colorfill='black', gray=None, graymin=0, graymax=None,
                  tiling=None, w=2048, scalebar=True, plotlimits=None, verbose=True, **kwargs):
         """
         Plots inverse pole figure map
@@ -383,6 +374,11 @@ class ScanData(GridIndexing):
         sel : bool numpy 1D array (optional)
             Boolean array indicating which data points should be plotted
             Default: None
+        colorfill : str or list shape(3) or shape(4) (optional)
+            Color used to fill unindexed pixels. It can be provided as RGB
+            or RGBA values as an iterable. If RGBA is provided, alpha channel
+            is droppped
+            Default: 'black'
         gray : numpy ndarray (optional)
             Grayscale mask plotted over IPF.
             For example, one may want to overlay the IPF map with the image
@@ -446,7 +442,7 @@ class ScanData(GridIndexing):
                 sel = sel & sellim
 
         ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
-                           self.grid, self.dx, self.dy, d, ax, sel, gray, graymin, graymax,
+                           self.grid, self.dx, self.dy, d, ax, sel, colorfill, gray, graymin, graymax,
                            tiling, w, scalebar, verbose, **kwargs)
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
@@ -758,7 +754,7 @@ class ScanData(GridIndexing):
         return ebsdmap
 
     def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
-                verbose=True, **kwargs):
+                sep_phases=False, verbose=True, **kwargs):
         """
         Plots pole figure
 
@@ -779,6 +775,9 @@ class ScanData(GridIndexing):
             the axes of the pole figure.
         contour : bool (optional)
             contour=True plots the pole figure using contour plot
+            Default: False
+        sep_phases : bool (optional)
+            If true, plot pole figures of different phases separately
             Default: False
         verbose : bool (optional)
             If True, prints computation time
@@ -816,7 +815,21 @@ class ScanData(GridIndexing):
         -------
         ax : matplotlib.pyplot.axes.Axes
         """
-        return plot_PF(None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs)
+
+        # TO DO: SET DIFFERENT COLOR SCHEMES FOR EACH PLOT
+        if sep_phases:
+            phases = np.unique(self.ph[sel])
+            ph = phases[0]
+            ax = plot_PF(None, proj, ax, sel & (self.ph == ph), rotation, contour, verbose,
+                         R=self.R, label='{}'.format(ph), **kwargs)
+            for ph in phases[1:]:
+                plot_PF(None, proj, ax, sel & (self.ph == ph), rotation, contour, verbose,
+                        R=self.R, ax=ax, label='{}'.format(ph), **kwargs)
+
+        else:
+            ax = plot_PF(None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs)
+
+        return ax
 
     def savefig(self, fname, **kwargs):
         """

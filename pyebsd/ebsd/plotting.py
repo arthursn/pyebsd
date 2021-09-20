@@ -11,10 +11,13 @@ from .orientation import PF, IPF, stereographic_projection
 from ..draw import set_tight_plt, draw_circle_frame, toimage, ScaleBar
 from ..selection import LassoSelector2, RectangleSelector2
 
-__all__ = ['set_threshold_tiling', 'GridIndexing', 'EBSDMap', 'get_color_IPF',
+__all__ = ['set_threshold_tiling', 'set_max_size',
+           'GridIndexing', 'EBSDMap', 'get_color_IPF',
            'unit_triangle', 'plot_PF', 'plot_property', 'plot_IPF']
 
 __THRESHOLD_TILING__ = 10000
+
+__MAX_SIZE__ = 10000
 
 
 def set_threshold_tiling(threshold):
@@ -28,6 +31,19 @@ def set_threshold_tiling(threshold):
     """
     global __THRESHOLD_TILING__
     __THRESHOLD_TILING__ = int(threshold)
+
+
+def set_max_size(max_size):
+    """
+    Sets __MAX_SIZE__
+
+    Parameters
+    ----------
+    max_size : int
+        New value of __MAX_SIZE__
+    """
+    global __MAX_SIZE__
+    __MAX_SIZE__ = int(max_size)
 
 
 class GridIndexing(object):
@@ -674,17 +690,14 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
         else:
             ax.contour(hist, extent=(-1, 1, -1, 1), **kwargs)
     else:
-        if kwargs.pop('scatter', False):
-            ax.scatter(xp.ravel(), yp.ravel(), **kwargs)
-        else:
-            if not kwargs.get('linestyle', None):
-                kwargs['linestyle'] = 'None'
-            if not kwargs.get('marker', None):
-                kwargs['marker'] = '.'
-            if not kwargs.get('markersize', None) and not kwargs.get('ms', None):
-                kwargs['markersize'] = 1
+        if not kwargs.get('linestyle', None):
+            kwargs['linestyle'] = 'None'
+        if not kwargs.get('marker', None):
+            kwargs['marker'] = '.'
+        if not kwargs.get('markersize', None) and not kwargs.get('ms', None):
+            kwargs['markersize'] = 1
 
-            ax.plot(xp.ravel(), yp.ravel(), **kwargs)
+        ax.plot(xp.ravel(), yp.ravel(), **kwargs)
 
     ax.set_xlim(-1.05, 1.05)
     ax.set_ylim(-1.05, 1.05)
@@ -853,18 +866,16 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
     vmin = kwargs.pop('vmin', np.min(prop[sel]))
     vmax = kwargs.pop('vmax', np.max(prop[sel]))
 
-    # converts string, or list to tuple with RGB color. Drops alpha channel if RGBA is provided
-    colorfill = matplotlib.colors.to_rgb(colorfill)
+    colorfill = matplotlib.colors.to_rgba(colorfill)
 
     # coloring
-    color = np.ndarray((N, 3))
-    color[:] = colorfill
+    color = np.full((N, 4), 1.0, dtype=float)
     if isinstance(colordict, dict):
         for p, color_code in colordict.items():
-            color[prop == float(p)] = matplotlib.colors.to_rgb(color_code)
+            color[prop == float(p)] = matplotlib.colors.to_rgba(color_code)
     else:
         # normalizes prop to range [0,1] and makes rgb colormap
-        color[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])[:, :3]
+        color[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])
 
     # filling invalid/non-selected data points
     color[not_sel] = colorfill
@@ -886,13 +897,12 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
             gray = (gray.reshape(-1, 1) - graymin)/(graymax - graymin)
             gray[gray < 0.] = 0.
             gray[gray > 1.] = 1.
-            color[sel] = color[sel]*gray[sel]
+            color[sel, :3] = color[sel, :3]*gray[sel]
 
     # getting AxesSubplot object
     if ax is None:
         fig, ax = plt.subplots()
     else:
-        ax.cla()
         fig = ax.get_figure()
 
     # plotting maps
@@ -908,12 +918,16 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
 
         scale = 1.*w/(xmax - xmin)
         h = np.int(scale*(ymax - ymin))
+        if h > __MAX_SIZE__:
+            h = __MAX_SIZE__
+            scale = h/(ymax - ymin)
+            w = np.int(scale*(xmax - xmin))
 
         x_hex = (x_hex - xmin)*scale
         y_hex = (y_hex - ymin)*scale
 
-        img_pil = Image.new('RGB', (w, h), 'black')
-        draw = ImageDraw.Draw(img_pil)
+        img_pil = Image.new('RGBA', (w, h), tuple(int(c * 255) for c in colorfill))
+        draw = ImageDraw.Draw(img_pil, 'RGBA')
         for i in range(len(x_hex)):
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=tuple(color[i]))
@@ -952,8 +966,16 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         scale = 1.*w/(xmax - xmin)
         if grid.lower() == 'hexgrid':
             h = np.int(scale*(ymax - ymin)*(3.**.5))
+            if h > __MAX_SIZE__:
+                h = __MAX_SIZE__
+                scale = h/((ymax - ymin)*3.**.5)
+                w = np.int(scale*(xmax - xmin))
         else:
             h = np.int(scale*(ymax - ymin))
+            if h > __MAX_SIZE__:
+                h = __MAX_SIZE__
+                scale = h/(ymax - ymin)
+                w = np.int(scale*(xmax - xmin))
 
         color = color.reshape(nrows, ncols, -1)
 
@@ -992,8 +1014,9 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
 
 
 def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
-             d=[0, 0, 1], ax=None, sel=None, gray=None, graymin=0, graymax=None,
-             tiling=None, w=2048, scalebar=True, verbose=True, **kwargs):
+             d=[0, 0, 1], ax=None, sel=None, colorfill='black', gray=None,
+             graymin=0, graymax=None, tiling=None, w=2048, scalebar=True,
+             verbose=True, **kwargs):
     """
     Plots inverse pole figure map
 
@@ -1031,6 +1054,11 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
     sel : bool numpy 1D array (optional)
         Boolean array indicating which data points should be plotted
         Default: None
+    colorfill : str or list shape(3) or shape(4) (optional)
+        Color used to fill unindexed pixels. It can be provided as RGB
+        or RGBA values as an iterable. If RGBA is provided, alpha channel
+        is droppped
+        Default: 'black'
     gray : numpy ndarray (optional)
         Grayscale mask plotted over IPF.
         For example, one may want to overlay the IPF map with the image
@@ -1123,15 +1151,17 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
     scalebar_location = kwargs.pop('scalebar_location', 'lower left')
 
     # call IPF to get crystal directions parallel to d and
-    # convert to color code (RGB)
+    # convert to color code (RGBA)
     d_IPF = IPF(M, d)
     d_IPF = np.abs(d_IPF)
     d_IPF = np.sort(d_IPF, axis=1)
     d_IPF = d_IPF[:, [1, 0, 2]]
-    color = get_color_IPF(d_IPF, issorted=True)
+    color = np.full((len(d_IPF), 4), 255, dtype=int)
+    color[:, :3] = get_color_IPF(d_IPF, issorted=True)
     # filling invalid/non-selected data points
     d_IPF[not_sel] = [np.nan, np.nan, np.nan]
-    color[not_sel] = [0, 0, 0]  # RGB
+    colorfill = tuple(int(c * 255) for c in matplotlib.colors.to_rgba(colorfill))
+    color[not_sel] = colorfill  # RGBA
 
     # applying gray mask
     if isinstance(gray, np.ndarray):
@@ -1145,13 +1175,12 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
             gray = (gray.reshape(-1, 1) - graymin)/(graymax - graymin)
             gray[gray < 0.] = 0.
             gray[gray > 1.] = 1.
-            color[sel] = color[sel]*gray[sel]
+            color[sel, :3] = color[sel, :3]*gray[sel]
 
     # getting AxesSubplot object
     if ax is None:
         fig, ax = plt.subplots()
     else:
-        ax.cla()
         fig = ax.get_figure()
 
     # plotting maps
@@ -1168,13 +1197,17 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
 
         scale = 1.*w/(xmax - xmin)
         h = np.int((ymax - ymin)*scale)
+        if h > __MAX_SIZE__:
+            h = __MAX_SIZE__
+            scale = h/(ymax - ymin)
+            w = np.int(scale*(xmax - xmin))
 
         # coordinates of the vertices in pixels
         x_hex = (x_hex - xmin)*scale
         y_hex = (y_hex - ymin)*scale
 
-        img_pil = Image.new('RGB', (w, h), 'black')
-        draw = ImageDraw.Draw(img_pil)
+        img_pil = Image.new('RGBA', (w, h), colorfill)
+        draw = ImageDraw.Draw(img_pil, 'RGBA')
         for i in range(len(x_hex)):
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=tuple(color[i]))
@@ -1213,8 +1246,16 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         scale = 1.*w/(xmax - xmin)
         if grid.lower() == 'hexgrid':
             h = np.int(scale*(ymax - ymin)*(3.**.5))
+            if h > __MAX_SIZE__:
+                h = __MAX_SIZE__
+                scale = h/((ymax - ymin)*3.**.5)
+                w = np.int(scale*(xmax - xmin))
         else:
             h = np.int(scale*(ymax - ymin))
+            if h > __MAX_SIZE__:
+                h = __MAX_SIZE__
+                scale = h/(ymax - ymin)
+                w = np.int(scale*(xmax - xmin))
 
         color = color.reshape(nrows, ncols, -1)
 
