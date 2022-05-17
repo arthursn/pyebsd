@@ -4,11 +4,12 @@ import time
 import numpy as np
 import matplotlib.colors
 import matplotlib.pyplot as plt
+from matplotlib_scalebar.scalebar import ScaleBar
 
 from PIL import Image, ImageDraw
 
 from .orientation import PF, IPF, stereographic_projection
-from ..draw import set_tight_plt, draw_circle_frame, toimage, ScaleBar
+from ..draw import set_tight_plt, draw_circle_frame, toimage
 from ..selection import LassoSelector2, RectangleSelector2
 
 __all__ = ['set_threshold_tiling', 'set_max_size',
