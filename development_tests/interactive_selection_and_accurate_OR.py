@@ -46,8 +46,8 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
     ax1, ax2, ax3, ax4 = axes.ravel()
 
-    fig.canvas.set_window_title(('Select area and press SHIFT for plotting selection. '
-                                 'Press ENTER to continue with accurate OR calculation.'))
+    fig.canvas.manager.set_window_title(('Select area and press SHIFT for plotting selection. '
+                                         'Press ENTER to continue with accurate OR calculation.'))
 
     # Plot unit triangle
     pyebsd.unit_triangle(ax3)

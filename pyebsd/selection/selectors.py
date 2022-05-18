@@ -8,7 +8,7 @@ __all__ = ['LassoSelector2', 'RectangleSelector2']
 
 class LassoSelector2(_SelectorWidget):
     def __init__(self, ax, x, y, lineprops=None):
-        _SelectorWidget.__init__(self, ax, self.onselect, button=None, useblit=False)
+        super().__init__(ax, self.onselect, useblit=False, button=None)
 
         if lineprops is None:
             lineprops = dict()
@@ -18,7 +18,7 @@ class LassoSelector2(_SelectorWidget):
         self.verts = None
         self.line = Line2D([], [], **lineprops)
         self.ax.add_line(self.line)
-        self.artists = [self.line]
+        self._selection_artist = self.line
 
         self.data = list(zip(x, y))
         self.sel = np.ndarray(len(self.data), dtype=bool)
