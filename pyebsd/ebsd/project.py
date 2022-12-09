@@ -122,7 +122,7 @@ class ScanData(GridIndexing):
         self.y -= self.y.min()
 
         # Optional columns
-        for colname, coldata in self.data.iteritems():
+        for colname, coldata in self.data.items():
             if colname not in self._compulsory_columns and isinstance(colname, str):
                 try:
                     # Check if colname is a valid variable name. Only works on python3,
