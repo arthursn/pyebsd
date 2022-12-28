@@ -6,16 +6,15 @@ from matplotlib import rcParams
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 
-from .orientation import (euler_angles_to_rotation_matrix,
-                          kernel_average_misorientation)
+from .orientation import euler_angles_to_rotation_matrix, kernel_average_misorientation
 from .plotting import GridIndexing, EBSDMap, plot_property, plot_IPF, plot_PF
 
-__all__ = ['ScanData', 'selection_to_scandata']
+__all__ = ["ScanData", "selection_to_scandata"]
 
 
-rcParams['savefig.dpi'] = 300
-rcParams['savefig.bbox'] = 'tight'
-rcParams['savefig.pad_inches'] = 0.0
+rcParams["savefig.dpi"] = 300
+rcParams["savefig.bbox"] = "tight"
+rcParams["savefig.pad_inches"] = 0.0
 
 
 class ScanData(GridIndexing):
@@ -46,11 +45,12 @@ class ScanData(GridIndexing):
         Header of the scan data file
         Default: ''
     """
-    _2pi = 2*np.pi
-    _cos60 = .5  # cos(60deg)
-    _sin60 = .5*3.**.5  # sin(60deg)
 
-    colors = ['red', 'green', 'blue', 'cyan', 'magenta', 'yellow']
+    _2pi = 2 * np.pi
+    _cos60 = 0.5  # cos(60deg)
+    _sin60 = 0.5 * 3.0**0.5  # sin(60deg)
+
+    colors = ["red", "green", "blue", "cyan", "magenta", "yellow"]
 
     neighbors_hexgrid_fixed = [
         # 1st neighbors
@@ -59,45 +59,122 @@ class ScanData(GridIndexing):
         [[3, 1], [0, 2], [-3, 1], [-3, -1], [0, -2], [3, -1]],
         # 3rd neighbors and so on...
         [[4, 0], [2, 2], [-2, 2], [-4, 0], [-2, -2], [2, -2]],
-        [[5, 1], [4, 2], [1, 3], [-1, 3], [-4, 2], [-5, 1],
-         [-5, -1], [-4, -2], [-1, -3], [1, -3], [4, -2], [5, -1]],
+        [
+            [5, 1],
+            [4, 2],
+            [1, 3],
+            [-1, 3],
+            [-4, 2],
+            [-5, 1],
+            [-5, -1],
+            [-4, -2],
+            [-1, -3],
+            [1, -3],
+            [4, -2],
+            [5, -1],
+        ],
         [[6, 0], [3, 3], [-3, 3], [-6, 0], [-3, -3], [3, -3]],
         [[6, 2], [0, 4], [-6, 2], [-6, -2], [0, -4], [6, -2]],
-        [[7, 1], [5, 3], [2, 4], [-2, 4], [-5, 3], [-7, 1],
-         [-7, -1], [-5, -3], [-2, -4], [2, -4], [5, -3], [7, -1]],
+        [
+            [7, 1],
+            [5, 3],
+            [2, 4],
+            [-2, 4],
+            [-5, 3],
+            [-7, 1],
+            [-7, -1],
+            [-5, -3],
+            [-2, -4],
+            [2, -4],
+            [5, -3],
+            [7, -1],
+        ],
         [[8, 0], [4, 4], [-4, 4], [-8, 0], [-4, -4], [4, -4]],
-        [[8, 2], [7, 3], [1, 5], [-1, 5], [-7, 3], [-8, 2],
-         [-8, -2], [-7, -3], [-1, -5], [1, -5], [7, -3], [8, -2]],
-        [[9, 1], [6, 4], [3, 5], [-3, 5], [-6, 4], [-9, 1],
-         [-9, -1], [-6, -4], [-3, -5], [3, -5], [6, -4], [9, -1]],
+        [
+            [8, 2],
+            [7, 3],
+            [1, 5],
+            [-1, 5],
+            [-7, 3],
+            [-8, 2],
+            [-8, -2],
+            [-7, -3],
+            [-1, -5],
+            [1, -5],
+            [7, -3],
+            [8, -2],
+        ],
+        [
+            [9, 1],
+            [6, 4],
+            [3, 5],
+            [-3, 5],
+            [-6, 4],
+            [-9, 1],
+            [-9, -1],
+            [-6, -4],
+            [-3, -5],
+            [3, -5],
+            [6, -4],
+            [9, -1],
+        ],
         [[10, 0], [5, 5], [-5, 5], [-10, 0], [-5, -5], [5, -5]],
         [[9, 3], [0, 6], [-9, 3], [-9, -3], [0, -6], [9, -3]],
-        [[10, 2], [8, 4], [2, 6], [-2, 6], [-8, 4], [-10, 2],
-         [-10, -2], [-8, -4], [-2, -6], [2, -6], [8, -4], [10, -2]],
-        [[11, 1], [7, 5], [4, 6], [-4, 6], [-7, 5], [-11, 1],
-         [-11, -1], [-7, -5], [-4, -6], [4, -6], [7, -5], [11, -1]],
+        [
+            [10, 2],
+            [8, 4],
+            [2, 6],
+            [-2, 6],
+            [-8, 4],
+            [-10, 2],
+            [-10, -2],
+            [-8, -4],
+            [-2, -6],
+            [2, -6],
+            [8, -4],
+            [10, -2],
+        ],
+        [
+            [11, 1],
+            [7, 5],
+            [4, 6],
+            [-4, 6],
+            [-7, 5],
+            [-11, 1],
+            [-11, -1],
+            [-7, -5],
+            [-4, -6],
+            [4, -6],
+            [7, -5],
+            [11, -1],
+        ],
         # 15th neighbors
-        [[12, 0], [6, 6], [-6, 6], [-12, 0], [-6, -6], [6, -6]]
+        [[12, 0], [6, 6], [-6, 6], [-12, 0], [-6, -6], [6, -6]],
     ]
 
     _n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
 
-    _colnames = {'x': dict(aliases=['X'], copy=True),
-                 'y': dict(aliases=['Y'], copy=True),
-                 'phi1': dict(aliases=['Euler1'], copy=False),
-                 'Phi': dict(aliases=['Euler2'], copy=False),
-                 'phi2': dict(aliases=['Euler3'], copy=False),
-                 'ph': dict(aliases=['phase', 'Phase'], copy=False)}
+    _colnames = {
+        "x": dict(aliases=["X"], copy=True),
+        "y": dict(aliases=["Y"], copy=True),
+        "phi1": dict(aliases=["Euler1"], copy=False),
+        "Phi": dict(aliases=["Euler2"], copy=False),
+        "phi2": dict(aliases=["Euler3"], copy=False),
+        "ph": dict(aliases=["phase", "Phase"], copy=False),
+    }
     _compulsory_columns = tuple(_colnames.keys())
 
-    def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=''):
+    def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=""):
         # Initializes base class GridIndexing
         super(ScanData, self).__init__(grid, ncols_odd, ncols_even, nrows, dx, dy)
 
         self.data = data  # pandas DataFrame
         if len(data) != self.N:
-            raise Exception(('Number of pixels ({}) does not match expected value '
-                             '({})').format(len(data), self.N))
+            raise Exception(
+                ("Number of pixels ({}) does not match expected value " "({})").format(
+                    len(data), self.N
+                )
+            )
 
         # Rename columns in dataframe
         self.header = header  # string
@@ -106,16 +183,21 @@ class ScanData(GridIndexing):
         # (.values: pandas Series to numpy array)
         for varname, cnames_info in self._colnames.items():
             for cname in self.data.columns:
-                if cname == varname or cname in cnames_info['aliases']:
-                    if not cnames_info['copy']:
+                if cname == varname or cname in cnames_info["aliases"]:
+                    if not cnames_info["copy"]:
                         setattr(self, varname, self.data[cname].values)
                     else:
                         setattr(self, varname, self.data[cname].values.copy())
 
-        if (abs(self.phi1.max()) > self._2pi or abs(self.Phi.max()) > self._2pi or
-                abs(self.phi2.max()) > self._2pi):
-            print('Euler angles out of allowed range! Please check if they are really '
-                  'provided in radians.')
+        if (
+            abs(self.phi1.max()) > self._2pi
+            or abs(self.Phi.max()) > self._2pi
+            or abs(self.phi2.max()) > self._2pi
+        ):
+            print(
+                "Euler angles out of allowed range! Please check if they are really "
+                "provided in radians."
+            )
 
         # Makes sure min(x) == 0 and min(y) == 0
         self.x -= self.x.min()
@@ -161,8 +243,7 @@ class ScanData(GridIndexing):
         sample coordinate frame of the EBSD system.
         """
         if self._R is None:
-            self._R = euler_angles_to_rotation_matrix(
-                self.phi1, self.Phi, self.phi2)
+            self._R = euler_angles_to_rotation_matrix(self.phi1, self.Phi, self.phi2)
         return self._R
 
     def get_neighbors_oim(self, distance):
@@ -170,26 +251,30 @@ class ScanData(GridIndexing):
         Returns list of relative indices of the neighboring pixels for
         a given distance in pixels
         """
-        if self.grid.lower() == 'hexgrid':
-            R60 = np.array([[self._cos60, -self._sin60],
-                            [self._sin60,  self._cos60]])  # 60 degrees rotation matrix
+        if self.grid.lower() == "hexgrid":
+            R60 = np.array(
+                [[self._cos60, -self._sin60], [self._sin60, self._cos60]]
+            )  # 60 degrees rotation matrix
 
             j_list = np.arange(-distance, distance, 2)
             i_list = np.full(j_list.shape, -distance)
 
-            xy = np.vstack([j_list*self._cos60, i_list*self._sin60])
+            xy = np.vstack([j_list * self._cos60, i_list * self._sin60])
 
             j_list, i_list = list(j_list), list(i_list)
 
             for r in range(1, 6):
                 xy = np.dot(R60, xy)  # 60 degrees rotation
-                j_list += list((xy[0]/self._cos60).round(0).astype(int))
-                i_list += list((xy[1]/self._sin60).round(0).astype(int))
+                j_list += list((xy[0] / self._cos60).round(0).astype(int))
+                i_list += list((xy[1] / self._sin60).round(0).astype(int))
         else:  # sqrgrid
-            R90 = np.array([[0, -1],
-                            [1,  0]], dtype=int)  # 90 degrees rotation matrix
-            xy = np.vstack([np.arange(-distance, distance, dtype=int),
-                            np.full(2*distance, -distance, dtype=int)])
+            R90 = np.array([[0, -1], [1, 0]], dtype=int)  # 90 degrees rotation matrix
+            xy = np.vstack(
+                [
+                    np.arange(-distance, distance, dtype=int),
+                    np.full(2 * distance, -distance, dtype=int),
+                ]
+            )
 
             j_list, i_list = list(xy[0]), list(xy[1])
 
@@ -205,17 +290,25 @@ class ScanData(GridIndexing):
         Returns list of relative indices of the neighboring pixels for
         a given distance in pixels
         """
-        if self.grid.lower() == 'hexgrid':
+        if self.grid.lower() == "hexgrid":
             if distance > self._n_neighbors_hexgrid_fixed:
-                raise Exception('get_neighbors_fixed not supported for distance > {}'.format(
-                    self._n_neighbors_hexgrid_fixed))
-            j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance-1]))
+                raise Exception(
+                    "get_neighbors_fixed not supported for distance > {}".format(
+                        self._n_neighbors_hexgrid_fixed
+                    )
+                )
+            j_list, i_list = list(zip(*self.neighbors_hexgrid_fixed[distance - 1]))
         else:
             raise Exception(
-                'get_neighbors_fixed not yet supported for grid type {}'.format(self.grid))
+                "get_neighbors_fixed not yet supported for grid type {}".format(
+                    self.grid
+                )
+            )
         return list(j_list), list(i_list)
 
-    def get_neighbors(self, distance, perimeteronly=True, distance_convention='OIM', sel=None):
+    def get_neighbors(
+        self, distance, perimeteronly=True, distance_convention="OIM", sel=None
+    ):
         """
         Returns list of indices of the neighboring pixels for every pixel
         for a given distance in pixels
@@ -249,13 +342,16 @@ class ScanData(GridIndexing):
             neighbors
             Indices of the neighboring pixels
         """
-        if distance_convention.lower() == 'oim':
+        if distance_convention.lower() == "oim":
             _get_neighbors = self.get_neighbors_oim
-        elif distance_convention.lower() == 'fixed':
+        elif distance_convention.lower() == "fixed":
             _get_neighbors = self.get_neighbors_fixed
         else:
             raise Exception(
-                'get_neighbors: unknown distance convention "{}"'.format(distance_convention))
+                'get_neighbors: unknown distance convention "{}"'.format(
+                    distance_convention
+                )
+            )
 
         if perimeteronly:
             # only pixels in the perimeter
@@ -263,7 +359,7 @@ class ScanData(GridIndexing):
         else:
             # including inner pixels
             j_shift, i_shift = [], []
-            for d in range(1, distance+1):
+            for d in range(1, distance + 1):
                 j_sh, i_sh = _get_neighbors(d)
                 j_shift += j_sh
                 i_shift += i_sh
@@ -280,8 +376,12 @@ class ScanData(GridIndexing):
         i_neighbors[sel] = np.add.outer(self.i[sel], i_shift)
 
         # i, j out of allowed range
-        outliers = (j_neighbors < 0) | (j_neighbors >= self.ncols) | (
-            i_neighbors < 0) | (i_neighbors >= self.nrows)
+        outliers = (
+            (j_neighbors < 0)
+            | (j_neighbors >= self.ncols)
+            | (i_neighbors < 0)
+            | (i_neighbors >= self.nrows)
+        )
 
         neighbors_ind = np.full((self.N, n_neighbors), -1, dtype=int)
         neighbors_ind[sel] = self.ij_to_index(i_neighbors[sel], j_neighbors[sel])
@@ -289,7 +389,7 @@ class ScanData(GridIndexing):
 
         return neighbors_ind.astype(int)
 
-    def get_distance_neighbors(self, distance, distance_convention='OIM'):
+    def get_distance_neighbors(self, distance, distance_convention="OIM"):
         """
         Returns distance, in um, to the n-th (distance-th) neighbor
 
@@ -313,23 +413,33 @@ class ScanData(GridIndexing):
         d : float
             Distance, in um, to the n-th (distance-th) neighbor
         """
-        if distance_convention.lower() == 'oim':
+        if distance_convention.lower() == "oim":
             j, i = self.get_neighbors_oim(distance)
-        elif distance_convention.lower() == 'fixed':
+        elif distance_convention.lower() == "fixed":
             j, i = self.get_neighbors_fixed(distance)
         else:
-            raise Exception(('get_distance_neighbors: unknown distance convention '
-                             '"{}"').format(distance_convention))
+            raise Exception(
+                ("get_distance_neighbors: unknown distance convention " '"{}"').format(
+                    distance_convention
+                )
+            )
 
-        if self.grid.lower() == 'hexgrid':
-            d = .5*(np.array(j)**2 + 3.*np.array(i)**2)**.5
+        if self.grid.lower() == "hexgrid":
+            d = 0.5 * (np.array(j) ** 2 + 3.0 * np.array(i) ** 2) ** 0.5
         else:  # sqrgrid
-            d = (np.array(j)**2 + np.array(i)**2)**.5
+            d = (np.array(j) ** 2 + np.array(i) ** 2) ** 0.5
 
         return d.mean()
 
-    def get_KAM(self, distance=1, perimeteronly=True, maxmis=None,
-                distance_convention='OIM', sel=None, **kwargs):
+    def get_KAM(
+        self,
+        distance=1,
+        perimeteronly=True,
+        maxmis=None,
+        distance_convention="OIM",
+        sel=None,
+        **kwargs
+    ):
         """
         Returns Kernel average misorientation map
 
@@ -354,12 +464,29 @@ class ScanData(GridIndexing):
         -------
         KAM : numpy ndarray shape(N) with KAM values in degrees
         """
-        neighbors = self.get_neighbors(distance, perimeteronly, distance_convention, sel)
-        return kernel_average_misorientation(self.M, neighbors, sel, maxmis,
-                                             kwargs.pop('out', 'deg'), **kwargs)
+        neighbors = self.get_neighbors(
+            distance, perimeteronly, distance_convention, sel
+        )
+        return kernel_average_misorientation(
+            self.M, neighbors, sel, maxmis, kwargs.pop("out", "deg"), **kwargs
+        )
 
-    def plot_IPF(self, d=[0, 0, 1], ax=None, sel=None, colorfill='black', gray=None, graymin=0, graymax=None,
-                 tiling=None, w=2048, scalebar=True, plotlimits=None, verbose=True, **kwargs):
+    def plot_IPF(
+        self,
+        d=[0, 0, 1],
+        ax=None,
+        sel=None,
+        colorfill="black",
+        gray=None,
+        graymin=0,
+        graymax=None,
+        tiling=None,
+        w=2048,
+        scalebar=True,
+        plotlimits=None,
+        verbose=True,
+        **kwargs
+    ):
         """
         Plots inverse pole figure map
 
@@ -431,28 +558,68 @@ class ScanData(GridIndexing):
             if len(plotlimits) == 4:
                 xlim, ylim = plotlimits[:2], plotlimits[2:]
             else:
-                print('plotlimits should be provided as list/tuple of length 4')
+                print("plotlimits should be provided as list/tuple of length 4")
         if xlim is not None and ylim is not None:
             xlim, ylim = sorted(xlim), sorted(ylim)
-            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (
-                self.y >= ylim[0]) & (self.y <= ylim[1])
+            sellim = (
+                (self.x >= xlim[0])
+                & (self.x <= xlim[1])
+                & (self.y >= ylim[0])
+                & (self.y <= ylim[1])
+            )
             if sel is None:
                 sel = sellim
             else:
                 sel = sel & sellim
 
-        ebsdmap = plot_IPF(self.M, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
-                           self.grid, self.dx, self.dy, d, ax, sel, colorfill, gray, graymin, graymax,
-                           tiling, w, scalebar, verbose, **kwargs)
+        ebsdmap = plot_IPF(
+            self.M,
+            self.nrows,
+            self.ncols_odd,
+            self.ncols_even,
+            self.x,
+            self.y,
+            self.grid,
+            self.dx,
+            self.dy,
+            d,
+            ax,
+            sel,
+            colorfill,
+            gray,
+            graymin,
+            graymax,
+            tiling,
+            w,
+            scalebar,
+            verbose,
+            **kwargs
+        )
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_property(self, prop, propname='z', ax=None, colordict=None, colorfill='black',
-                      fillvalue=np.nan, sel=None, gray=None, graymin=0, graymax=None,
-                      tiling=None, w=2048, scalebar=True, colorbar=True, plotlimits=None,
-                      verbose=True, **kwargs):
+    def plot_property(
+        self,
+        prop,
+        propname="z",
+        ax=None,
+        colordict=None,
+        colorfill="black",
+        fillvalue=np.nan,
+        sel=None,
+        gray=None,
+        graymin=0,
+        graymax=None,
+        tiling=None,
+        w=2048,
+        scalebar=True,
+        colorbar=True,
+        plotlimits=None,
+        verbose=True,
+        **kwargs
+    ):
         """
         Plots any EBSD property
 
@@ -540,28 +707,68 @@ class ScanData(GridIndexing):
             if len(plotlimits) == 4:
                 xlim, ylim = plotlimits[:2], plotlimits[2:]
             else:
-                print('plotlimits should be provided as list/tuple of length 4')
+                print("plotlimits should be provided as list/tuple of length 4")
         if xlim is not None and ylim is not None:
             xlim, ylim = sorted(xlim), sorted(ylim)
-            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (
-                self.y >= ylim[0]) & (self.y <= ylim[1])
+            sellim = (
+                (self.x >= xlim[0])
+                & (self.x <= xlim[1])
+                & (self.y >= ylim[0])
+                & (self.y <= ylim[1])
+            )
             if sel is None:
                 sel = sellim
             else:
                 sel = sel & sellim
 
-        ebsdmap = plot_property(prop, self.nrows, self.ncols_odd, self.ncols_even, self.x, self.y,
-                                self.grid, self.dx, self.dy, propname, ax, colordict, colorfill,
-                                fillvalue, sel, gray, graymin, graymax, tiling, w, scalebar,
-                                colorbar, verbose, **kwargs)
+        ebsdmap = plot_property(
+            prop,
+            self.nrows,
+            self.ncols_odd,
+            self.ncols_even,
+            self.x,
+            self.y,
+            self.grid,
+            self.dx,
+            self.dy,
+            propname,
+            ax,
+            colordict,
+            colorfill,
+            fillvalue,
+            sel,
+            gray,
+            graymin,
+            graymax,
+            tiling,
+            w,
+            scalebar,
+            colorbar,
+            verbose,
+            **kwargs
+        )
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
         self.axes.append(ebsdmap.ax)
         return ebsdmap
 
-    def plot_phase(self, ax=None, colordict=None, colorfill='black', fillvalue=-1,
-                   sel=None, gray=None, graymin=0, graymax=None, tiling=None, w=2048,
-                   scalebar=True, plotlimits=None, verbose=True, **kwargs):
+    def plot_phase(
+        self,
+        ax=None,
+        colordict=None,
+        colorfill="black",
+        fillvalue=-1,
+        sel=None,
+        gray=None,
+        graymin=0,
+        graymax=None,
+        tiling=None,
+        w=2048,
+        scalebar=True,
+        plotlimits=None,
+        verbose=True,
+        **kwargs
+    ):
         """
         Plots phases map
 
@@ -640,16 +847,48 @@ class ScanData(GridIndexing):
             ph_code = set(self.ph)
             ccycler = cycle(self.colors)
             colordict = {ph: next(ccycler) for ph in ph_code}
-        ebsdmap = self.plot_property(self.ph, 'phase', ax, colordict, colorfill, fillvalue, sel,
-                                     gray, graymin, graymax, tiling, w, scalebar, False, plotlimits,
-                                     verbose, **kwargs)
+        ebsdmap = self.plot_property(
+            self.ph,
+            "phase",
+            ax,
+            colordict,
+            colorfill,
+            fillvalue,
+            sel,
+            gray,
+            graymin,
+            graymax,
+            tiling,
+            w,
+            scalebar,
+            False,
+            plotlimits,
+            verbose,
+            **kwargs
+        )
         return ebsdmap
 
-    def plot_KAM(self, distance=1, perimeteronly=True, ax=None, maxmis=None,
-                 distance_convention='OIM', colorfill='black', fillvalue=np.nan,
-                 sel=None, gray=None, graymin=0, graymax=None, tiling=None,
-                 w=2048, scalebar=True, colorbar=True, plotlimits=None, verbose=True,
-                 **kwargs):
+    def plot_KAM(
+        self,
+        distance=1,
+        perimeteronly=True,
+        ax=None,
+        maxmis=None,
+        distance_convention="OIM",
+        colorfill="black",
+        fillvalue=np.nan,
+        sel=None,
+        gray=None,
+        graymin=0,
+        graymax=None,
+        tiling=None,
+        w=2048,
+        scalebar=True,
+        colorbar=True,
+        plotlimits=None,
+        verbose=True,
+        **kwargs
+    ):
         """
         Plots kernel average misorientation map
 
@@ -736,25 +975,54 @@ class ScanData(GridIndexing):
             if len(plotlimits) == 4:
                 xlim, ylim = plotlimits[:2], plotlimits[2:]
             else:
-                print('plotlimits should be provided as list/tuple of length 4')
+                print("plotlimits should be provided as list/tuple of length 4")
         if xlim is not None and ylim is not None:
             xlim, ylim = sorted(xlim), sorted(ylim)
-            sellim = (self.x >= xlim[0]) & (self.x <= xlim[1]) & (
-                self.y >= ylim[0]) & (self.y <= ylim[1])
+            sellim = (
+                (self.x >= xlim[0])
+                & (self.x <= xlim[1])
+                & (self.y >= ylim[0])
+                & (self.y <= ylim[1])
+            )
             if sel is None:
                 sel = sellim
             else:
                 sel = sel & sellim
 
         KAM = self.get_KAM(distance, perimeteronly, maxmis, distance_convention, sel)
-        ebsdmap = self.plot_property(KAM, 'KAM', ax, None, colorfill, fillvalue, sel,
-                                     gray, graymin, graymax, tiling, w, scalebar, colorbar,
-                                     None, verbose, **kwargs)
-        ebsdmap.cax.set_label(u'KAM (°)')
+        ebsdmap = self.plot_property(
+            KAM,
+            "KAM",
+            ax,
+            None,
+            colorfill,
+            fillvalue,
+            sel,
+            gray,
+            graymin,
+            graymax,
+            tiling,
+            w,
+            scalebar,
+            colorbar,
+            None,
+            verbose,
+            **kwargs
+        )
+        ebsdmap.cax.set_label("KAM (°)")
         return ebsdmap
 
-    def plot_PF(self, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
-                sep_phases=False, verbose=True, **kwargs):
+    def plot_PF(
+        self,
+        proj=[1, 0, 0],
+        ax=None,
+        sel=None,
+        rotation=None,
+        contour=False,
+        sep_phases=False,
+        verbose=True,
+        **kwargs
+    ):
         """
         Plots pole figure
 
@@ -820,14 +1088,37 @@ class ScanData(GridIndexing):
         if sep_phases:
             phases = np.unique(self.ph[sel])
             ph = phases[0]
-            ax = plot_PF(None, proj, ax, sel & (self.ph == ph), rotation, contour, verbose,
-                         R=self.R, label='{}'.format(ph), **kwargs)
+            ax = plot_PF(
+                None,
+                proj,
+                ax,
+                sel & (self.ph == ph),
+                rotation,
+                contour,
+                verbose,
+                R=self.R,
+                label="{}".format(ph),
+                **kwargs
+            )
             for ph in phases[1:]:
-                plot_PF(None, proj, ax, sel & (self.ph == ph), rotation, contour, verbose,
-                        R=self.R, ax=ax, label='{}'.format(ph), **kwargs)
+                plot_PF(
+                    None,
+                    proj,
+                    ax,
+                    sel & (self.ph == ph),
+                    rotation,
+                    contour,
+                    verbose,
+                    R=self.R,
+                    ax=ax,
+                    label="{}".format(ph),
+                    **kwargs
+                )
 
         else:
-            ax = plot_PF(None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs)
+            ax = plot_PF(
+                None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs
+            )
 
         return ax
 
@@ -866,30 +1157,35 @@ class ScanData(GridIndexing):
         if isinstance(newscan.header, list):
             header = newscan.header
             for i, line in enumerate(header):
-                if '# NCOLS_ODD:' in line:
-                    header[i] = '# NCOLS_ODD: {:d}\n'.format(newscan.ncols_odd)
+                if "# NCOLS_ODD:" in line:
+                    header[i] = "# NCOLS_ODD: {:d}\n".format(newscan.ncols_odd)
                     continue
-                if '# NCOLS_EVEN:' in line:
-                    header[i] = '# NCOLS_EVEN: {:d}\n'.format(newscan.ncols_even)
+                if "# NCOLS_EVEN:" in line:
+                    header[i] = "# NCOLS_EVEN: {:d}\n".format(newscan.ncols_even)
                     continue
-                if '# NROWS:' in line:
-                    header[i] = '# NROWS: {:d}\n'.format(newscan.nrows)
+                if "# NROWS:" in line:
+                    header[i] = "# NROWS: {:d}\n".format(newscan.nrows)
                     continue
         else:
-            header.append('# GRID: {:}\n'.format(newscan.grid))
-            header.append('# XSTEP: {:.8f}\n'.format(newscan.dx))
-            header.append('# YSTEP: {:.8f}\n'.format(newscan.dy))
-            header.append('# NCOLS_ODD: {:d}\n'.format(newscan.ncols_odd))
-            header.append('# NCOLS_EVEN: {:d}\n'.format(newscan.ncols_even))
-            header.append('# NROWS: {:d}\n'.format(newscan.nrows))
+            header.append("# GRID: {:}\n".format(newscan.grid))
+            header.append("# XSTEP: {:.8f}\n".format(newscan.dx))
+            header.append("# YSTEP: {:.8f}\n".format(newscan.dy))
+            header.append("# NCOLS_ODD: {:d}\n".format(newscan.ncols_odd))
+            header.append("# NCOLS_EVEN: {:d}\n".format(newscan.ncols_even))
+            header.append("# NROWS: {:d}\n".format(newscan.nrows))
 
         try:
-            file = open(fname, 'w')
-            file.write(''.join(header))
+            file = open(fname, "w")
+            file.write("".join(header))
             file.close()
-            newscan.data.to_csv(fname, mode='a',
-                                header=False, index=False, sep=' ',
-                                float_format=kwargs.pop('float_format', '%.5f'))
+            newscan.data.to_csv(
+                fname,
+                mode="a",
+                header=False,
+                index=False,
+                sep=" ",
+                float_format=kwargs.pop("float_format", "%.5f"),
+            )
         except Exception:
             raise
         else:
@@ -940,25 +1236,28 @@ def _get_rectangle_surrounding_selection_hexgrid(scan, sel):
             imin -= 1  # add row to the top
             jmin -= 1  # add [another] columns to the left
 
-    xmin = scan.dx*(2.*jmin - 1.)/4.  # (jmin*dx/2 - dx/4)
-    xmax = scan.dx*(2.*jmax + 1.)/4.  # (jmax*dx/2 + dx/4)
-    ymin = scan.dy*(2.*imin - 1.)/2.  # (imin*dy - dy/2)
-    ymax = scan.dy*(2.*imax + 1.)/2.  # (imax*dy + dy/2)
+    xmin = scan.dx * (2.0 * jmin - 1.0) / 4.0  # (jmin*dx/2 - dx/4)
+    xmax = scan.dx * (2.0 * jmax + 1.0) / 4.0  # (jmax*dx/2 + dx/4)
+    ymin = scan.dy * (2.0 * imin - 1.0) / 2.0  # (imin*dy - dy/2)
+    ymax = scan.dy * (2.0 * imax + 1.0) / 2.0  # (imax*dy + dy/2)
 
-    ncols_even = (jmax - jmin)//2
+    ncols_even = (jmax - jmin) // 2
     ncols_odd = ncols_even + 1
     nrows = imax - imin + 1
 
     # select rectangle surrounding the selected data
-    rect = (scan.x >= xmin) & (scan.x <= xmax) & \
-        (scan.y >= ymin) & (scan.y <= ymax)
+    rect = (scan.x >= xmin) & (scan.x <= xmax) & (scan.y >= ymin) & (scan.y <= ymax)
 
     # total number of points
-    N = ncols_even*(nrows//2) + ncols_odd*(nrows - nrows//2)
+    N = ncols_even * (nrows // 2) + ncols_odd * (nrows - nrows // 2)
     if N != np.count_nonzero(rect):
-        raise Exception(('Something went wrong: expected number '
-                         'of points ({}) differs from what '
-                         'we got ({})').format(N, np.count_nonzero(rect)))
+        raise Exception(
+            (
+                "Something went wrong: expected number "
+                "of points ({}) differs from what "
+                "we got ({})"
+            ).format(N, np.count_nonzero(rect))
+        )
 
     return ncols_odd, ncols_even, nrows, rect
 
@@ -991,21 +1290,24 @@ def _get_rectangle_surrounding_selection_sqrgrid(scan, sel):
     nrows = imax - imin + 1
 
     # select rectangle surrounding the selected data
-    rect = (scan.x >= xmin) & (scan.x <= xmax) & \
-        (scan.y >= ymin) & (scan.y <= ymax)
+    rect = (scan.x >= xmin) & (scan.x <= xmax) & (scan.y >= ymin) & (scan.y <= ymax)
 
     # total number of points
-    N = ncols_even*nrows
+    N = ncols_even * nrows
     if N != np.count_nonzero(rect):
-        raise Exception(('Something went wrong: expected number '
-                         'of points ({}) differs from what '
-                         'we got ({})').format(N, np.count_nonzero(rect)))
+        raise Exception(
+            (
+                "Something went wrong: expected number "
+                "of points ({}) differs from what "
+                "we got ({})"
+            ).format(N, np.count_nonzero(rect))
+        )
 
     return ncols_odd, ncols_even, nrows, rect
 
 
 def _get_rectangle_surrounding_selection(scan, sel):
-    if scan.grid.lower() == 'hexgrid':
+    if scan.grid.lower() == "hexgrid":
         return _get_rectangle_surrounding_selection_hexgrid(scan, sel)
     else:
         return _get_rectangle_surrounding_selection_sqrgrid(scan, sel)
@@ -1032,14 +1334,14 @@ def selection_to_scandata(scan, sel):
     newdata = scan.data.copy()  # raw data
 
     # Regions not belonging to selection have values set to default
-    newdata.loc[~sel, 'phi1'] = 4.
-    newdata.loc[~sel, 'Phi'] = 4.
-    newdata.loc[~sel, 'phi2'] = 4.
-    newdata.loc[~sel, 'IQ'] = -1
-    newdata.loc[~sel, 'CI'] = -2
-    newdata.loc[~sel, 'ph'] = -1
-    newdata.loc[~sel, 'intensity'] = -1
-    newdata.loc[~sel, 'fit'] = 0
+    newdata.loc[~sel, "phi1"] = 4.0
+    newdata.loc[~sel, "Phi"] = 4.0
+    newdata.loc[~sel, "phi2"] = 4.0
+    newdata.loc[~sel, "IQ"] = -1
+    newdata.loc[~sel, "CI"] = -2
+    newdata.loc[~sel, "ph"] = -1
+    newdata.loc[~sel, "intensity"] = -1
+    newdata.loc[~sel, "fit"] = 0
 
     ncols_odd, ncols_even, nrows, rect = _get_rectangle_surrounding_selection(scan, sel)
 
@@ -1050,7 +1352,6 @@ def selection_to_scandata(scan, sel):
     newdata.x -= newdata.x.min()
     newdata.y -= newdata.y.min()
 
-    return ScanData(newdata, scan.grid,
-                    scan.dx, scan.dy,
-                    ncols_odd, ncols_even, nrows,
-                    scan.header)
+    return ScanData(
+        newdata, scan.grid, scan.dx, scan.dy, ncols_odd, ncols_even, nrows, scan.header
+    )

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import types
 import platform
 
-__all__ = ['show', 'modify_show', 'set_tight_plt']
+__all__ = ["show", "modify_show", "set_tight_plt"]
 
 
 def show(fig):
@@ -15,7 +15,7 @@ def show(fig):
     new_manager = dummy.canvas.manager
     new_manager.canvas.figure = fig
     fig.set_canvas(new_manager.canvas)
-    if hasattr(fig, 'show2'):
+    if hasattr(fig, "show2"):
         fig.show2()
     else:
         fig.show()
@@ -27,7 +27,7 @@ def modify_show(fig):
     showing a figure that has been closed before
     http://stackoverflow.com/questions/972/adding-a-method-to-an-existing-object-instance
     """
-    if platform.system == 'Windows':
+    if platform.system == "Windows":
         if fig:
             fig.show2 = types.MethodType(fig.show, fig)
             fig.show = types.MethodType(show, fig)

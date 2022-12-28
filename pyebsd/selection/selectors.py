@@ -3,7 +3,7 @@ from matplotlib.lines import Line2D
 from matplotlib.path import Path
 import numpy as np
 
-__all__ = ['LassoSelector2', 'RectangleSelector2']
+__all__ = ["LassoSelector2", "RectangleSelector2"]
 
 
 class LassoSelector2(_SelectorWidget):
@@ -13,7 +13,9 @@ class LassoSelector2(_SelectorWidget):
         if lineprops is None:
             lineprops = dict()
 
-        self.state_modifier_keys = dict(move=' ', accept='enter', clear='c', disconnect='escape')
+        self.state_modifier_keys = dict(
+            move=" ", accept="enter", clear="c", disconnect="escape"
+        )
 
         self.verts = None
         self.line = Line2D([], [], **lineprops)
@@ -55,14 +57,14 @@ class LassoSelector2(_SelectorWidget):
 
     def on_key_press(self, event):  # replace default action on_key_press
         if self.active:
-            key = event.key or ''
-            if key == self.state_modifier_keys['clear']:
+            key = event.key or ""
+            if key == self.state_modifier_keys["clear"]:
                 self.clear()
                 return
-            if key == self.state_modifier_keys['accept']:
+            if key == self.state_modifier_keys["accept"]:
                 self.accept()
                 return
-            if key == self.state_modifier_keys['disconnect']:
+            if key == self.state_modifier_keys["disconnect"]:
                 self.clear()
                 self.disconnect()
                 return
@@ -96,11 +98,23 @@ class LassoSelector2(_SelectorWidget):
 
 class RectangleSelector2(RectangleSelector):
     def __init__(self, ax, x, y, rectprops=None, aspect=None):
-        RectangleSelector.__init__(self, ax, self.onselect, rectprops=rectprops, useblit=False,
-                                   interactive=True)
+        RectangleSelector.__init__(
+            self,
+            ax,
+            self.onselect,
+            rectprops=rectprops,
+            useblit=False,
+            interactive=True,
+        )
 
-        self.state_modifier_keys = dict(move=' ', accept='enter', clear='c',
-                                        disconnect='escape', square='shift', center='control')
+        self.state_modifier_keys = dict(
+            move=" ",
+            accept="enter",
+            clear="c",
+            disconnect="escape",
+            square="shift",
+            center="control",
+        )
 
         self.data = list(zip(x, y))
         self.sel = []
@@ -109,7 +123,7 @@ class RectangleSelector2(RectangleSelector):
 
         if aspect is not None:
             if isinstance(aspect, (list, tuple, np.ndarray)):
-                self.ratio = aspect[1]/aspect[0]
+                self.ratio = aspect[1] / aspect[0]
             elif type(aspect) == float:
                 self.ratio = aspect
             elif type(aspect) == int:
@@ -117,8 +131,8 @@ class RectangleSelector2(RectangleSelector):
 
     def _on_key_press(self, event):
         if self.active:
-            key = event.key or ''
-            if key == self.state_modifier_keys['disconnect']:
+            key = event.key or ""
+            if key == self.state_modifier_keys["disconnect"]:
                 for artist in self.artists:
                     artist.set_visible(False)
                 self.disconnect()
@@ -127,35 +141,41 @@ class RectangleSelector2(RectangleSelector):
     def _onmove(self, event):
         """on motion notify event if box/line is wanted"""
         # resize an existing shape
-        if self.active_handle and not self.active_handle == 'C':
+        if self.active_handle and not self.active_handle == "C":
             x1, x2, y1, y2 = self._extents_on_press
 
-            if hasattr(self, 'ratio'):
-                center = [(x1 + x2)/2., (y1 + y2)/2.]  # center
-                dx = (event.xdata - center[0])
-                dy = (event.ydata - center[1])
-                if self.ratio < 1.:
-                    maxd = max(abs(dx), abs(dy/self.ratio))
+            if hasattr(self, "ratio"):
+                center = [(x1 + x2) / 2.0, (y1 + y2) / 2.0]  # center
+                dx = event.xdata - center[0]
+                dy = event.ydata - center[1]
+                if self.ratio < 1.0:
+                    maxd = max(abs(dx), abs(dy / self.ratio))
                     if abs(dx) < maxd:
                         dx *= maxd / abs(dx)
                     if abs(dy) < maxd:
-                        dy *= maxd / abs(dy/self.ratio)
+                        dy *= maxd / abs(dy / self.ratio)
                 else:
-                    maxd = max(abs(self.ratio*dx), abs(dy))
+                    maxd = max(abs(self.ratio * dx), abs(dy))
                     if abs(dx) < maxd:
-                        dx *= maxd / abs(self.ratio*dx)
+                        dx *= maxd / abs(self.ratio * dx)
                     if abs(dy) < maxd:
                         dy *= maxd / abs(dy)
-                x1, x2, y1, y2 = (center[0] - dx, center[0] + dx, center[1] - dy, center[1] + dy)
+                x1, x2, y1, y2 = (
+                    center[0] - dx,
+                    center[0] + dx,
+                    center[1] - dy,
+                    center[1] + dy,
+                )
             else:
-                if self.active_handle in ['E', 'W'] + self._corner_order:
+                if self.active_handle in ["E", "W"] + self._corner_order:
                     x2 = event.xdata
-                if self.active_handle in ['N', 'S'] + self._corner_order:
+                if self.active_handle in ["N", "S"] + self._corner_order:
                     y2 = event.ydata
 
         # move existing shape
-        elif ('move' in self.state or self.active_handle == 'C') \
-                and self._extents_on_press is not None:
+        elif (
+            "move" in self.state or self.active_handle == "C"
+        ) and self._extents_on_press is not None:
             x1, x2, y1, y2 = self._extents_on_press
             dx = event.xdata - self.eventpress.xdata
             dy = event.ydata - self.eventpress.ydata
@@ -168,30 +188,30 @@ class RectangleSelector2(RectangleSelector):
         else:
             center = [self.eventpress.xdata, self.eventpress.ydata]
             center_pix = [self.eventpress.x, self.eventpress.y]
-            dx = (event.xdata - center[0]) / 2.
-            dy = (event.ydata - center[1]) / 2.
+            dx = (event.xdata - center[0]) / 2.0
+            dy = (event.ydata - center[1]) / 2.0
 
             # rectangle with aspect ratio defined by the user
-            if hasattr(self, 'ratio'):
+            if hasattr(self, "ratio"):
                 dx_pix = abs(event.x - center_pix[0])
                 dy_pix = abs(event.y - center_pix[1])
                 if not dx_pix:
                     return
-                if self.ratio < 1.:
-                    maxd = max(abs(dx_pix), abs(dy_pix/self.ratio))
+                if self.ratio < 1.0:
+                    maxd = max(abs(dx_pix), abs(dy_pix / self.ratio))
                     if abs(dx_pix) < maxd:
                         dx *= maxd / (abs(dx_pix) + 1e-6)
                     if abs(dy_pix) < maxd:
-                        dy *= maxd / (abs(dy_pix/self.ratio) + 1e-6)
+                        dy *= maxd / (abs(dy_pix / self.ratio) + 1e-6)
                 else:
-                    maxd = max(abs(self.ratio*dx_pix), abs(dy_pix))
+                    maxd = max(abs(self.ratio * dx_pix), abs(dy_pix))
                     if abs(dx_pix) < maxd:
-                        dx *= maxd / (abs(self.ratio*dx_pix) + 1e-6)
+                        dx *= maxd / (abs(self.ratio * dx_pix) + 1e-6)
                     if abs(dy_pix) < maxd:
                         dy *= maxd / (abs(dy_pix) + 1e-6)
 
             # from center
-            if 'center' in self.state:
+            if "center" in self.state:
                 dx *= 2
                 dy *= 2
 
@@ -200,7 +220,12 @@ class RectangleSelector2(RectangleSelector):
                 center[0] += dx
                 center[1] += dy
 
-            x1, x2, y1, y2 = (center[0] - dx, center[0] + dx, center[1] - dy, center[1] + dy)
+            x1, x2, y1, y2 = (
+                center[0] - dx,
+                center[0] + dx,
+                center[1] - dy,
+                center[1] + dy,
+            )
 
         self.extents = x1, x2, y1, y2
 

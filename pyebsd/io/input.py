@@ -5,7 +5,7 @@ import pandas as pd
 
 from ..ebsd.project import ScanData
 
-__all__ = ['load_ang_file', 'load_scandata']
+__all__ = ["load_ang_file", "load_scandata"]
 
 
 def _parse_info_header(line, pattern, dtype=str):
@@ -57,7 +57,7 @@ def load_ang_file(fname):
 
     """
     t0 = time.time()
-    print('Reading file \"{}\"...'.format(fname))
+    print('Reading file "{}"...'.format(fname))
 
     grid = None
     dx = None
@@ -70,30 +70,30 @@ def load_ang_file(fname):
         header = []
         for line in f:
             # If header
-            if line[0] == '#' or line[0] == '\n':
+            if line[0] == "#" or line[0] == "\n":
                 header.append(line)
 
-                pattern = '# GRID:'
+                pattern = "# GRID:"
                 if pattern in line:
                     grid = _parse_info_header(line, pattern)
                     continue
-                pattern = '# XSTEP:'
+                pattern = "# XSTEP:"
                 if pattern in line:
                     dx = _parse_info_header(line, pattern, float)
                     continue
-                pattern = '# YSTEP:'
+                pattern = "# YSTEP:"
                 if pattern in line:
                     dy = _parse_info_header(line, pattern, float)
                     continue
-                pattern = '# NCOLS_ODD:'
+                pattern = "# NCOLS_ODD:"
                 if pattern in line:
                     ncols_odd = _parse_info_header(line, pattern, int)
                     continue
-                pattern = '# NCOLS_EVEN:'
+                pattern = "# NCOLS_EVEN:"
                 if pattern in line:
                     ncols_even = _parse_info_header(line, pattern, int)
                     continue
-                pattern = '# NROWS:'
+                pattern = "# NROWS:"
                 if pattern in line:
                     nrows = _parse_info_header(line, pattern, int)
                     continue
@@ -101,18 +101,28 @@ def load_ang_file(fname):
                 break
 
     if grid is None:
-        raise Exception('Missing grid info')
+        raise Exception("Missing grid info")
 
     # Uses pandas to read ang file. pd.read_csv returns a pandas DataFrame
-    data = pd.read_csv(fname, header=None, comment='#', delim_whitespace=True)
+    data = pd.read_csv(fname, header=None, comment="#", delim_whitespace=True)
 
     # Rename the columns
     columns = list(data.columns)
-    columns[:10] = ['phi1', 'Phi', 'phi2', 'x',
-                    'y', 'IQ', 'CI', 'ph', 'intensity', 'fit']
+    columns[:10] = [
+        "phi1",
+        "Phi",
+        "phi2",
+        "x",
+        "y",
+        "IQ",
+        "CI",
+        "ph",
+        "intensity",
+        "fit",
+    ]
     data.columns = columns
 
-    print('\n{} points read in {:.2f} s'.format(len(data), time.time() - t0))
+    print("\n{} points read in {:.2f} s".format(len(data), time.time() - t0))
 
     # If any of dx, dy, ncols_odd, ncols_even, nrows is None, then guess them from x, y columns
     if any(v is None for v in [dx, dy, ncols_odd, ncols_even, nrows]):
@@ -121,7 +131,7 @@ def load_ang_file(fname):
 
         nrows = len(ycoords)
         # if SqrGrid or RectGrid
-        if grid.lower() != 'hexgrid':
+        if grid.lower() != "hexgrid":
             ncols_odd = ncols_even = len(xcoords)
         else:
             ncols_odd = np.count_nonzero(data.y == ycoords[0])
@@ -133,13 +143,13 @@ def load_ang_file(fname):
         dx = data.x[1] - data.x[0]
         dy = ycoords[1] - ycoords[0]
 
-        print('Grid parameters guessed from x, y columns:')
-        print('  XSTEP:', dx)
-        print('  YSTEP:', dy)
-        print('  NCOLS_ODD:', ncols_odd)
-        print('  NCOLS_EVEN:', ncols_even)
-        print('  NROWS:', nrows)
-        print('')
+        print("Grid parameters guessed from x, y columns:")
+        print("  XSTEP:", dx)
+        print("  YSTEP:", dy)
+        print("  NCOLS_ODD:", ncols_odd)
+        print("  NCOLS_EVEN:", ncols_even)
+        print("  NROWS:", nrows)
+        print("")
 
     return ScanData(data, grid, dx, dy, ncols_odd, ncols_even, nrows, header)
 
@@ -160,7 +170,7 @@ def load_scandata(fname):
     """
     ext = os.path.splitext(fname)[-1]
 
-    if ext == '.ang':
+    if ext == ".ang":
         scan = load_ang_file(fname)
     else:
         raise Exception('File extension "{}" not supported'.format(ext))

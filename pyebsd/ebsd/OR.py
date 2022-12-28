@@ -2,13 +2,16 @@ import sys
 import time
 import numpy as np
 
-from .orientation import (list_cubic_symmetry_operators,
-                          reduce_cubic_transformations, average_orientation,
-                          rotation_matrix_to_euler_angles,
-                          euler_angles_to_rotation_matrix)
+from .orientation import (
+    list_cubic_symmetry_operators,
+    reduce_cubic_transformations,
+    average_orientation,
+    rotation_matrix_to_euler_angles,
+    euler_angles_to_rotation_matrix,
+)
 
 
-__all__ = ['OR_exp', 'OR']
+__all__ = ["OR_exp", "OR"]
 
 
 def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
@@ -70,13 +73,13 @@ def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
 
     """
     t0 = time.time()
-    verbose = kwargs.pop('verbose', True)
+    verbose = kwargs.pop("verbose", True)
     if verbose:
-        sys.stdout.write('Calculating variants... ')
+        sys.stdout.write("Calculating variants... ")
         sys.stdout.flush()
 
     if isinstance(phdict, dict):
-        prt, chd = phdict['parent'], phdict['child']
+        prt, chd = phdict["parent"], phdict["child"]
     else:
         prt, chd = phdict[0], phdict[1]
 
@@ -91,7 +94,7 @@ def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     N = len(Mchd)
 
     # Get symmetry operators
-    C = kwargs.pop('C', list_cubic_symmetry_operators())
+    C = kwargs.pop("C", list_cubic_symmetry_operators())
     # T = C * Mprt : ndarray shape(24, 3, 3)
     T = np.tensordot(C, Mprt, axes=[[-1], [-2]]).transpose([0, 2, 1])
     # U = Mchd * T^-1 : ndarray shape(N, 24, 3, 3)
@@ -122,12 +125,14 @@ def OR_exp(M, ph, phdict=dict(parent=2, child=1), sel=None, **kwargs):
     V = Vsel[jsel]
 
     # Euler angles of average orientation
-    phi1, Phi, phi2 = rotation_matrix_to_euler_angles(Vsel[jsel], avg=True, verbose=False)
+    phi1, Phi, phi2 = rotation_matrix_to_euler_angles(
+        Vsel[jsel], avg=True, verbose=False
+    )
     # Average orientation rotation matrix
     Vavg = euler_angles_to_rotation_matrix(phi1, Phi, phi2, verbose=False)
 
     if verbose:
-        sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.write("{:.2f} s\n".format(time.time() - t0))
 
     # Delete arrays
     del Mchd, T, U, D, Vsel
@@ -185,12 +190,12 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([-1, 0, 1], [-1, -1, 1]), single=False, **
         variant
 
     """
-    trunc = kwargs.pop('trunc', 1e-8)
+    trunc = kwargs.pop("trunc", 1e-8)
     ps, ds = np.asarray(ps), np.asarray(ds)
     p_prt, d_prt = ps[0], ds[0]  # parent phase
     p_chd, d_chd = ps[1], ds[1]  # child phase
 
-    C = kwargs.pop('C', list_cubic_symmetry_operators())
+    C = kwargs.pop("C", list_cubic_symmetry_operators())
 
     # check variants normal to plane 'n'. Due to numerical truncation,
     # instead of choosing the variants 'd' based on np.dot(d,n) == 0,
@@ -207,8 +212,8 @@ def OR(ps=([1, 1, 1], [0, 1, 1]), ds=([-1, 0, 1], [-1, -1, 1]), single=False, **
     R_prt = np.array([d_prt, -np.cross(d_prt, p_prt), p_prt])
     R_chd = np.array([d_chd, -np.cross(d_chd, p_chd), p_chd])
 
-    R_prt = R_prt/np.linalg.norm(R_prt, axis=1).reshape(-1, 1)
-    R_chd = R_chd/np.linalg.norm(R_chd, axis=1).reshape(-1, 1)
+    R_prt = R_prt / np.linalg.norm(R_prt, axis=1).reshape(-1, 1)
+    R_chd = R_chd / np.linalg.norm(R_chd, axis=1).reshape(-1, 1)
 
     V = np.dot(R_chd.T, R_prt)
 

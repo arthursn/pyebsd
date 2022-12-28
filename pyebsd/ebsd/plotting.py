@@ -12,9 +12,17 @@ from .orientation import PF, IPF, stereographic_projection
 from ..draw import set_tight_plt, draw_circle_frame, toimage
 from ..selection import LassoSelector2, RectangleSelector2
 
-__all__ = ['set_threshold_tiling', 'set_max_size',
-           'GridIndexing', 'EBSDMap', 'get_color_IPF',
-           'unit_triangle', 'plot_PF', 'plot_property', 'plot_IPF']
+__all__ = [
+    "set_threshold_tiling",
+    "set_max_size",
+    "GridIndexing",
+    "EBSDMap",
+    "get_color_IPF",
+    "unit_triangle",
+    "plot_PF",
+    "plot_property",
+    "plot_IPF",
+]
 
 __THRESHOLD_TILING__ = 10000
 
@@ -48,7 +56,7 @@ def set_max_size(max_size):
 
 
 class GridIndexing(object):
-    __supported_grids = ['hexgrid', 'sqrgrid']
+    __supported_grids = ["hexgrid", "sqrgrid"]
 
     def __init__(self, grid, ncols_odd, ncols_even, nrows, dx, dy):
         self.grid = grid  # string (e.g., hexgrid)
@@ -65,19 +73,27 @@ class GridIndexing(object):
         self.N = None
 
         # total number of columns
-        if self.grid.lower() == 'hexgrid':
+        if self.grid.lower() == "hexgrid":
             diff = abs(self.ncols_odd - self.ncols_even)
             if diff != 1:
-                raise Exception(('| ncols_odd - ncols_even | ( | {} - {} | = {}) must '
-                                 'be 1').format(self.ncols_odd, self.ncols_even, diff))
+                raise Exception(
+                    (
+                        "| ncols_odd - ncols_even | ( | {} - {} | = {}) must " "be 1"
+                    ).format(self.ncols_odd, self.ncols_even, diff)
+                )
             # Number of columns according to indexing system (see ij_to_index)
             self.ncols = self.ncols_odd + self.ncols_even
             # Number of pixels
-            self.N = self.ncols_even*(self.nrows//2) + self.ncols_odd*(self.nrows - self.nrows//2)
+            self.N = self.ncols_even * (self.nrows // 2) + self.ncols_odd * (
+                self.nrows - self.nrows // 2
+            )
         else:
             if self.ncols_odd != self.ncols_even:
-                raise Exception('NCOLS_ODD ({}) and NCOLS_EVEN ({}) should be equal for {}'.format(
-                    self.ncols_odd, self.ncols_even, self.grid))
+                raise Exception(
+                    "NCOLS_ODD ({}) and NCOLS_EVEN ({}) should be equal for {}".format(
+                        self.ncols_odd, self.ncols_even, self.grid
+                    )
+                )
 
             # Number of columns according to indexing system (see ij_to_index)
             self.ncols = self.ncols_odd
@@ -92,10 +108,12 @@ class GridIndexing(object):
         row number (0 -> nrows - 1)
         """
         if self._i is None:
-            if self.grid.lower() == 'hexgrid':
-                self._i = 2*(self.index//self.ncols)
-                shift = np.tile([0]*self.ncols_odd + [1]*self.ncols_even, self.nrows)
-                self._i += shift[:self.N]
+            if self.grid.lower() == "hexgrid":
+                self._i = 2 * (self.index // self.ncols)
+                shift = np.tile(
+                    [0] * self.ncols_odd + [1] * self.ncols_even, self.nrows
+                )
+                self._i += shift[: self.N]
             else:
                 self._i = self.index // self.ncols
         return self._i
@@ -107,15 +125,15 @@ class GridIndexing(object):
         """
         if self._j is None:
             rem = self.index % self.ncols  # remainder
-            if self.grid.lower() == 'hexgrid':
-                rem_div = rem//self.ncols_odd
+            if self.grid.lower() == "hexgrid":
+                rem_div = rem // self.ncols_odd
                 rem_rem = rem % self.ncols_odd
                 # special case
                 if self.ncols_odd < self.ncols_even:
-                    rem_div[self.ncols-1::self.ncols] = 1
+                    rem_div[self.ncols - 1 :: self.ncols] = 1
                     rem_div = 1 - rem_div
-                    rem_rem[self.ncols-1::self.ncols] = self.ncols_even - 1
-                self._j = rem_div + 2*rem_rem
+                    rem_rem[self.ncols - 1 :: self.ncols] = self.ncols_even - 1
+                self._j = rem_div + 2 * rem_rem
             else:
                 self._j = rem
         return self._j
@@ -198,24 +216,24 @@ class GridIndexing(object):
          *     *     *  ...   *     *  r-1
 
         """
-        if self.grid.lower() == 'hexgrid':
-            index = (i//2)*self.ncols + (j//2)
+        if self.grid.lower() == "hexgrid":
+            index = (i // 2) * self.ncols + (j // 2)
             # ncols_odd > ncols_even is the normal situation
             if self.ncols_odd > self.ncols_even:
-                index += (j % 2)*self.ncols_odd
+                index += (j % 2) * self.ncols_odd
                 forbidden = i % 2 != j % 2  # forbidden i, j pairs
             else:
-                index += (1 - j % 2)*self.ncols_odd
+                index += (1 - j % 2) * self.ncols_odd
                 forbidden = i % 2 == j % 2
             # This turns negative every i, j pair where j > ncols
-            index *= (1 - self.N*(j//self.ncols))
+            index *= 1 - self.N * (j // self.ncols)
             # Turns forbidden values negative
             index = np.array(index)
             index[forbidden] = -1
             if index.ndim == 0:
                 index = int(index)
         else:
-            index = i*self.ncols + j
+            index = i * self.ncols + j
         return index
 
     def xy_to_index(self, x, y):
@@ -234,11 +252,11 @@ class GridIndexing(object):
         index : int or numpy ndarray
             Pixel index
         """
-        i = np.round(y/self.dy).astype(int)
-        if self.grid.lower() == 'hexgrid':
+        i = np.round(y / self.dy).astype(int)
+        if self.grid.lower() == "hexgrid":
             # This part is tricky because the odd and even rows are shifted from each other
             # dx in terms of j is actually half of the original value
-            j = np.array(2.*x/self.dx + 1).astype(int)
+            j = np.array(2.0 * x / self.dx + 1).astype(int)
             if self.ncols_odd > self.ncols_even:
                 forbidden = i % 2 != j % 2
             else:
@@ -246,7 +264,7 @@ class GridIndexing(object):
             # Approximate forbidden values by nearest pixel
             j[forbidden] -= 1
         else:
-            j = np.round(x/self.dx).astype(int)
+            j = np.round(x / self.dx).astype(int)
 
         return self.ij_to_index(i, j)
 
@@ -256,17 +274,17 @@ class CoordsFormatter(object):
     Formats coordinates and z values in interactive plot mode
     """
 
-    def __init__(self, grid_indexing, Z, name='z'):
+    def __init__(self, grid_indexing, Z, name="z"):
         self.grid_indexing = grid_indexing
         self.Z = Z
-        self.valuefmt = '  {}='.format(name)
-        self.valuefmt += '{:g}' if self.Z.ndim == 1 else '{}'
+        self.valuefmt = "  {}=".format(name)
+        self.valuefmt += "{:g}" if self.Z.ndim == 1 else "{}"
 
     def __call__(self, x, y):
-        string = ''
+        string = ""
         index = self.grid_indexing.xy_to_index(x, y)
         if index >= 0:
-            string += 'index={:}  x={:g}  y={:g}'.format(index, x, y)
+            string += "index={:}  x={:g}  y={:g}".format(index, x, y)
             try:
                 if not np.any(np.isnan(self.Z[index])):
                     string += self.valuefmt.format(self.Z[index])
@@ -304,7 +322,7 @@ class EBSDMap(object):
         self.img = img
         self.ax = ax
         self.fig = fig
-        self.fig.canvas.mpl_connect('draw_event', self.ondraw)
+        self.fig.canvas.mpl_connect("draw_event", self.ondraw)
         self.cax = cax
         self.xlim = None
         self.ylim = None
@@ -345,19 +363,20 @@ class EBSDMap(object):
     def get_ylim(self):
         return self.ylim
 
-    def lasso_selector(self, lineprops=dict(color='white')):
+    def lasso_selector(self, lineprops=dict(color="white")):
         """
         Initializes LassoSelector2
         """
         self.selector = LassoSelector2(self.ax, self.x, self.y, lineprops=lineprops)
         return self.selector
 
-    def rect_selector(self, rectprops=dict(edgecolor='white', fill=False), aspect=None):
+    def rect_selector(self, rectprops=dict(edgecolor="white", fill=False), aspect=None):
         """
         Initializes RectangleSelector2
         """
         self.selector = RectangleSelector2(
-            self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect)
+            self.ax, self.x, self.y, rectprops=rectprops, aspect=aspect
+        )
         return self.selector
 
     def savefig(self, fname, **kwargs):
@@ -373,7 +392,7 @@ class EBSDMap(object):
             kwargs parameters are passed to fig.savefig(fname, **kwargs)
             function
         """
-        kw = {'dpi': 300, 'bbox_inches': 'tight', 'pad_inches': 0.0}
+        kw = {"dpi": 300, "bbox_inches": "tight", "pad_inches": 0.0}
         kw.update(kwargs)
         self.fig.savefig(fname, **kw)
 
@@ -386,23 +405,23 @@ def _calculate_barycenter_unit_triangle():
 
     # Barycenter half circular cap
     # integrate (2-(x+1)^2)^0.5 from (3^0.5-1)/2 to 2^0.5 - 1
-    Ac = (np.pi - 3)/12  # area
+    Ac = (np.pi - 3) / 12  # area
     # integrate x*(2-(x+1)^2)^0.5 from (3^0.5-1)/2 to 2^0.5 - 1
-    AcCxc = (-2 + 3*3**.5 - np.pi)/12  # area times Cx
+    AcCxc = (-2 + 3 * 3**0.5 - np.pi) / 12  # area times Cx
     # integrate y*((2-y^2)^0.5 - 1 - (3^0.5-1)/2 ) from 0 to (3^0.5-1)/2
     # or
     # integrate (2-(x+1)^2)/2 from (3^0.5-1)/2 to 2^0.5 - 1
-    AcCyc = (-7 + 16*2**.5 - 9*3**.5)/24  # area times Cy
+    AcCyc = (-7 + 16 * 2**0.5 - 9 * 3**0.5) / 24  # area times Cy
 
     # Barycenter isosceles right triangle
-    At = (2 - 3**.5)/4  # area
-    Cxt = (3**.5 - 1)/3  # Cx
-    Cyt = (3**.5 - 1)/6  # Cy
+    At = (2 - 3**0.5) / 4  # area
+    Cxt = (3**0.5 - 1) / 3  # Cx
+    Cyt = (3**0.5 - 1) / 6  # Cy
 
     # Calculate barycenter by decomposition
     A = Ac + At
-    Cx = (AcCxc + At*Cxt)/A
-    Cy = (AcCyc + At*Cyt)/A
+    Cx = (AcCxc + At * Cxt) / A
+    Cy = (AcCyc + At * Cyt) / A
 
     return stereographic_projection_to_direction([Cx, Cy])
 
@@ -428,7 +447,7 @@ def get_color_IPF(uvw, **kwargs):
     if ndim != 2:
         uvw = uvw.reshape(-1, 3)
 
-    if not kwargs.pop('issorted', False):
+    if not kwargs.pop("issorted", False):
         uvw = np.abs(uvw)
         # Sort u, v, w
         uvw = np.sort(uvw, axis=1)
@@ -441,8 +460,8 @@ def get_color_IPF(uvw, **kwargs):
 
     # whitespot: white spot in the unit triangle
     # By default, whitespot is in the barycenter of the unit triangle
-    whitespot = kwargs.pop('whitespot', [0.48846011, 0.22903335, 0.84199195])
-    pwr = kwargs.pop('pwr', .75)
+    whitespot = kwargs.pop("whitespot", [0.48846011, 0.22903335, 0.84199195])
+    pwr = kwargs.pop("pwr", 0.75)
 
     # Select variant where w >= u >= v
     whitespot = np.sort(whitespot)
@@ -452,14 +471,14 @@ def get_color_IPF(uvw, **kwargs):
     kG = whitespot[0] - whitespot[1]
     kB = whitespot[1]
 
-    R = (R/kR)**pwr
-    G = (G/kG)**pwr
-    B = (B/kB)**pwr
+    R = (R / kR) ** pwr
+    G = (G / kG) ** pwr
+    B = (B / kB) ** pwr
 
     rgb = np.array([R, G, B])
     rgbmax = np.max(rgb, axis=0)
     # normalize rgb from 0 to 1 and then from 0 to 255
-    rgb = rgb*255/rgbmax
+    rgb = rgb * 255 / rgbmax
 
     # rgb to int and invert axes (transpose)
     rgb = rgb.astype(np.uint8).T
@@ -487,15 +506,15 @@ def unit_triangle(ax=None, n=512, **kwargs):
     """
     # x and y max values in the stereographic projection corresponding to
     # the unit triangle
-    xmax, ymax = 2.**.5 - 1, (3.**.5 - 1)/2.
-    dx = xmax/(n-1)
-    dy = ymax/(n-1)
+    xmax, ymax = 2.0**0.5 - 1, (3.0**0.5 - 1) / 2.0
+    dx = xmax / (n - 1)
+    dy = ymax / (n - 1)
 
     # map n x n square around unit triangle
     xp, yp = np.meshgrid(np.linspace(0, xmax, n), np.linspace(0, ymax, n))
     xp, yp = xp.ravel(), yp.ravel()
     # convert projected coordinates (xp, yp) to uvw directions
-    u, v, w = 2*xp, 2*yp, 1-xp**2-yp**2
+    u, v, w = 2 * xp, 2 * yp, 1 - xp**2 - yp**2
     uvw = np.vstack([u, v, w]).T
 
     color = np.ndarray(uvw.shape)
@@ -510,52 +529,86 @@ def unit_triangle(ax=None, n=512, **kwargs):
     img_pil = toimage(color.reshape(n, n, 3))
 
     if ax is None:
-        fig, ax = plt.subplots(facecolor='white')
+        fig, ax = plt.subplots(facecolor="white")
 
-    ax.set_aspect('equal')
-    ax.axis('off')
+    ax.set_aspect("equal")
+    ax.axis("off")
     # Plots the unit triangle
-    ax.imshow(img_pil, interpolation='None', origin='lower',
-              extent=(-dx/2, xmax+dx/2, -dy/2, ymax+dy/2))
+    ax.imshow(
+        img_pil,
+        interpolation="None",
+        origin="lower",
+        extent=(-dx / 2, xmax + dx / 2, -dy / 2, ymax + dy / 2),
+    )
 
     # Coordinates displayed in the interactive plot window
     _uvw = uvw.copy()
     _uvw[~sel] = [np.nan, np.nan, np.nan]
-    ax.format_coord = CoordsFormatter(GridIndexing('SqrGrid', n, n, n, dx, dy),
-                                      _uvw.round(6), 'd')
+    ax.format_coord = CoordsFormatter(
+        GridIndexing("SqrGrid", n, n, n, dx, dy), _uvw.round(6), "d"
+    )
 
     # Calculate coordinates of borders of unit triangle
-    t = np.linspace(0, 1., n)
+    t = np.linspace(0, 1.0, n)
     # Trust me, this works
-    uvw = np.full((3*n, 3), 1., dtype=float)
+    uvw = np.full((3 * n, 3), 1.0, dtype=float)
     # u
-    uvw[n:2*n, 0] = t[::-1]
-    uvw[2*n:, 0] = t
+    uvw[n : 2 * n, 0] = t[::-1]
+    uvw[2 * n :, 0] = t
     # v
     uvw[:n, 1] = t
-    uvw[n:2*n, 1] = t[::-1]
-    uvw[2*n:, 1] = 0.
+    uvw[n : 2 * n, 1] = t[::-1]
+    uvw[2 * n :, 1] = 0.0
     # w: Nothing do to. All values are equal to 1
 
     x, y = stereographic_projection(uvw)
     # Plots borders of unit triangle
-    ax.plot(x, y, 'k-', lw=2)
+    ax.plot(x, y, "k-", lw=2)
 
     # Reference directions
-    ax.annotate('001', xy=stereographic_projection([0, 0, 1]), xytext=(0, -10),
-                textcoords='offset points', ha='center', va='top', size=30)
-    ax.annotate('101', xy=stereographic_projection([1, 0, 1]), xytext=(0, -10),
-                textcoords='offset points', ha='center', va='top', size=30)
-    ax.annotate('111', xy=stereographic_projection([1, 1, 1]), xytext=(0, 10),
-                textcoords='offset points', ha='center', va='bottom', size=30)
-    ax.set_xlim(-.01, xmax+.01)
-    ax.set_ylim(-.01, ymax+.01)
+    ax.annotate(
+        "001",
+        xy=stereographic_projection([0, 0, 1]),
+        xytext=(0, -10),
+        textcoords="offset points",
+        ha="center",
+        va="top",
+        size=30,
+    )
+    ax.annotate(
+        "101",
+        xy=stereographic_projection([1, 0, 1]),
+        xytext=(0, -10),
+        textcoords="offset points",
+        ha="center",
+        va="top",
+        size=30,
+    )
+    ax.annotate(
+        "111",
+        xy=stereographic_projection([1, 1, 1]),
+        xytext=(0, 10),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        size=30,
+    )
+    ax.set_xlim(-0.01, xmax + 0.01)
+    ax.set_ylim(-0.01, ymax + 0.01)
 
     return ax
 
 
-def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=False,
-            verbose=True, **kwargs):
+def plot_PF(
+    M=None,
+    proj=[1, 0, 0],
+    ax=None,
+    sel=None,
+    rotation=None,
+    contour=False,
+    verbose=True,
+    **kwargs
+):
     """
     The user should provide either R or M. It's more convenient to use
     R values when plotting raw experimental data. M should be used
@@ -617,7 +670,7 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     if contour and not fill:
         plt.contourf(..., **kwargs)
     """
-    R = kwargs.pop('R', None)
+    R = kwargs.pop("R", None)
 
     if isinstance(R, np.ndarray):
         if R.ndim == 2:
@@ -627,11 +680,11 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
             M = M.reshape(1, 3, 3)
         R = M.transpose([0, 2, 1])
     else:
-        raise Exception('M or R has to be provided')
+        raise Exception("M or R has to be provided")
 
     if verbose:
         t0 = time.time()
-        sys.stdout.write('Plotting Pole Figure... ')
+        sys.stdout.write("Plotting Pole Figure... ")
         sys.stdout.flush()
 
     # PF returns directions (in the sample coordinate frame) of all variants
@@ -652,24 +705,25 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     xp, yp = stereographic_projection(dsample[dsample[:, 2] >= 0])
 
     if ax is None:  # if ax was not provided, creates new ax object
-        fig, ax = plt.subplots(facecolor='white')
-        ax.set_aspect('equal')
-        ax.axis('off')
-        lw_frame = kwargs.pop('lw_frame', .5)
+        fig, ax = plt.subplots(facecolor="white")
+        ax.set_aspect("equal")
+        ax.axis("off")
+        lw_frame = kwargs.pop("lw_frame", 0.5)
         draw_circle_frame(ax, lw=lw_frame)
 
     if contour:
-        fill = kwargs.pop('fill', True)
-        bins = kwargs.pop('bins', (256, 256))
+        fill = kwargs.pop("fill", True)
+        bins = kwargs.pop("bins", (256, 256))
 
-        hist, xedges, yedges = np.histogram2d(yp.ravel(), xp.ravel(), bins=bins,
-                                              range=[[-1, 1], [-1, 1]])
-        fn = kwargs.pop('fn', 'sqrt')
+        hist, xedges, yedges = np.histogram2d(
+            yp.ravel(), xp.ravel(), bins=bins, range=[[-1, 1], [-1, 1]]
+        )
+        fn = kwargs.pop("fn", "sqrt")
 
         if fn:
-            if fn == 'sqrt':
-                hist = hist**.5
-            elif fn == 'log':
+            if fn == "sqrt":
+                hist = hist**0.5
+            elif fn == "log":
                 hist = np.log(hist)
             else:
                 try:
@@ -677,13 +731,14 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
                 except Exception:
                     pass
 
-        nlevels = kwargs.pop('nlevels', 10)
+        nlevels = kwargs.pop("nlevels", 10)
         lvls = np.linspace(0, np.max(hist), nlevels)
-        kwargs['levels'] = lvls[1:]
+        kwargs["levels"] = lvls[1:]
 
-        X, Y = np.meshgrid((xedges[:-1] + xedges[1:])/2.,
-                           (yedges[:-1] + yedges[1:])/2.)
-        circle = X**2 + Y**2 >= 1.
+        X, Y = np.meshgrid(
+            (xedges[:-1] + xedges[1:]) / 2.0, (yedges[:-1] + yedges[1:]) / 2.0
+        )
+        circle = X**2 + Y**2 >= 1.0
         hist[circle] = np.nan
 
         if fill:
@@ -691,12 +746,12 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
         else:
             ax.contour(hist, extent=(-1, 1, -1, 1), **kwargs)
     else:
-        if not kwargs.get('linestyle', None):
-            kwargs['linestyle'] = 'None'
-        if not kwargs.get('marker', None):
-            kwargs['marker'] = '.'
-        if not kwargs.get('markersize', None) and not kwargs.get('ms', None):
-            kwargs['markersize'] = 1
+        if not kwargs.get("linestyle", None):
+            kwargs["linestyle"] = "None"
+        if not kwargs.get("marker", None):
+            kwargs["marker"] = "."
+        if not kwargs.get("markersize", None) and not kwargs.get("ms", None):
+            kwargs["markersize"] = 1
 
         ax.plot(xp.ravel(), yp.ravel(), **kwargs)
 
@@ -704,16 +759,37 @@ def plot_PF(M=None, proj=[1, 0, 0], ax=None, sel=None, rotation=None, contour=Fa
     ax.set_ylim(-1.05, 1.05)
 
     if verbose:
-        sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.write("{:.2f} s\n".format(time.time() - t0))
 
     return ax
 
 
-def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
-                  propname='z', ax=None, colordict=None, colorfill='black',
-                  fillvalue=np.nan, sel=None, gray=None, graymin=0, graymax=None,
-                  tiling=None, w=2048, scalebar=True, colorbar=True,
-                  verbose=True, **kwargs):
+def plot_property(
+    prop,
+    nrows,
+    ncols_odd,
+    ncols_even,
+    x,
+    y,
+    grid,
+    dx=None,
+    dy=None,
+    propname="z",
+    ax=None,
+    colordict=None,
+    colorfill="black",
+    fillvalue=np.nan,
+    sel=None,
+    gray=None,
+    graymin=0,
+    graymax=None,
+    tiling=None,
+    w=2048,
+    scalebar=True,
+    colorbar=True,
+    verbose=True,
+    **kwargs
+):
     """
     Plots any EBSD property
 
@@ -810,62 +886,62 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
     # get N based on nrows, ncols_odd and ncols_even
     if verbose:
         t0 = time.time()
-        sys.stdout.write('Plotting property map... ')
+        sys.stdout.write("Plotting property map... ")
         sys.stdout.flush()
 
     if dx is None:
-        dx = (np.max(x) - np.min(x))/ncols_odd
+        dx = (np.max(x) - np.min(x)) / ncols_odd
     if dy is None:
-        dy = (np.max(y) - np.min(y))/(nrows - 1)
+        dy = (np.max(y) - np.min(y)) / (nrows - 1)
 
     grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows, dx, dy)
     N = grid_indexing.N
 
     if N != len(prop):
-        raise Exception('N and len(prop) differ')
+        raise Exception("N and len(prop) differ")
 
     if isinstance(sel, np.ndarray):
         if N != len(sel):
-            raise Exception('N and len(sel) differ')
+            raise Exception("N and len(sel) differ")
         sel &= ~np.isnan(prop)
     else:
         sel = ~np.isnan(prop)
     not_sel = ~sel
 
     # set default tiling
-    if grid.lower() == 'sqrgrid' and tiling == 'hex':
-        print('hex tiling not supported for squared grid. Using rect tiling instead.')
-        tiling = 'rect'
+    if grid.lower() == "sqrgrid" and tiling == "hex":
+        print("hex tiling not supported for squared grid. Using rect tiling instead.")
+        tiling = "rect"
 
     if tiling is None:
-        tiling = 'rect'
-        if grid.lower() == 'hexgrid':
+        tiling = "rect"
+        if grid.lower() == "hexgrid":
             if np.count_nonzero(sel) <= __THRESHOLD_TILING__:
-                tiling = 'hex'
+                tiling = "hex"
 
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
 
-    if tiling == 'hex':
-        edge_length = dx/3.**.5
-        ymin -= edge_length/2.
-        ymax += edge_length/2.
+    if tiling == "hex":
+        edge_length = dx / 3.0**0.5
+        ymin -= edge_length / 2.0
+        ymax += edge_length / 2.0
     else:
-        ymin -= dy/2.
-        ymax += dy/2.
+        ymin -= dy / 2.0
+        ymax += dy / 2.0
 
-    if grid.lower() == 'sqrgrid':
-        xmin -= dx/2.
-        xmax += dx/2.
+    if grid.lower() == "sqrgrid":
+        xmin -= dx / 2.0
+        xmax += dx / 2.0
 
     # getting kwargs parameters
-    cmap = kwargs.pop('cmap', plt.get_cmap())
+    cmap = kwargs.pop("cmap", plt.get_cmap())
     if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
-    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
-    vmin = kwargs.pop('vmin', np.min(prop[sel]))
-    vmax = kwargs.pop('vmax', np.max(prop[sel]))
+    scalebar_location = kwargs.pop("scalebar_location", "lower left")
+    vmin = kwargs.pop("vmin", np.min(prop[sel]))
+    vmax = kwargs.pop("vmax", np.max(prop[sel]))
 
     colorfill = matplotlib.colors.to_rgba(colorfill)
 
@@ -876,7 +952,7 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
             color[prop == float(p)] = matplotlib.colors.to_rgba(color_code)
     else:
         # normalizes prop to range [0,1] and makes rgb colormap
-        color[sel] = cmap(((prop - vmin)/(vmax - vmin))[sel])
+        color[sel] = cmap(((prop - vmin) / (vmax - vmin))[sel])
 
     # filling invalid/non-selected data points
     color[not_sel] = colorfill
@@ -889,16 +965,16 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
     # applying gray mask
     if isinstance(gray, np.ndarray):
         if N != gray.shape[0]:
-            raise Exception('M.shape and gray.shape differ')
+            raise Exception("M.shape and gray.shape differ")
         else:
             if graymin is None:
                 graymin = gray.min()
             if graymax is None:
                 graymax = gray.max()
-            gray = (gray.reshape(-1, 1) - graymin)/(graymax - graymin)
-            gray[gray < 0.] = 0.
-            gray[gray > 1.] = 1.
-            color[sel, :3] = color[sel, :3]*gray[sel]
+            gray = (gray.reshape(-1, 1) - graymin) / (graymax - graymin)
+            gray[gray < 0.0] = 0.0
+            gray[gray > 1.0] = 1.0
+            color[sel, :3] = color[sel, :3] * gray[sel]
 
     # getting AxesSubplot object
     if ax is None:
@@ -907,47 +983,55 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         fig = ax.get_figure()
 
     # plotting maps
-    if tiling == 'hex':
-        color = (255*color[sel]).astype(int)
+    if tiling == "hex":
+        color = (255 * color[sel]).astype(int)
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
 
         # calculates the coordinates of the vertices of the hexagonal pixel
         for i in range(6):
-            x_hex[:, i] = x[sel] + np.sin(i*np.pi/3)*edge_length
-            y_hex[:, i] = y[sel] + np.cos(i*np.pi/3)*edge_length
+            x_hex[:, i] = x[sel] + np.sin(i * np.pi / 3) * edge_length
+            y_hex[:, i] = y[sel] + np.cos(i * np.pi / 3) * edge_length
 
-        scale = 1.*w/(xmax - xmin)
-        h = np.int(scale*(ymax - ymin))
+        scale = 1.0 * w / (xmax - xmin)
+        h = int(scale * (ymax - ymin))
         if h > __MAX_SIZE__:
             h = __MAX_SIZE__
-            scale = h/(ymax - ymin)
-            w = np.int(scale*(xmax - xmin))
+            scale = h / (ymax - ymin)
+            w = int(scale * (xmax - xmin))
 
-        x_hex = (x_hex - xmin)*scale
-        y_hex = (y_hex - ymin)*scale
+        x_hex = (x_hex - xmin) * scale
+        y_hex = (y_hex - ymin) * scale
 
-        img_pil = Image.new('RGBA', (w, h), tuple(int(c * 255) for c in colorfill))
-        draw = ImageDraw.Draw(img_pil, 'RGBA')
+        img_pil = Image.new("RGBA", (w, h), tuple(int(c * 255) for c in colorfill))
+        draw = ImageDraw.Draw(img_pil, "RGBA")
         for i in range(len(x_hex)):
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=tuple(color[i]))
 
-    elif tiling == 'rect':
-        if grid.lower() == 'hexgrid':
+    elif tiling == "rect":
+        if grid.lower() == "hexgrid":
             # double pixels
             sel = np.repeat(sel, 2)
             color = np.repeat(color, 2, axis=0)
             # N pixels and ncols for rect grid plotting
-            N, ncols = 2*N, 2*min(ncols_odd, ncols_even)
+            N, ncols = 2 * N, 2 * min(ncols_odd, ncols_even)
 
             # remove extra pixels
             if ncols_odd > ncols_even:
-                rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                                np.arange(ncols+1, N, 2*(ncols+1))])
+                rm = np.hstack(
+                    [
+                        np.arange(0, N, 2 * (ncols + 1)),
+                        np.arange(ncols + 1, N, 2 * (ncols + 1)),
+                    ]
+                )
             else:
-                rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
-                                np.arange(2*ncols+1, N, 2*(ncols+1))])
+                rm = np.hstack(
+                    [
+                        np.arange(ncols, N, 2 * (ncols + 1)),
+                        np.arange(2 * ncols + 1, N, 2 * (ncols + 1)),
+                    ]
+                )
             sel = np.delete(sel, rm, axis=0)
             color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
@@ -958,25 +1042,25 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         imin, imax = np.min(isel), np.max(isel) + 1  # y
 
         # crop first or last column
-        if grid.lower() == 'hexgrid':
+        if grid.lower() == "hexgrid":
             if jmin != 0 and jmin != ncols:
                 jmin += 1
             if jmax != 0 and jmax != ncols:
                 jmax -= 1
 
-        scale = 1.*w/(xmax - xmin)
-        if grid.lower() == 'hexgrid':
-            h = np.int(scale*(ymax - ymin)*(3.**.5))
+        scale = 1.0 * w / (xmax - xmin)
+        if grid.lower() == "hexgrid":
+            h = int(scale * (ymax - ymin) * (3.0**0.5))
             if h > __MAX_SIZE__:
                 h = __MAX_SIZE__
-                scale = h/((ymax - ymin)*3.**.5)
-                w = np.int(scale*(xmax - xmin))
+                scale = h / ((ymax - ymin) * 3.0**0.5)
+                w = int(scale * (xmax - xmin))
         else:
-            h = np.int(scale*(ymax - ymin))
+            h = int(scale * (ymax - ymin))
             if h > __MAX_SIZE__:
                 h = __MAX_SIZE__
-                scale = h/(ymax - ymin)
-                w = np.int(scale*(xmax - xmin))
+                scale = h / (ymax - ymin)
+                w = int(scale * (xmax - xmin))
 
         color = color.reshape(nrows, ncols, -1)
 
@@ -988,7 +1072,9 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
     ax.format_coord = CoordsFormatter(grid_indexing, _prop, propname)
-    img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
+    img = ax.imshow(
+        img_pil, interpolation="None", extent=(xmin, xmax, ymax, ymin), **kwargs
+    )
 
     # add scalebar
     if scalebar:
@@ -1002,22 +1088,41 @@ def plot_property(prop, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=No
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        cax = fig.colorbar(sm, ax=ax, shrink=.92)
+        cax = fig.colorbar(sm, ax=ax, shrink=0.92)
 
     # removing the borders/margins
-    ax.axis('off')
+    ax.axis("off")
     set_tight_plt(fig, ax)
 
     if verbose:
-        sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.write("{:.2f} s\n".format(time.time() - t0))
 
     return EBSDMap(x, y, img, ax, fig, cax)
 
 
-def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
-             d=[0, 0, 1], ax=None, sel=None, colorfill='black', gray=None,
-             graymin=0, graymax=None, tiling=None, w=2048, scalebar=True,
-             verbose=True, **kwargs):
+def plot_IPF(
+    M,
+    nrows,
+    ncols_odd,
+    ncols_even,
+    x,
+    y,
+    grid,
+    dx=None,
+    dy=None,
+    d=[0, 0, 1],
+    ax=None,
+    sel=None,
+    colorfill="black",
+    gray=None,
+    graymin=0,
+    graymax=None,
+    tiling=None,
+    w=2048,
+    scalebar=True,
+    verbose=True,
+    **kwargs
+):
     """
     Plots inverse pole figure map
 
@@ -1100,56 +1205,56 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
     """
     if verbose:
         t0 = time.time()
-        sys.stdout.write('Plotting Inverse Pole Figure... ')
+        sys.stdout.write("Plotting Inverse Pole Figure... ")
         sys.stdout.flush()
 
     if dx is None:
-        dx = (np.max(x) - np.min(x))/ncols_odd
+        dx = (np.max(x) - np.min(x)) / ncols_odd
     if dy is None:
-        dy = (np.max(y) - np.min(y))/(nrows - 1)
+        dy = (np.max(y) - np.min(y)) / (nrows - 1)
 
     grid_indexing = GridIndexing(grid, ncols_odd, ncols_even, nrows, dx, dy)
     N = grid_indexing.N
 
     if N != len(M):
-        raise Exception('N and len(M) differ')
+        raise Exception("N and len(M) differ")
 
     if isinstance(sel, np.ndarray):
         if N != sel.shape[0]:
-            raise Exception('N and len(sel) differ')
+            raise Exception("N and len(sel) differ")
     else:
         sel = np.full(N, True)
     not_sel = ~sel
 
     # set default tiling
-    if grid.lower() == 'sqrgrid' and tiling == 'hex':
-        print('hex tiling not supported for squared grid. Using rect tiling instead.')
-        tiling = 'rect'
+    if grid.lower() == "sqrgrid" and tiling == "hex":
+        print("hex tiling not supported for squared grid. Using rect tiling instead.")
+        tiling = "rect"
 
     if tiling is None:
-        tiling = 'rect'
-        if grid.lower() == 'hexgrid':
+        tiling = "rect"
+        if grid.lower() == "hexgrid":
             if np.count_nonzero(sel) <= __THRESHOLD_TILING__:
-                tiling = 'hex'
+                tiling = "hex"
 
     # x and y plot limits
     xmin, xmax = np.min(x[sel]), np.max(x[sel])
     ymin, ymax = np.min(y[sel]), np.max(y[sel])
 
-    if tiling == 'hex':
-        edge_length = dx/3.**.5
-        ymin -= edge_length/2.
-        ymax += edge_length/2.
+    if tiling == "hex":
+        edge_length = dx / 3.0**0.5
+        ymin -= edge_length / 2.0
+        ymax += edge_length / 2.0
     else:
-        ymin -= dy/2.
-        ymax += dy/2.
+        ymin -= dy / 2.0
+        ymax += dy / 2.0
 
-    if grid.lower() == 'sqrgrid':
-        xmin -= dx/2.
-        xmax += dx/2.
+    if grid.lower() == "sqrgrid":
+        xmin -= dx / 2.0
+        xmax += dx / 2.0
 
     # getting kwargs parameters
-    scalebar_location = kwargs.pop('scalebar_location', 'lower left')
+    scalebar_location = kwargs.pop("scalebar_location", "lower left")
 
     # call IPF to get crystal directions parallel to d and
     # convert to color code (RGBA)
@@ -1167,16 +1272,16 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
     # applying gray mask
     if isinstance(gray, np.ndarray):
         if N != gray.shape[0]:
-            raise Exception('N and len(gray) differ')
+            raise Exception("N and len(gray) differ")
         else:
             if graymin is None:
                 graymin = gray.min()
             if graymax is None:
                 graymax = gray.max()
-            gray = (gray.reshape(-1, 1) - graymin)/(graymax - graymin)
-            gray[gray < 0.] = 0.
-            gray[gray > 1.] = 1.
-            color[sel, :3] = color[sel, :3]*gray[sel]
+            gray = (gray.reshape(-1, 1) - graymin) / (graymax - graymin)
+            gray[gray < 0.0] = 0.0
+            gray[gray > 1.0] = 1.0
+            color[sel, :3] = color[sel, :3] * gray[sel]
 
     # getting AxesSubplot object
     if ax is None:
@@ -1185,7 +1290,7 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         fig = ax.get_figure()
 
     # plotting maps
-    if tiling == 'hex':
+    if tiling == "hex":
         color = color[sel]
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
@@ -1193,41 +1298,49 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         for i in range(6):
             # coordinates of the vertices of each hexagonal tile
             # in physical units (most commonly nm)
-            x_hex[:, i] = x[sel] + np.sin(i*np.pi/3)*edge_length
-            y_hex[:, i] = y[sel] + np.cos(i*np.pi/3)*edge_length
+            x_hex[:, i] = x[sel] + np.sin(i * np.pi / 3) * edge_length
+            y_hex[:, i] = y[sel] + np.cos(i * np.pi / 3) * edge_length
 
-        scale = 1.*w/(xmax - xmin)
-        h = np.int((ymax - ymin)*scale)
+        scale = 1.0 * w / (xmax - xmin)
+        h = int((ymax - ymin) * scale)
         if h > __MAX_SIZE__:
             h = __MAX_SIZE__
-            scale = h/(ymax - ymin)
-            w = np.int(scale*(xmax - xmin))
+            scale = h / (ymax - ymin)
+            w = int(scale * (xmax - xmin))
 
         # coordinates of the vertices in pixels
-        x_hex = (x_hex - xmin)*scale
-        y_hex = (y_hex - ymin)*scale
+        x_hex = (x_hex - xmin) * scale
+        y_hex = (y_hex - ymin) * scale
 
-        img_pil = Image.new('RGBA', (w, h), colorfill)
-        draw = ImageDraw.Draw(img_pil, 'RGBA')
+        img_pil = Image.new("RGBA", (w, h), colorfill)
+        draw = ImageDraw.Draw(img_pil, "RGBA")
         for i in range(len(x_hex)):
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
             draw.polygon(hexagon, fill=tuple(color[i]))
 
-    elif tiling == 'rect':
-        if grid.lower() == 'hexgrid':
+    elif tiling == "rect":
+        if grid.lower() == "hexgrid":
             # double pixels
             sel = np.repeat(sel, 2)
             color = np.repeat(color, 2, axis=0)
             # N pixels and ncols for rect grid plotting
-            N, ncols = 2*N, 2*min(ncols_odd, ncols_even)
+            N, ncols = 2 * N, 2 * min(ncols_odd, ncols_even)
 
             # remove extra pixels
             if ncols_odd > ncols_even:
-                rm = np.hstack([np.arange(0, N, 2*(ncols+1)),
-                                np.arange(ncols+1, N, 2*(ncols+1))])
+                rm = np.hstack(
+                    [
+                        np.arange(0, N, 2 * (ncols + 1)),
+                        np.arange(ncols + 1, N, 2 * (ncols + 1)),
+                    ]
+                )
             else:
-                rm = np.hstack([np.arange(ncols, N, 2*(ncols+1)),
-                                np.arange(2*ncols+1, N, 2*(ncols+1))])
+                rm = np.hstack(
+                    [
+                        np.arange(ncols, N, 2 * (ncols + 1)),
+                        np.arange(2 * ncols + 1, N, 2 * (ncols + 1)),
+                    ]
+                )
             sel = np.delete(sel, rm, axis=0)
             color = np.delete(color, rm, axis=0)
         else:  # sqrgrid
@@ -1238,25 +1351,25 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         imin, imax = np.min(isel), np.max(isel) + 1  # y
 
         # crop first or last column
-        if grid.lower() == 'hexgrid':
+        if grid.lower() == "hexgrid":
             if jmin != 0 and jmin != ncols:
                 jmin += 1
             if jmax != 0 and jmax != ncols:
                 jmax -= 1
 
-        scale = 1.*w/(xmax - xmin)
-        if grid.lower() == 'hexgrid':
-            h = np.int(scale*(ymax - ymin)*(3.**.5))
+        scale = 1.0 * w / (xmax - xmin)
+        if grid.lower() == "hexgrid":
+            h = int(scale * (ymax - ymin) * (3.0**0.5))
             if h > __MAX_SIZE__:
                 h = __MAX_SIZE__
-                scale = h/((ymax - ymin)*3.**.5)
-                w = np.int(scale*(xmax - xmin))
+                scale = h / ((ymax - ymin) * 3.0**0.5)
+                w = int(scale * (xmax - xmin))
         else:
-            h = np.int(scale*(ymax - ymin))
+            h = int(scale * (ymax - ymin))
             if h > __MAX_SIZE__:
                 h = __MAX_SIZE__
-                scale = h/(ymax - ymin)
-                w = np.int(scale*(xmax - xmin))
+                scale = h / (ymax - ymin)
+                w = int(scale * (xmax - xmin))
 
         color = color.reshape(nrows, ncols, -1)
 
@@ -1267,8 +1380,10 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         plt.close(fig)
         raise Exception('Unknown "{}" tiling'.format(tiling))
 
-    ax.format_coord = CoordsFormatter(grid_indexing, d_IPF.round(6), 'd')
-    img = ax.imshow(img_pil, interpolation='None', extent=(xmin, xmax, ymax, ymin), **kwargs)
+    ax.format_coord = CoordsFormatter(grid_indexing, d_IPF.round(6), "d")
+    img = ax.imshow(
+        img_pil, interpolation="None", extent=(xmin, xmax, ymax, ymin), **kwargs
+    )
 
     # add scalebar
     if scalebar:
@@ -1277,10 +1392,10 @@ def plot_IPF(M, nrows, ncols_odd, ncols_even, x, y, grid, dx=None, dy=None,
         ax.add_artist(scalebar)
 
     # removing the borders/margins
-    ax.axis('off')
+    ax.axis("off")
     set_tight_plt(fig, ax)
 
     if verbose:
-        sys.stdout.write('{:.2f} s\n'.format(time.time() - t0))
+        sys.stdout.write("{:.2f} s\n".format(time.time() - t0))
 
     return EBSDMap(x, y, img, ax, fig)

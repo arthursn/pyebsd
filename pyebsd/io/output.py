@@ -1,4 +1,4 @@
-__all__ = ['save_ang_file']
+__all__ = ["save_ang_file"]
 
 
 def save_ang_file(fname, scan, sel=None, **kwargs):
