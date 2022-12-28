@@ -2,14 +2,15 @@
 Lasso selector to select areas
 """
 
+from pathlib import Path
 import matplotlib.pyplot as plt
 import pyebsd
 
 from builtins import input
-import os
+
 # .ang file available in the data folder
 # Replace angfile variable with the path to your .ang file
-angfile = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
+angfile = Path(__file__).parent.parent / "data" / "ADI_bcc_fcc.ang"
 
 # load ebsd scandata
 # So far, pyebsd only supports loading .ang files generated
@@ -35,7 +36,7 @@ ipf = scan.plot_IPF(sel=(scan.ph == 2), gray=scan.IQ)
 # terminal/command prompt
 ipf.lasso_selector()
 
-key = input('Press ENTER to process selected data ')
+key = input("Press ENTER to process selected data ")
 
 # Disable interactive mode
 plt.ioff()
@@ -45,11 +46,11 @@ ipfselection = scan.plot_IPF(sel=ipf.sel, gray=scan.IQ)
 
 # Plot pole figure of the bcc phase in the selected area
 pfbcc = scan.plot_PF(sel=ipf.sel & (scan.ph == 1), contour=True)
-pfbcc.set_title('Pole Figure bcc phase')
+pfbcc.set_title("Pole Figure bcc phase")
 
 # Plot pole figure of the fcc phase in the selected area
 pffcc = scan.plot_PF(sel=ipf.sel & (scan.ph == 2), contour=True)
-pffcc.set_title('Pole Figure fcc phase')
+pffcc.set_title("Pole Figure fcc phase")
 
 # Show plots
 plt.show()

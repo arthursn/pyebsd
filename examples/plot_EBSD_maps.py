@@ -2,14 +2,13 @@
 Plotting EBSD maps
 """
 
+from pathlib import Path
 import matplotlib.pyplot as plt
 import pyebsd
 
-
-import os
 # .ang file available in the data folder
 # Replace angfile variable with the path to your .ang file
-angfile = os.path.join('..', 'data', 'ADI_bcc_fcc.ang')
+angfile = Path(__file__).parent.parent / "data" / "ADI_bcc_fcc.ang"
 
 # load ebsd scandata
 # So far, pyebsd only supports loading .ang files generated
