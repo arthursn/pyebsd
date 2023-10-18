@@ -17,6 +17,9 @@ rcParams["savefig.dpi"] = 300
 rcParams["savefig.bbox"] = "tight"
 rcParams["savefig.pad_inches"] = 0.0
 
+_2PI = 2 * np.pi
+_COS60 = 0.5  # cos(60deg)
+_SIN60 = 0.5 * 3.0**0.5  # sin(60deg)
 
 class ScanData(GridIndexing):
     """
@@ -47,9 +50,6 @@ class ScanData(GridIndexing):
         Default: ''
     """
 
-    _2pi = 2 * np.pi
-    _cos60 = 0.5  # cos(60deg)
-    _sin60 = 0.5 * 3.0**0.5  # sin(60deg)
 
     colors = ["red", "green", "blue", "cyan", "magenta", "yellow"]
 
@@ -205,9 +205,9 @@ class ScanData(GridIndexing):
                         setattr(self, alias, getattr(self, field_name))
 
         if (
-            abs(self.phi1.max()) > self._2pi
-            or abs(self.Phi.max()) > self._2pi
-            or abs(self.phi2.max()) > self._2pi
+            abs(self.phi1.max()) > _2PI
+            or abs(self.Phi.max()) > _2PI
+            or abs(self.phi2.max()) > _2PI
         ):
             print(
                 "Euler angles out of allowed range! Please check if they are really "
@@ -271,20 +271,20 @@ class ScanData(GridIndexing):
         """
         if self.grid.lower() == "hexgrid":
             R60 = np.array(
-                [[self._cos60, -self._sin60], [self._sin60, self._cos60]]
+                [[_COS60, -_SIN60], [_SIN60, _COS60]]
             )  # 60 degrees rotation matrix
 
             j_list = np.arange(-distance, distance, 2)
             i_list = np.full(j_list.shape, -distance)
 
-            xy = np.vstack([j_list * self._cos60, i_list * self._sin60])
+            xy = np.vstack([j_list * _COS60, i_list * _SIN60])
 
             j_list, i_list = list(j_list), list(i_list)
 
             for r in range(1, 6):
                 xy = np.dot(R60, xy)  # 60 degrees rotation
-                j_list += list((xy[0] / self._cos60).round(0).astype(int))
-                i_list += list((xy[1] / self._sin60).round(0).astype(int))
+                j_list += list((xy[0] / _COS60).round(0).astype(int))
+                i_list += list((xy[1] / _SIN60).round(0).astype(int))
         else:  # sqrgrid
             R90 = np.array([[0, -1], [1, 0]], dtype=int)  # 90 degrees rotation matrix
             xy = np.vstack(

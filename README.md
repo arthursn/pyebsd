@@ -9,7 +9,7 @@ pyebsd is an python implemented open-source tool for processing Electron Backsca
 
 pyebsd is in development stage and, for now, is only able to process phases of cubic symmetry. Its main use case is steel microstructures.
 
-pyebsd is a ``pure'' Python package, meaning that it does not depend on building extension modules. For computational expensive calculations, such as manipulation of matrices, it relies on the clever vectorized operations with NumPy.
+pyebsd is a "pure" Python package, meaning that it does not depend on building extension modules. For computational expensive calculations, such as manipulation of matrices, it relies on the clever vectorized operations with NumPy.
 
 # Installation
 
