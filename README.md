@@ -7,45 +7,26 @@ pyebsd is an python implemented open-source tool for processing Electron Backsca
 - accurate orientation relationship for cubic crystals
 - misorientation
 
-# Installation and requirements
+pyebsd is in development stage and, for now, is only able to process phases of cubic symmetry. Its main use case is steel microstructures.
 
-pyebsd runs in python 2 (>=2.7) and python 3 (>= 3.5) and uses the following non-standard python libraries:
+pyebsd is a ``pure'' Python package, meaning that it does not depend on building extension modules. For computational expensive calculations, such as manipulation of matrices, it relies on the clever vectorized operations with NumPy.
 
-- numpy
-- matplotlib
-- pandas
-- scipy
-- pillow
+# Installation
 
-pyebsd is not available yet at PyPI. In order to install the library, first download the repository:
+pyebsd runs in Python 3 (>= 3.5). Earlier versions of pyebsd still work on python 2, but python 2 support has been deprecated.
+
+pyebsd is not available yet in the Python Package Index. In order to install the library, first download the repository:
 
 ```bash
 git clone https://github.com/arthursn/pyebsd
 ```
 
-Then install pyebsd by running the `setup.py` file:
+Then install pyebsd by running pip in the root folder:
 
 ```bash
-python setup.py install
+pip install . 
 ```
 
-Please be aware that administrator permissions might be necessary.
-
-Use the `--user` option to install pyebsd in the user folder:
-
-```bash
-python setup.py install --user
-```
-
-Please notice that `setuptools` must be installed beforehand.
-
-When pyebsd is installed using `setup.py`, all dependencies should be automatically solved.
-
-If the dependencies are not solved, the required libraries can be installed from the [Python Package Index](https://pypi.org) using pip:
-
-```bash
-pip install numpy matplotlib pandas scipy pillow
-```
 # Basic usage
 
 Examples can be found in the [examples](https://github.com/arthursn/pyebsd/tree/master/examples) folder. A jupyter notebook with interactive examples is provided [here](https://github.com/arthursn/pyebsd/blob/master/examples/plot_EBSD_maps.ipynb).
@@ -64,15 +45,15 @@ scan = pyebsd.load_scandata('path/to/ang/file')
 Plot Inverse Pole Figure (IPF) map:
 
 ```python
-# gray=scan.IQ is used to set the quality index as grayscale
-scan.plot_IPF(gray=scan.IQ)
+# gray="IQ" is used to set the quality index as grayscale
+scan.plot_IPF(gray="IQ")
 plt.show()
 ```
 
 Plot phase map:
 
 ```python
-scan.plot_phase(gray=scan.IQ)
+scan.plot_phase(gray="IQ")
 plt.show()
 ```
 
