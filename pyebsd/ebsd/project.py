@@ -188,6 +188,12 @@ class ScanData(GridIndexing):
                         setattr(self, varname, self.data[cname].values)
                     else:
                         setattr(self, varname, self.data[cname].values.copy())
+                    # Set aliases as attributes
+                    for alias in cnames_info["aliases"]:
+                        # Just in case... This should never happen
+                        if alias == varname:
+                            continue
+                        setattr(self, alias, getattr(self, varname))
 
         if (
             abs(self.phi1.max()) > self._2pi
@@ -217,8 +223,8 @@ class ScanData(GridIndexing):
         self._i = None  # row number
         self._j = None  # col number
 
-        self._M = None
-        self._R = None
+        self._M = None  # Rotation matrices M (sample to crystal)
+        self._R = None  # Rotation matrices R (crystal to sample)
 
         # keeps history of Figure, AxesSubplot and EBSDMap objects in these
         # lists. self.clear_history() can be used to clear the history
