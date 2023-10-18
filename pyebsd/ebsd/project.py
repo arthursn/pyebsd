@@ -594,7 +594,7 @@ class ScanData(GridIndexing):
             try:
                 gray = getattr(self, gray)
             except AttributeError:
-                gray = self.data[gray]
+                gray = self.data[gray].values
 
         ebsdmap = plot_IPF(
             self.M,
@@ -749,13 +749,13 @@ class ScanData(GridIndexing):
             try:
                 prop = getattr(self, prop)
             except AttributeError:
-                prop = self.data[prop]
+                prop = self.data[prop].values
 
         if isinstance(gray, str):
             try:
                 gray = getattr(self, gray)
             except AttributeError:
-                gray = self.data[gray]
+                gray = self.data[gray].values
 
         ebsdmap = plot_property(
             prop,
