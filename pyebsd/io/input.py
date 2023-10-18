@@ -1,11 +1,12 @@
-import os
+import h5py
 import time
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from ..ebsd.project import ScanData
 
-__all__ = ["load_ang_file", "load_scandata"]
+__all__ = ["load_ang_file", "load_h5oina_file", "load_scandata"]
 
 
 def _parse_info_header(line, pattern, dtype=str):
@@ -116,7 +117,7 @@ def load_ang_file(fname):
         "y",
         "IQ",
         "CI",
-        "ph",
+        "phase",
         "intensity",
         "fit",
     ]
@@ -154,6 +155,53 @@ def load_ang_file(fname):
     return ScanData(data, grid, dx, dy, ncols_odd, ncols_even, nrows, header)
 
 
+def load_h5oina_file(fname):
+    h5file = h5py.File(fname)
+
+    group_name = "/1/EBSD/Data"
+    grid = "SqrGrid"
+    header = ""
+
+    data_dict = dict()
+
+    for key, dataset in h5file[group_name].items():
+        if key == "Euler":
+            (
+                data_dict["phi1"],
+                data_dict["Phi"],
+                data_dict["phi2"],
+            ) = np.array(dataset).T
+            continue
+
+        data_dict[key] = np.array(dataset)
+
+    data = pd.DataFrame(data_dict)
+
+    # Find grid parameters (grid spacing, number of rows and columns)
+    xcoords = np.unique(data.X)
+    ycoords = np.unique(data.Y)
+
+    nrows = len(ycoords)
+    ncols_odd = np.count_nonzero(data.Y == ycoords[0])
+    if nrows > 1:
+        ncols_even = np.count_nonzero(data.Y == ycoords[1])
+    else:
+        ncols_even = ncols_odd - 1
+
+    dx = data.X[1] - data.X[0]
+    dy = ycoords[1] - ycoords[0]
+
+    print("Grid parameters guessed from x, y columns:")
+    print("  XSTEP:", dx)
+    print("  YSTEP:", dy)
+    print("  NCOLS_ODD:", ncols_odd)
+    print("  NCOLS_EVEN:", ncols_even)
+    print("  NROWS:", nrows)
+    print("")
+
+    return ScanData(data, grid, dx, dy, ncols_odd, ncols_even, nrows, header)
+
+
 def load_scandata(fname):
     """
     Load EBSD scan data
@@ -168,10 +216,12 @@ def load_scandata(fname):
     scan : ScanData object
 
     """
-    ext = os.path.splitext(fname)[-1]
+    ext = Path(fname).suffix
 
-    if ext == ".ang":
+    if ext.lower() == ".ang":
         scan = load_ang_file(fname)
+    elif ext.lower() == ".h5oina":
+        scan = load_h5oina_file(fname)
     else:
         raise Exception('File extension "{}" not supported'.format(ext))
 
