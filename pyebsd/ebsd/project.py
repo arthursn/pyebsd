@@ -572,6 +572,9 @@ class ScanData(GridIndexing):
             else:
                 sel = sel & sellim
 
+        if isinstance(gray, str):
+            gray = getattr(self, gray)
+
         ebsdmap = plot_IPF(
             self.M,
             self.nrows,
@@ -721,6 +724,12 @@ class ScanData(GridIndexing):
             else:
                 sel = sel & sellim
 
+        if isinstance(prop, str):
+            prop = getattr(self, prop)
+
+        if isinstance(gray, str):
+            gray = getattr(self, gray)
+
         ebsdmap = plot_property(
             prop,
             self.nrows,
@@ -847,6 +856,7 @@ class ScanData(GridIndexing):
             ph_code = set(self.ph)
             ccycler = cycle(self.colors)
             colordict = {ph: next(ccycler) for ph in ph_code}
+
         ebsdmap = self.plot_property(
             self.ph,
             "phase",
