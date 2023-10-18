@@ -156,15 +156,31 @@ def load_ang_file(fname):
 
 
 def load_h5oina_file(fname):
+    t0 = time.time()
+    print('Reading file "{}"...'.format(fname))
+
     h5file = h5py.File(fname)
 
-    group_name = "/1/EBSD/Data"
+    acquisition_index = 1
     grid = "SqrGrid"
     header = ""
 
-    data_dict = dict()
+    group_name = f"{acquisition_index:d}/EBSD"
 
-    for key, dataset in h5file[group_name].items():
+    # Read metadata in header
+    ncols_odd = ncols_even = int(h5file[f"{group_name}/Header/X Cells"][0])
+    nrows = int(h5file[f"{group_name}/Header/Y Cells"][0])
+    dx = float(h5file[f"{group_name}/Header/X Step"][0])
+    dy = float(h5file[f"{group_name}/Header/Y Step"][0])
+
+    print("  XSTEP:", dx)
+    print("  YSTEP:", dy)
+    print("  NCOLS:", ncols_odd)
+    print("  NROWS:", nrows)
+
+    # Read data
+    data_dict = dict()
+    for key, dataset in h5file[f"{group_name}/Data"].items():
         if key == "Euler":
             (
                 data_dict["phi1"],
@@ -177,27 +193,9 @@ def load_h5oina_file(fname):
 
     data = pd.DataFrame(data_dict)
 
-    # Find grid parameters (grid spacing, number of rows and columns)
-    xcoords = np.unique(data.X)
-    ycoords = np.unique(data.Y)
+    h5file.close()
 
-    nrows = len(ycoords)
-    ncols_odd = np.count_nonzero(data.Y == ycoords[0])
-    if nrows > 1:
-        ncols_even = np.count_nonzero(data.Y == ycoords[1])
-    else:
-        ncols_even = ncols_odd - 1
-
-    dx = data.X[1] - data.X[0]
-    dy = ycoords[1] - ycoords[0]
-
-    print("Grid parameters guessed from x, y columns:")
-    print("  XSTEP:", dx)
-    print("  YSTEP:", dy)
-    print("  NCOLS_ODD:", ncols_odd)
-    print("  NCOLS_EVEN:", ncols_even)
-    print("  NROWS:", nrows)
-    print("")
+    print("\n{} points read in {:.2f} s".format(len(data), time.time() - t0))
 
     return ScanData(data, grid, dx, dy, ncols_odd, ncols_even, nrows, header)
 
