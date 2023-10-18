@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import matplotlib.pyplot as plt
 from itertools import cycle
 from matplotlib import rcParams
 from matplotlib.axes import Axes
-import matplotlib.pyplot as plt
+from dataclasses import dataclass
 
 from .orientation import euler_angles_to_rotation_matrix, kernel_average_misorientation
 from .plotting import GridIndexing, EBSDMap, plot_property, plot_IPF, plot_PF
@@ -154,15 +155,23 @@ class ScanData(GridIndexing):
 
     _n_neighbors_hexgrid_fixed = len(neighbors_hexgrid_fixed)
 
-    _colnames = {
-        "x": dict(aliases=["X"], copy=True),
-        "y": dict(aliases=["Y"], copy=True),
-        "phi1": dict(aliases=["Euler1"], copy=False),
-        "Phi": dict(aliases=["Euler2"], copy=False),
-        "phi2": dict(aliases=["Euler3"], copy=False),
-        "ph": dict(aliases=["phase", "Phase"], copy=False),
+    @dataclass
+    class FieldNameInfo:
+        aliases: list
+        copy: bool = False
+
+    _fieldnames = {
+        # Compulsory
+        "x": FieldNameInfo(aliases=["X"], copy=True),
+        "y": FieldNameInfo(aliases=["Y"], copy=True),
+        "phi1": FieldNameInfo(aliases=["Euler1"], copy=False),
+        "Phi": FieldNameInfo(aliases=["Euler2"], copy=False),
+        "phi2": FieldNameInfo(aliases=["Euler3"], copy=False),
+        "phase": FieldNameInfo(aliases=["ph", "Phase"], copy=False),
+        # Optional
+        "IQ": FieldNameInfo(aliases=["Band Contrast"], copy=False),
     }
-    _compulsory_columns = tuple(_colnames.keys())
+    _compulsory_columns = ["x", "y", "phi1", "Phi", "phi2", "phase"]
 
     def __init__(self, data, grid, dx, dy, ncols_odd, ncols_even, nrows, header=""):
         # Initializes base class GridIndexing
@@ -181,19 +190,19 @@ class ScanData(GridIndexing):
 
         # Set compulsory columns in data (x, y, phi1 ...) as member variables
         # (.values: pandas Series to numpy array)
-        for varname, cnames_info in self._colnames.items():
+        for field_name, field_name_info in self._fieldnames.items():
             for cname in self.data.columns:
-                if cname == varname or cname in cnames_info["aliases"]:
-                    if not cnames_info["copy"]:
-                        setattr(self, varname, self.data[cname].values)
+                if cname == field_name or cname in field_name_info.aliases:
+                    if not field_name_info.copy:
+                        setattr(self, field_name, self.data[cname].values)
                     else:
-                        setattr(self, varname, self.data[cname].values.copy())
+                        setattr(self, field_name, self.data[cname].values.copy())
                     # Set aliases as attributes
-                    for alias in cnames_info["aliases"]:
+                    for alias in field_name_info.aliases:
                         # Just in case... This should never happen
-                        if alias == varname:
+                        if alias == field_name:
                             continue
-                        setattr(self, alias, getattr(self, varname))
+                        setattr(self, alias, getattr(self, field_name))
 
         if (
             abs(self.phi1.max()) > self._2pi
@@ -231,6 +240,9 @@ class ScanData(GridIndexing):
         self.figs = []
         self.axes = []
         self.ebsdmaps = []
+
+    def __getitem__(self, colname):
+        return self.data[colname].values
 
     @property
     def M(self):
@@ -579,7 +591,10 @@ class ScanData(GridIndexing):
                 sel = sel & sellim
 
         if isinstance(gray, str):
-            gray = getattr(self, gray)
+            try:
+                gray = getattr(self, gray)
+            except AttributeError:
+                gray = self.data[gray]
 
         ebsdmap = plot_IPF(
             self.M,
@@ -731,10 +746,16 @@ class ScanData(GridIndexing):
                 sel = sel & sellim
 
         if isinstance(prop, str):
-            prop = getattr(self, prop)
+            try:
+                prop = getattr(self, prop)
+            except AttributeError:
+                prop = self.data[prop]
 
         if isinstance(gray, str):
-            gray = getattr(self, gray)
+            try:
+                gray = getattr(self, gray)
+            except AttributeError:
+                gray = self.data[gray]
 
         ebsdmap = plot_property(
             prop,
