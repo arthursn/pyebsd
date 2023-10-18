@@ -18,6 +18,7 @@ setup(
     ],
     include_package_data=True,
     install_requires=[
+        "h5py",
         "matplotlib",
         "matplotlib_scalebar",
         "numpy",
