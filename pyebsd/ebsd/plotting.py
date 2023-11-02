@@ -401,7 +401,7 @@ def _calculate_barycenter_unit_triangle():
     """
     Function name speaks for itself
     """
-    from ..crystal import stereographic_projection_to_direction
+    from .orientation import stereographic_projection_to_direction
 
     # Barycenter half circular cap
     # integrate (2-(x+1)^2)^0.5 from (3^0.5-1)/2 to 2^0.5 - 1
@@ -637,7 +637,7 @@ def plot_PF(
         contour=True plots the pole figure using contour plot
         Default: False
 
-    **kwargs:
+    **kwargs :
         R : numpy ndarray shape(N,3,3)
             If M is not provided, R has to be provided instead.
             Transformation matrix from the crystal coordinate frame to
@@ -876,6 +876,16 @@ def plot_property(
         Default: True
 
     **kwargs :
+        func : callable
+            Function applied to prop
+        vmin : Any
+            Minimum value of prop
+        vmax : Any
+            Maximum value of prop
+        cmap : str or callable
+            Colormap instance. If passed as str, color is fetched with
+            plt.get_cmap(cmap)
+
         kwargs parameters are passed to function ax.imshow:
         ax.imshow(img, ..., **kwargs)
 
@@ -888,6 +898,10 @@ def plot_property(
         t0 = time.time()
         sys.stdout.write("Plotting property map... ")
         sys.stdout.flush()
+
+    func = kwargs.pop("func", None)
+    if func is not None:
+        prop = func(prop)
 
     if dx is None:
         dx = (np.max(x) - np.min(x)) / ncols_odd
