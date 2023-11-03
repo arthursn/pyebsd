@@ -21,6 +21,7 @@ _2PI = 2 * np.pi
 _COS60 = 0.5  # cos(60deg)
 _SIN60 = 0.5 * 3.0**0.5  # sin(60deg)
 
+
 class ScanData(GridIndexing):
     """
     EBSD scan data
@@ -49,7 +50,6 @@ class ScanData(GridIndexing):
         Header of the scan data file
         Default: ''
     """
-
 
     colors = ["red", "green", "blue", "cyan", "magenta", "yellow"]
 
@@ -235,6 +235,8 @@ class ScanData(GridIndexing):
         self._M = None  # Rotation matrices M (sample to crystal)
         self._R = None  # Rotation matrices R (crystal to sample)
 
+        self.verbose = True
+
         # keeps history of Figure, AxesSubplot and EBSDMap objects in these
         # lists. self.clear_history() can be used to clear the history
         self.figs = []
@@ -261,7 +263,12 @@ class ScanData(GridIndexing):
         sample coordinate frame of the EBSD system.
         """
         if self._R is None:
-            self._R = euler_angles_to_rotation_matrix(self.phi1, self.Phi, self.phi2)
+            self._R = euler_angles_to_rotation_matrix(
+                self.phi1,
+                self.Phi,
+                self.phi2,
+                verbose=self.verbose,
+            )
         return self._R
 
     def get_neighbors_oim(self, distance):
@@ -502,7 +509,6 @@ class ScanData(GridIndexing):
         w=2048,
         scalebar=True,
         plotlimits=None,
-        verbose=True,
         **kwargs
     ):
         """
@@ -557,12 +563,13 @@ class ScanData(GridIndexing):
             If an EBSDMap or AxesSubplot object is provided, then limits
             are retrieved by calling get_xlim() and get_ylim() functions.
             Default: None
-        verbose : bool (optional)
-            If True, prints computation time
-            Default: True
 
         **kwargs :
-            kwargs parameters are passed to function ax.imshow:
+            verbose : bool (optional)
+                If True, prints computation time
+                Default: True
+
+            Remaining kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
@@ -616,8 +623,8 @@ class ScanData(GridIndexing):
             tiling,
             w,
             scalebar,
-            verbose,
-            **kwargs
+            verbose=kwargs.pop("verbose", self.verbose),
+            **kwargs,
         )
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
@@ -641,7 +648,6 @@ class ScanData(GridIndexing):
         scalebar=True,
         colorbar=True,
         plotlimits=None,
-        verbose=True,
         **kwargs
     ):
         """
@@ -712,12 +718,13 @@ class ScanData(GridIndexing):
             If an EBSDMap or AxesSubplot object is provided, then limits
             are retrieved by calling get_xlim() and get_ylim() functions.
             Default: None
-        verbose : bool (optional)
-            If True, prints computation time
-            Default: True
 
         **kwargs :
-            kwargs parameters are passed to function ax.imshow:
+            verbose : bool (optional)
+                If True, prints computation time
+                Default: True
+
+            Remaining kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
@@ -780,8 +787,8 @@ class ScanData(GridIndexing):
             w,
             scalebar,
             colorbar,
-            verbose,
-            **kwargs
+            verbose=kwargs.pop("verbose", self.verbose),
+            **kwargs,
         )
         self.ebsdmaps.append(ebsdmap)
         self.figs.append(ebsdmap.fig)
@@ -802,7 +809,6 @@ class ScanData(GridIndexing):
         w=2048,
         scalebar=True,
         plotlimits=None,
-        verbose=True,
         **kwargs
     ):
         """
@@ -867,12 +873,13 @@ class ScanData(GridIndexing):
             If an EBSDMap or AxesSubplot object is provided, then limits
             are retrieved by calling get_xlim() and get_ylim() functions.
             Default: None
-        verbose : bool (optional)
-            If True, prints computation time
-            Default: True
 
         **kwargs :
-            kwargs parameters are passed to function ax.imshow:
+            verbose : bool (optional)
+                If True, prints computation time
+                Default: True
+
+            Remaining kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
@@ -900,8 +907,8 @@ class ScanData(GridIndexing):
             scalebar,
             False,
             plotlimits,
-            verbose,
-            **kwargs
+            verbose=kwargs.pop("verbose", self.verbose),
+            **kwargs,
         )
         return ebsdmap
 
@@ -923,7 +930,6 @@ class ScanData(GridIndexing):
         scalebar=True,
         colorbar=True,
         plotlimits=None,
-        verbose=True,
         **kwargs
     ):
         """
@@ -993,12 +999,13 @@ class ScanData(GridIndexing):
             If an EBSDMap or AxesSubplot object is provided, then limits
             are retrieved by calling get_xlim() and get_ylim() functions.
             Default: None
-        verbose : bool (optional)
-            If True, prints computation time
-            Default: True
 
         **kwargs :
-            kwargs parameters are passed to function ax.imshow:
+            verbose : bool (optional)
+                If True, prints computation time
+                Default: True
+
+            Remaining kwargs parameters are passed to function ax.imshow:
             ax.imshow(img, ..., **kwargs)
 
         Returns
@@ -1043,8 +1050,8 @@ class ScanData(GridIndexing):
             scalebar,
             colorbar,
             None,
-            verbose,
-            **kwargs
+            verbose=kwargs.pop("verbose", self.verbose),
+            **kwargs,
         )
         ebsdmap.cax.set_label("KAM (°)")
         return ebsdmap
@@ -1057,7 +1064,6 @@ class ScanData(GridIndexing):
         rotation=None,
         contour=False,
         sep_phases=False,
-        verbose=True,
         **kwargs
     ):
         """
@@ -1084,11 +1090,11 @@ class ScanData(GridIndexing):
         sep_phases : bool (optional)
             If true, plot pole figures of different phases separately
             Default: False
-        verbose : bool (optional)
-            If True, prints computation time
-            Default: True
 
         **kwargs :
+            verbose : bool (optional)
+                If True, prints computation time
+                Default: True
             lw_frame : float
                 line width of PF frame
                 Default: 0.5
@@ -1132,10 +1138,10 @@ class ScanData(GridIndexing):
                 sel & (self.ph == ph),
                 rotation,
                 contour,
-                verbose,
+                verbose=kwargs.pop("verbose", self.verbose),
                 R=self.R,
                 label="{}".format(ph),
-                **kwargs
+                **kwargs,
             )
             for ph in phases[1:]:
                 plot_PF(
@@ -1145,16 +1151,24 @@ class ScanData(GridIndexing):
                     sel & (self.ph == ph),
                     rotation,
                     contour,
-                    verbose,
+                    verbose=kwargs.pop("verbose", self.verbose),
                     R=self.R,
                     ax=ax,
                     label="{}".format(ph),
-                    **kwargs
+                    **kwargs,
                 )
 
         else:
             ax = plot_PF(
-                None, proj, ax, sel, rotation, contour, verbose, R=self.R, **kwargs
+                None,
+                proj,
+                ax,
+                sel,
+                rotation,
+                contour,
+                verbose=kwargs.pop("verbose", self.verbose),
+                R=self.R,
+                **kwargs,
             )
 
         return ax
