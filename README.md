@@ -21,10 +21,10 @@ pyebsd is not available yet in the Python Package Index. In order to install the
 git clone https://github.com/arthursn/pyebsd
 ```
 
-Then install pyebsd by running pip in the root folder:
+Then install pyebsd by running pip with the cloned `./pyebsd` folder (local repository) as argument:
 
 ```bash
-pip install . 
+pip install ./pyebsd
 ```
 
 # Basic usage
