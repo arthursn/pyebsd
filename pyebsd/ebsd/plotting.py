@@ -439,7 +439,7 @@ def get_color_IPF(uvw, **kwargs):
     by the directions 001, 101, and 111), it suffices that u, v, and w are all
     positive numbers and w >= u >= v.
     """
-    if isinstance(uvw, (list, tuple)):
+    if not isinstance(uvw, np.ndarray):
         uvw = np.array(uvw)
 
     shape = uvw.shape  # original shape
