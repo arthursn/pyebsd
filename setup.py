@@ -22,7 +22,7 @@ setup(
         "matplotlib",
         "matplotlib_scalebar",
         "numpy<2",
-        "pandas<2",
+        "pandas",
         "pillow",
         "scipy",
     ],
