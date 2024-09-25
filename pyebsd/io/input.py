@@ -105,7 +105,7 @@ def load_ang_file(fname):
         raise Exception("Missing grid info")
 
     # Uses pandas to read ang file. pd.read_csv returns a pandas DataFrame
-    data = pd.read_csv(fname, header=None, comment="#", delim_whitespace=True)
+    data = pd.read_csv(fname, header=None, comment="#", sep=r"\s+")
 
     # Rename the columns
     columns = list(data.columns)
