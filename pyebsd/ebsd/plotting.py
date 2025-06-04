@@ -5,11 +5,10 @@ import numpy as np
 import matplotlib.colors
 import matplotlib.pyplot as plt
 from matplotlib_scalebar.scalebar import ScaleBar
-
 from PIL import Image, ImageDraw
 
 from .orientation import PF, IPF, stereographic_projection
-from ..draw import set_tight_plt, draw_circle_frame, toimage
+from ..draw import set_tight_plt, draw_circle_frame
 from ..selection import LassoSelector2, RectangleSelector2
 
 __all__ = [
@@ -77,9 +76,9 @@ class GridIndexing(object):
             diff = abs(self.ncols_odd - self.ncols_even)
             if diff != 1:
                 raise Exception(
-                    (
-                        "| ncols_odd - ncols_even | ( | {} - {} | = {}) must " "be 1"
-                    ).format(self.ncols_odd, self.ncols_even, diff)
+                    ("| ncols_odd - ncols_even | ( | {} - {} | = {}) must be 1").format(
+                        self.ncols_odd, self.ncols_even, diff
+                    )
                 )
             # Number of columns according to indexing system (see ij_to_index)
             self.ncols = self.ncols_odd + self.ncols_even
@@ -477,7 +476,6 @@ def get_color_IPF(uvw, **kwargs):
 
     rgb = np.array([R, G, B])
     rgbmax = np.max(rgb, axis=0)
-    # normalize rgb from 0 to 1 and then from 0 to 255
     rgb = rgb * 255 / rgbmax
 
     # rgb to int and invert axes (transpose)
@@ -526,7 +524,7 @@ def unit_triangle(ax=None, n=512, **kwargs):
     # fill points outside the unit triangle in white
     color[~sel] = [255, 255, 255]
 
-    img_pil = toimage(color.reshape(n, n, 3))
+    img_pil = Image.fromarray(color.reshape(n, n, 3))
 
     if ax is None:
         fig, ax = plt.subplots(facecolor="white")
@@ -607,7 +605,7 @@ def plot_PF(
     rotation=None,
     contour=False,
     verbose=True,
-    **kwargs
+    **kwargs,
 ):
     """
     The user should provide either R or M. It's more convenient to use
@@ -788,7 +786,7 @@ def plot_property(
     scalebar=True,
     colorbar=True,
     verbose=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Plots any EBSD property
@@ -998,7 +996,7 @@ def plot_property(
 
     # plotting maps
     if tiling == "hex":
-        color = (255 * color[sel]).astype(int)
+        color_rgba = (255 * color[sel]).astype(np.uint8)
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
 
@@ -1021,7 +1019,7 @@ def plot_property(
         draw = ImageDraw.Draw(img_pil, "RGBA")
         for i in range(len(x_hex)):
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
-            draw.polygon(hexagon, fill=tuple(color[i]))
+            draw.polygon(hexagon, fill=tuple(color_rgba[i]))
 
     elif tiling == "rect":
         if grid.lower() == "hexgrid":
@@ -1076,9 +1074,9 @@ def plot_property(
                 scale = h / (ymax - ymin)
                 w = int(scale * (xmax - xmin))
 
-        color = color.reshape(nrows, ncols, -1)
-
-        img_pil = toimage(color[imin:imax, jmin:jmax, :])
+        color_rgba = (255 * color.reshape(nrows, ncols, -1)).astype(np.uint8)
+        mode = "RGBA" if color_rgba.shape[-1] == 4 else "RGB"
+        img_pil = Image.fromarray(color_rgba[imin:imax, jmin:jmax, :], mode=mode)
         img_pil = img_pil.resize(size=(w, h), resample=Image.BOX)
 
     else:
@@ -1135,7 +1133,7 @@ def plot_IPF(
     w=2048,
     scalebar=True,
     verbose=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Plots inverse pole figure map
@@ -1305,7 +1303,7 @@ def plot_IPF(
 
     # plotting maps
     if tiling == "hex":
-        color = color[sel]
+        color_rgba = color[sel]
         x_hex = np.ndarray((len(x[sel]), 6))
         y_hex = np.ndarray((len(y[sel]), 6))
 
@@ -1330,7 +1328,7 @@ def plot_IPF(
         draw = ImageDraw.Draw(img_pil, "RGBA")
         for i in range(len(x_hex)):
             hexagon = list(zip(*[x_hex[i], y_hex[i]]))
-            draw.polygon(hexagon, fill=tuple(color[i]))
+            draw.polygon(hexagon, fill=tuple(color_rgba[i]))
 
     elif tiling == "rect":
         if grid.lower() == "hexgrid":
@@ -1385,9 +1383,9 @@ def plot_IPF(
                 scale = h / (ymax - ymin)
                 w = int(scale * (xmax - xmin))
 
-        color = color.reshape(nrows, ncols, -1)
-
-        img_pil = toimage(color[imin:imax, jmin:jmax, :])
+        color_rgba = (color.reshape(nrows, ncols, -1)).astype(np.uint8)
+        mode = "RGBA" if color_rgba.shape[-1] == 4 else "RGB"
+        img_pil = Image.fromarray(color_rgba[imin:imax, jmin:jmax, :], mode=mode)
         img_pil = img_pil.resize(size=(w, h), resample=Image.BOX)
 
     else:
