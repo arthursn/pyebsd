@@ -1,3 +1,37 @@
+[project]
+name = "pyebsd"
+dynamic = ["version"]
+description = "Python library for post-processing of Electron Backscattered Diffraction (EBSD) data"
+readme = "README.md"
+authors = [{ name = "Arthur Nishikawa", email = "nishikawa.poli@gmail.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "h5py",
+    "matplotlib",
+    "matplotlib_scalebar",
+    "numpy",
+    "pandas",
+    "pillow",
+]
+
+[project.urls]
+Homepage = "https://github.com/arthursn/pyebsd"
+Repository = "https://github.com/arthursn/pyebsd"
+
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "pyebsd",
+    "pyebsd.ebsd",
+    "pyebsd.io",
+    "pyebsd.selection",
+    "pyebsd.draw",
+    "pyebsd.misc",
+]
